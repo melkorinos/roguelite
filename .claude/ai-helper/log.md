@@ -9,6 +9,11 @@
 - Deferred: simulation model (turn-based vs action), run pressure mechanics
 - Tentative: extraction run structure, puzzle-satisfaction-with-chaos-payoff player feel
 
+## 2026-06-01 (tests green)
+- GUT configured: .gutconfig.json pointing to res://test/unit/
+- test_game_state.gd: 5 tests, 11 assertions, 0.271s — all passing
+- Phase 2 full loop test confirmed in editor
+
 ## 2026-06-01 (maintainability)
 - Strict typing enforced on `systems/` and `data/` — all function signatures typed, arithmetic vars typed, `as` casts for Dictionary access
 - Global font size set in project.godot (GUI → theme/default_font_size = 20); all per-node `add_theme_font_size_override()` calls removed from scene scripts

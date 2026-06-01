@@ -19,7 +19,17 @@ Goal: player lands in a shop, buys items, clicks Fight, sandstorm resolves, sees
 - [x] Battle scene: HP display, 10s sandstorm timer, result text, Next Round / Menu buttons
 - [x] Update MainMenu Start → Shop
 - [x] Delete Game.tscn walking demo
-- [ ] Full loop test: MainMenu → Shop → Battle → Result → Shop  ← verify in editor
+- [x] Full loop test: MainMenu → Shop → Battle → Result → Shop  ← verified in editor
+
+## Phase 2 — complete. ✓
+
+## Phase 3 — Maintainability baseline (COMPLETE — 2026-06-01)
+- [x] Strict typing enforced on systems/ and data/
+- [x] Global font size in project.godot — no per-node overrides
+- [x] GUT installed and configured (.gutconfig.json, res://test/unit/)
+- [x] First test suite: test_game_state.gd — 5 tests, 11 assertions, all passing
+- [x] GitHub Actions CI: validate job (import + boot check) + test job (GUT headless)
+- [x] CLAUDE.md updated with typing rules, theme rules, build check step
 
 ## Deferred / open
 - Primary play object decision (Scenario A / B — units vs single character)
