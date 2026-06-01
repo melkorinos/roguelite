@@ -43,9 +43,39 @@ godot --headless --quit            # headless smoke-test
 
 **GameState** is a plain `Dictionary` created by `GameState.create()` in [data/GameState.gd](data/GameState.gd). All scenes read and write it via `GameManager.state`. Systems must not mutate state in-place — return a new Dictionary.
 
-**Scene chain:** `Boot → MainMenu → [Settings] → Game`
+**Scene chain:** `Boot → MainMenu → [Settings] → Shop → Battle`
 
 **State pattern:** `GameManager.state = SomeSystem.some_fn(GameManager.state, args)` → `_render()`
+
+## Code standards
+
+**Strict typing — mandatory on `systems/` and `data/`:**
+- All function parameters and return types must be explicitly declared
+- All local variables that perform arithmetic must be explicitly typed
+- Use `as` casts when reading numeric/bool values from a `Dictionary`: `var hp: int = state["player_hp"]`
+- For nullable slots (inventory items), use `Variant` as the local type
+- `Array[Dictionary]` for typed collections; plain `Array` when the collection is mixed or nullable
+- Scene scripts (`scenes/`) follow the same rule for function signatures; local render variables may be untyped
+
+**Theme overrides — don't use per-node overrides for font size:**
+- Set the global default in Project Settings → GUI → Theme → Default Font Size
+- Use `add_theme_font_size_override()` only when a specific node must deviate from the global default
+- Never set theme properties via dictionary access (`node.theme_override_font_sizes["font_size"]`) in GDScript — use the method form
+
+## Build validation — run before closing any task
+
+```
+godot --headless --import   # compile all scripts
+godot --headless --quit     # boot check — exit 0 means scripts load and autoloads init
+```
+
+Requires `godot` on PATH. On Windows: add the Godot editor directory to system PATH.
+CI runs the same two commands on every push (see [.github/workflows/ci.yml](.github/workflows/ci.yml)).
+
+**When GUT tests exist**, also run:
+```
+godot --headless -s addons/gut/gut_cmdln.gd -gdir=test/ -gexit
+```
 
 ## Assistant behavior
 

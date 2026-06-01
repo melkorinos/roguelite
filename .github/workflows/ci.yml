@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    name: Script validation + boot check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Godot
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.6.0
+          use-dotnet: false
+
+      - name: Import project
+        run: godot --headless --import || true
+
+      - name: Boot check
+        run: godot --headless --quit
+        timeout-minutes: 1
+
+  test:
+    name: Unit tests (GUT)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Godot
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.6.0
+          use-dotnet: false
+
+      - name: Import project
+        run: godot --headless --import || true
+
+      - name: Run tests
+        run: godot --headless -s addons/gut/gut_cmdln.gd -gdir=test/ -gexit
+        timeout-minutes: 2

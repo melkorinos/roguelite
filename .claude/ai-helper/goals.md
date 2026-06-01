@@ -1,27 +1,37 @@
 # Goals
 
-## Sprint 0 — Scaffold (COMPLETE — extraction roguelite era, scaffold reused)
-- [x] Project setup (Vite + TypeScript + pnpm + Vitest + Phaser 3)
-- [x] Folder structure (scenes / systems / data / config)
-- [x] Scene chain: Boot → MainMenu → Settings → Game + UI overlay
-- [x] Player moves in a room (arrow keys)
-- [x] One item placed in the world
-- [ ] Item pickup, HUD, first test — DEFERRED (genre pivot to auto-battler)
+## Phase 1 — Godot setup (COMPLETE — 2026-06-01)
+- [x] Migrate from Phaser 3 / TypeScript to Godot 4 / GDScript
+- [x] Project at repo root: `project.godot`, 1280×720, canvas_items stretch
+- [x] `GameManager` Autoload, `GameState.create()` factory
+- [x] Scene chain: Boot → MainMenu → Settings
+- [x] Game scene: player entity moves with arrow keys
 
-## Sprint 1 — Core loop: shop → fight (first playable)
+## Phase 2 — Core loop: Shop → Battle → Result (first playable) — COMPLETE 2026-06-01
 
-Goal: player can open the game, land in a shop, buy pieces, click Fight, watch an Ability Chain resolve, see the result.
+Goal: player lands in a shop, buys items, clicks Fight, sandstorm resolves, sees result, loops back.
 
-- [ ] Redesign `GameState` for auto-battler (Player HP, Gold, piece collection, round number, phase)
-- [ ] Piece data model: type, level, Faction, Ability definition, Rarity
-- [ ] `MergeSystem`: detect 3 identical pieces → produce upgraded piece
-- [ ] `ShopSystem`: generate rotating shop, buy with Gold, reroll (1 Gold)
-- [ ] `AbilityChainSystem`: pure TypeScript simulation — run chain, return log of events + final HP delta
-- [ ] Vitest tests: MergeSystem, AbilityChainSystem
-- [ ] Shop scene (Phaser): display player pieces, shop offers, Gold count, Buy / Sell / Reroll / Fight buttons
-- [ ] Combat scene (Phaser): display both Compositions + HP bars, step through Ability Chain events
-- [ ] Result screen: show HP change, Replay button (if token available and player lost), Next Round button
-- [ ] Wire the loop: Shop → Combat → Result → Shop (round increments)
+- [x] Replace `GameState` with auto-battler state (phase, round, gold, inventory, HP)
+- [x] `ItemData.gd`: 5 placeholder items with attack/defence stats
+- [x] `ShopSystem.gd`: buy_item, sell_item, reroll_shop — pure static functions
+- [x] `BattleSystem.gd`: tick_battle, compute_result, get_player_stats — pure static functions
+- [x] Shop scene: FOR SALE list, inventory slots, Reroll button, FIGHT button
+- [x] Battle scene: HP display, 10s sandstorm timer, result text, Next Round / Menu buttons
+- [x] Update MainMenu Start → Shop
+- [x] Delete Game.tscn walking demo
+- [ ] Full loop test: MainMenu → Shop → Battle → Result → Shop  ← verify in editor
+
+## Deferred / open
+- Primary play object decision (Scenario A / B — units vs single character)
+- Draft system (Items / Trinkets)
+- Merge mechanic (3× same → upgrade)
+- Forge mechanic (A + B → C)
+- Ability Chain combat (real combat, not sandstorm placeholder)
+- Innate Ability + Replay mechanic
+- Faction synergy system
+- Meta-progression layer
+- Backend (async PvP)
+- Steam packaging (Godot export)
 
 ## Deferred / open
 - Primary play object decision (Scenario A / B / C) — resolve before Sprint 1 coding begins

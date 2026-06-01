@@ -1,0 +1,29 @@
+extends GutTest
+
+
+func test_create_returns_shop_phase() -> void:
+	var state := GameState.create()
+	assert_eq(state["phase"], "shop")
+
+
+func test_create_starts_at_round_1() -> void:
+	var state := GameState.create()
+	assert_eq(state["round"], 1)
+
+
+func test_create_has_correct_starting_gold() -> void:
+	var state := GameState.create()
+	assert_eq(state["gold"], 10)
+
+
+func test_create_has_correct_starting_hp() -> void:
+	var state := GameState.create()
+	assert_eq(state["player_hp"], 30)
+	assert_eq(state["opponent_hp"], 20)
+
+
+func test_create_inventory_has_five_empty_slots() -> void:
+	var state := GameState.create()
+	assert_eq(state["inventory"].size(), 5)
+	for slot: Variant in state["inventory"]:
+		assert_null(slot)

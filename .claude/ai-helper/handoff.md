@@ -1,261 +1,253 @@
-# Handoff — Prototype: Shop → Battle loop
+# Handoff — Auto-Battler Prototype
 
-## What this is
+## Status
 
-A handoff for an agent tasked with updating the existing Phaser 3 scaffold into a minimal playable prototype of the auto-battler. The goal is a runnable loop: **Main Menu → Shop → Battle → Result → back to Shop**.
+| Phase | Goal | Status |
+|-------|------|--------|
+| Phase 1 — Setup | Godot 4 project, Main Menu, 1 controllable entity | **COMPLETE** |
+| **Phase 2 — Prototype** | Shop → Battle → Result loop, full playable round | **THIS HANDOFF** |
 
-**Important:** This is a placeholder prototype only. Item and unit design is not final. The primary play-object decision (units vs single character vs items-as-fighters) is explicitly deferred — a further grilling session will happen before the real game-update task. Do not architect around any particular play-object model. Use the word "item" as a neutral placeholder for now.
+---
+
+## What exists (Phase 1 output)
+
+```
+project.godot                      ← Godot 4.6, 1280×720, canvas_items stretch
+autoloads/
+  GameManager.gd                   ← global state holder (Autoload)
+data/
+  GameState.gd                     ← create() factory — EXPAND in Phase 2
+scenes/
+  Boot.tscn + Boot.gd              ← transitions to MainMenu — keep unchanged
+  MainMenu.tscn + MainMenu.gd      ← Start / Settings / Quit — update Start target
+  Settings.tscn + Settings.gd      ← placeholder — keep unchanged
+  Game.tscn + Game.gd              ← walking demo — REPLACE with Shop + Battle
+```
+
+**Architecture rule (hard):** Scene scripts (`.gd` attached to `.tscn`) handle rendering and input only. Nothing in `systems/` or `data/` may reference scene nodes or the SceneTree.
+
+**State pattern:** `GameManager.state = SomeSystem.fn(GameManager.state, args)` → `_render()`
 
 ---
 
 ## Read these first
 
-Before touching any code, read the following files in order:
-
 | File | Purpose |
 |------|---------|
 | [soul.md](soul.md) | Game identity and player fantasy |
 | [memory.md](memory.md) | All settled design decisions |
-| [goals.md](goals.md) | Sprint 1 checklist — this task covers the prototype items |
-| [log.md](log.md) | Development history |
-| [../../CONTEXT.md](../../CONTEXT.md) | Domain vocabulary — use these terms in code, comments, and variable names |
-
----
-
-## Current codebase state
-
-```
-src/
-  main.ts                 — Phaser game init, registers all scenes
-  config/GameConfig.ts    — canvas size, physics settings
-  data/types.ts           — GameState, PlayerEntity, ItemEntity, createInitialGameState()
-  scenes/
-    BootScene.ts          — preloads assets, transitions to MainMenuScene
-    MainMenuScene.ts      — Start / Settings / Quit buttons
-    SettingsScene.ts      — placeholder settings screen
-    GameScene.ts          — OLD: player moves around a room with arrow keys (REPLACE)
-    UIScene.ts            — OLD: shows HP overlay (REPLACE)
-  systems/
-    MovementSystem.ts     — pure function, player movement (KEEP as pattern reference)
-    MovementSystem.test.ts — Vitest test (KEEP as test pattern reference)
-```
-
-**Architecture rule (hard):** Phaser lives only in `src/scenes/`. Nothing in `src/systems/` or `src/data/` may import Phaser.
-
-**Pattern to follow:** Systems are pure functions — `(state, ...args) => newState`. See `MovementSystem.ts` for the exact shape.
+| [goals.md](goals.md) | Sprint checklist |
+| [../../CONTEXT.md](../../CONTEXT.md) | Domain vocabulary — use in variable names and node names |
 
 ---
 
 ## What to build
 
-### 1. Replace `src/data/types.ts`
+### 1. Replace `data/GameState.gd`
 
-Replace the existing roguelite types with auto-battler types. Keep the immutable `GameState` pattern.
+Expand the state for the auto-battler loop. Replaces the Phase 1 walking-demo state entirely.
 
-```typescript
-export interface ShopItem {
-  id: string;
-  label: string;       // 'a' | 'b' | 'c' | 'd' | 'e'
-  name: string;
-  price: number;
-  attack: number;
-  defence: number;
-}
+```gdscript
+class_name GameState
 
-export interface GameState {
-  phase: 'shop' | 'battle' | 'result';
-  round: number;
-  playerHp: number;
-  opponentHp: number;
-  gold: number;
-  inventory: (ShopItem | null)[];  // always 5 slots
-  shopItems: ShopItem[];           // always 5 items
-  battleTimer: number;             // seconds elapsed in battle phase
-  sandstormFired: boolean;
-}
-
-export function createInitialGameState(): GameState { ... }
+static func create() -> Dictionary:
+    return {
+        "phase": "shop",              # "shop" | "battle" | "result"
+        "round": 1,
+        "player_hp": 30,
+        "opponent_hp": 20,
+        "gold": 10,
+        "inventory": [null, null, null, null, null],  # 5 slots
+        "shop_items": [],             # populated on Shop scene ready
+        "battle_timer": 0.0,
+        "sandstorm_fired": false,
+    }
 ```
 
-### 2. Add `src/data/itemData.ts`
+### 2. Add `data/ItemData.gd`
 
-Five placeholder items. Stats are for prototype purposes only — not final balance.
+Five placeholder items. Stats are prototype-only — not final balance.
 
-| Label | Name | Price | Attack | Defence |
-|-------|------|-------|--------|---------|
-| a | Iron Sword | 10g | +3 | 0 |
-| b | Wooden Shield | 8g | 0 | +2 |
-| c | Rusty Axe | 14g | +4 | -1 |
-| d | Leather Armour | 9g | 0 | +3 |
-| e | Lucky Charm | 6g | +1 | +1 |
+```gdscript
+class_name ItemData
 
-### 3. Add `src/systems/ShopSystem.ts`
-
-Pure functions. No Phaser imports.
-
-```typescript
-buyItem(state: GameState, label: string): GameState
-// — checks gold, finds empty inventory slot, deducts cost, places item
-
-sellItem(state: GameState, slotIndex: number): GameState
-// — removes item from inventory, refunds half price (floor)
-
-rerollShop(state: GameState): GameState
-// — costs 2g, generates a new random set of 5 shop items
+static func all_items() -> Array:
+    return [
+        { "id": "a", "name": "Iron Sword",     "price": 10, "attack":  3, "defence":  0 },
+        { "id": "b", "name": "Wooden Shield",  "price":  8, "attack":  0, "defence":  2 },
+        { "id": "c", "name": "Rusty Axe",      "price": 14, "attack":  4, "defence": -1 },
+        { "id": "d", "name": "Leather Armour", "price":  9, "attack":  0, "defence":  3 },
+        { "id": "e", "name": "Lucky Charm",    "price":  6, "attack":  1, "defence":  1 },
+    ]
 ```
 
-### 4. Add `src/systems/BattleSystem.ts`
+### 3. Add `systems/ShopSystem.gd`
 
-Pure functions. No Phaser imports.
+Pure static functions. No scene node references.
 
-```typescript
-// Returns the player's total stats from their inventory
-getPlayerStats(inventory: (ShopItem | null)[]): { attack: number; defence: number }
+```gdscript
+class_name ShopSystem
 
-// Tick the battle forward by delta ms. Fires sandstorm at t=10s.
-tickBattle(state: GameState, delta: number): GameState
-// — increments battleTimer
-// — at battleTimer >= 10: sets sandstormFired = true, deals 10 damage to both playerHp and opponentHp
-// — transitions phase to 'result' once sandstorm has fired and a beat has passed
+# Deducts gold, places item in first empty inventory slot.
+# Returns state unchanged if gold insufficient or inventory full.
+static func buy_item(state: Dictionary, item_id: String) -> Dictionary:
+    ...
 
-// Returns win/loss/draw string
-computeResult(state: GameState): 'player_wins' | 'opponent_wins' | 'draw'
+# Removes item from slot, refunds floor(price / 2) gold.
+static func sell_item(state: Dictionary, slot_index: int) -> Dictionary:
+    ...
+
+# Costs 2 gold. Picks 5 random items from ItemData.all_items().
+# Returns state unchanged if gold < 2.
+static func reroll_shop(state: Dictionary) -> Dictionary:
+    ...
 ```
 
-The opponent for this prototype is a dummy with fixed stats: 20 HP, 2 attack, 1 defence. These values are not meaningful — they exist only to make the result screen work.
+### 4. Add `systems/BattleSystem.gd`
 
-### 5. Replace `src/scenes/GameScene.ts` → `src/scenes/ShopScene.ts`
+Pure static functions. No scene node references.
 
-**Layout (800×600 canvas):**
+The opponent for this prototype is a dummy: 20 HP, 2 attack, 1 defence. Values are not meaningful — exist only to make the result screen work.
 
-```
-┌─────────────────────────────────────────┐
-│  Round 1     Gold: 100g     HP: 30/30   │  ← top bar
-├─────────────────────────────────────────┤
-│  FOR SALE                               │
-│  [a] Iron Sword    10g  +3atk           │
-│  [b] Wooden Shield  8g  +2def           │
-│  [c] Rusty Axe     14g  +4atk -1def     │
-│  [d] Leather Armour 9g  +3def           │
-│  [e] Lucky Charm    6g  +1atk +1def     │
-│                          [Reroll — 2g]  │
-├─────────────────────────────────────────┤
-│  INVENTORY  (5 slots)                   │
-│  [Iron Sword] [empty] [empty] ... [Sell]│
-├─────────────────────────────────────────┤
-│                          [▶ FIGHT]      │
-└─────────────────────────────────────────┘
-```
+```gdscript
+class_name BattleSystem
 
-- Clicking a FOR SALE row calls `buyItem` and re-renders.
-- Clicking an inventory slot with an item calls `sellItem`.
-- Reroll button calls `rerollShop` (costs 2g).
-- FIGHT button transitions `phase` to `'battle'` and starts `BattleScene`.
+# Sums attack and defence from non-null inventory slots.
+static func get_player_stats(inventory: Array) -> Dictionary:
+    # returns { "attack": int, "defence": int }
 
-### 6. Replace `src/scenes/UIScene.ts` → `src/scenes/BattleScene.ts`
+# Advances battle_timer by delta seconds.
+# At battle_timer >= 10.0: sets sandstorm_fired = true, deals 10 damage to both HPs.
+# At battle_timer >= 11.0 and sandstorm fired: sets phase = "result".
+static func tick_battle(state: Dictionary, delta: float) -> Dictionary:
+    ...
 
-**Layout:**
-
-```
-┌─────────────────────────────────────────┐
-│  BATTLE — Round 1                       │
-├─────────────────────────────────────────┤
-│  YOUR ITEMS            OPPONENT         │
-│  Iron Sword (+3atk)    [Dummy Fighter]  │
-│  Leather Armour(+3def)                  │
-│                                         │
-│  YOUR HP: 30           OPP HP: 20       │
-│                                         │
-│  ⏱ 10s until SANDSTORM...              │
-│                                         │
-│  [SANDSTORM hits! -10 to both]  ← fires at t=10s
-├─────────────────────────────────────────┤
-│  Result: YOU WIN / YOU LOSE / DRAW      │
-│                    [Next Round] [Menu]  │
-└─────────────────────────────────────────┘
+# Returns "player_wins" | "opponent_wins" | "draw"
+static func compute_result(state: Dictionary) -> String:
+    ...
 ```
 
-- Scene calls `tickBattle(state, delta)` each update frame.
-- Sandstorm message appears and persists when `state.sandstormFired` becomes true.
-- After sandstorm fires, wait ~1 second then show result text and buttons.
-- "Next Round" increments `round`, resets HP and battle state, returns to ShopScene.
-- "Menu" goes back to MainMenuScene.
+### 5. Add `scenes/Shop.tscn` + `scenes/Shop.gd`
 
-### 7. Update `src/scenes/MainMenuScene.ts`
+Layout (1280×720 canvas):
 
-Change the "Start" button to launch `ShopScene` instead of `GameScene + UIScene`:
-
-```typescript
-this.scene.start('ShopScene');
+```
+┌──────────────────────────────────────────────┐
+│  Round 1     Gold: 10g      HP: 30/30        │  ← top bar Label nodes
+├──────────────────────────────────────────────┤
+│  FOR SALE                                    │
+│  [Iron Sword      10g  +3atk          ] Buy  │
+│  [Wooden Shield    8g  +2def          ] Buy  │
+│  [Rusty Axe       14g  +4atk  -1def   ] Buy  │
+│  [Leather Armour   9g  +3def          ] Buy  │
+│  [Lucky Charm      6g  +1atk  +1def   ] Buy  │
+│                              [Reroll — 2g]   │
+├──────────────────────────────────────────────┤
+│  INVENTORY  (5 slots)                        │
+│  [Iron Sword] [empty] [empty] [empty] [empty]│  ← click item to sell
+├──────────────────────────────────────────────┤
+│                                   [► FIGHT]  │
+└──────────────────────────────────────────────┘
 ```
 
-### 8. Update `src/main.ts`
+`Shop.gd` behaviour:
+- `_ready()`: if `state.shop_items` is empty, call `ShopSystem.reroll_shop` with free first roll (skip cost). Call `_render()`.
+- `_render()`: rebuild all labels/buttons from `GameManager.state` — full redraw every time, no partial caching.
+- Buy button → `GameManager.state = ShopSystem.buy_item(state, item_id)` → `_render()`
+- Inventory slot (occupied) → `GameManager.state = ShopSystem.sell_item(state, index)` → `_render()`
+- Reroll → `GameManager.state = ShopSystem.reroll_shop(state)` → `_render()`
+- FIGHT → `GameManager.state.phase = "battle"` → `change_scene_to_file("res://scenes/Battle.tscn")`
 
-Register the new scenes and remove old ones:
+### 6. Add `scenes/Battle.tscn` + `scenes/Battle.gd`
 
-```typescript
-scene: [BootScene, MainMenuScene, SettingsScene, ShopScene, BattleScene]
+Layout:
+
+```
+┌──────────────────────────────────────────────┐
+│  BATTLE — Round 1                            │
+├──────────────────────────────────────────────┤
+│  YOUR ITEMS              OPPONENT            │
+│  Iron Sword (+3atk)      [Dummy Fighter]     │
+│  Leather Armour (+3def)                      │
+│                                              │
+│  YOUR HP: 30             OPP HP: 20          │
+│                                              │
+│  ⏱ 10s until SANDSTORM...                   │
+│  [SANDSTORM hits! -10 to both]  ← t=10s     │
+├──────────────────────────────────────────────┤
+│  Result: YOU WIN / YOU LOSE / DRAW           │  ← visible after sandstorm
+│                        [Next Round]  [Menu]  │
+└──────────────────────────────────────────────┘
 ```
 
-Remove `GameScene` and `UIScene` from the registry (or keep them commented out temporarily).
+`Battle.gd` behaviour:
+- `_process(delta)`: `GameManager.state = BattleSystem.tick_battle(state, delta)` → `_render()`. Stop calling once `state.phase == "result"`.
+- Sandstorm label: hidden until `state.sandstorm_fired == true`.
+- Result + buttons: hidden until `state.phase == "result"`.
+- Next Round button: `state.round += 1`, reset `player_hp`, `opponent_hp`, `battle_timer`, `sandstorm_fired`, set `phase = "shop"`, `change_scene_to_file("res://scenes/Shop.tscn")`.
+- Menu button: `GameManager.state = GameState.create()`, `change_scene_to_file("res://scenes/MainMenu.tscn")`.
+
+### 7. Update `scenes/MainMenu.gd`
+
+Change the Start button to go to Shop instead of Game:
+
+```gdscript
+func _on_start_pressed() -> void:
+    GameManager.state = GameState.create()
+    get_tree().change_scene_to_file("res://scenes/Shop.tscn")
+```
+
+### 8. Delete `scenes/Game.tscn` + `scenes/Game.gd`
+
+The walking demo is replaced by the Shop + Battle loop. Remove both files once Shop is running.
 
 ---
 
-## What to keep unchanged
+## Final file structure after Phase 2
 
-- `src/scenes/BootScene.ts` — no changes needed
-- `src/scenes/SettingsScene.ts` — no changes needed
-- `src/config/GameConfig.ts` — no changes needed
-- `src/systems/MovementSystem.ts` + its test — keep as reference; do not delete
+```
+project.godot
+autoloads/
+  GameManager.gd
+data/
+  GameState.gd          ← replaced (auto-battler state)
+  ItemData.gd           ← new
+scenes/
+  Boot.tscn + Boot.gd
+  MainMenu.tscn + MainMenu.gd   ← Start now goes to Shop
+  Settings.tscn + Settings.gd
+  Shop.tscn + Shop.gd           ← new
+  Battle.tscn + Battle.gd       ← new
+systems/
+  ShopSystem.gd         ← new
+  BattleSystem.gd       ← new
+```
 
 ---
 
-## Tests to add
+## Execution order
 
-Add Vitest unit tests for both new systems:
+1. Replace `data/GameState.gd` with auto-battler state
+2. Add `data/ItemData.gd`
+3. Add `systems/ShopSystem.gd`, implement and verify logic manually
+4. Add `systems/BattleSystem.gd`, implement and verify logic manually
+5. Build `scenes/Shop.tscn` + `Shop.gd`, verify buy / sell / reroll cycle
+6. Build `scenes/Battle.tscn` + `Battle.gd`, verify sandstorm fires at 10s
+7. Update `MainMenu.gd` Start target to Shop
+8. Delete `Game.tscn` + `Game.gd`
+9. Full loop test: MainMenu → Shop → buy items → FIGHT → sandstorm → result → Next Round → Shop
 
-- `src/systems/ShopSystem.test.ts` — test buyItem (sufficient gold, insufficient gold, full inventory), sellItem, rerollShop cost
-- `src/systems/BattleSystem.test.ts` — test tickBattle advances timer, sandstorm fires at t=10, computeResult returns correct winner
+**Done when:** A complete round plays through without errors. The result screen shows win/loss/draw. Next Round returns to the shop with round counter incremented.
 
 ---
 
-## What is intentionally NOT in scope
+## What is NOT in scope
 
 - Faction or synergy system
 - Merge or Forge mechanics
-- Ability Chain combat (real combat is deferred — sandstorm is the placeholder)
+- Ability Chain combat (sandstorm is the placeholder battle resolution)
 - Draft system
 - Rarity tiers
+- Real item balance
 - Meta-progression
 - Async multiplayer / backend
-- Real item balance
-
----
-
-## Design context summary
-
-A further grilling session will take place before the real game-update task. The following decisions are settled and should be respected even in placeholder code:
-
-- **Genre**: auto-battler, ability-chain combat (The Bazaar-style), async PvP
-- **Session**: 20–30 min, Steam desktop target
-- **Match**: 8 players, single Player HP bar, proportional damage on loss
-- **Upgrade loops**: Merge (3× same → upgrade) + Forge (A+B→C, recipe-based) — not in this prototype
-- **Economy**: Gold shop + free Draft each round — only Gold shop in this prototype
-- **Factions**: threshold synergies + passive ability interactions — deferred
-- **Pieces**: ~30 at launch, Common/Rare/Epic rarity — 5 placeholders in this prototype
-- **Play object**: UNDEFINED — do not commit to units, single-character, or items-as-fighters in the architecture
-- **Visual identity**: clean, minimal, weird, surreal
-
-Full settled decisions: [memory.md](memory.md)
-Full vocabulary: [../../CONTEXT.md](../../CONTEXT.md)
-
----
-
-## Suggested skills
-
-| Skill | When to use |
-|-------|-------------|
-| `/tdd` | Building ShopSystem and BattleSystem with tests first |
-| `/grill-with-docs` | The follow-up design session (primary play object, ability system, factions) |
-| `/prototype` | If any UI layout questions arise — generate variants before committing |
-| `/zoom-out` | If unsure how a new system fits the existing architecture |
