@@ -139,6 +139,56 @@ static func preview_bench(state: Dictionary) -> String:
 	return "✗ No recipe"
 
 
+static func move_to_forge_slot(state: Dictionary, forge_slot_idx: int, from_inv_idx: int) -> Dictionary:
+	var inv: Array = state["inventory"]
+	if inv[from_inv_idx] == null:
+		return state
+	var current_in_slot: Variant = state["forge_slots"][forge_slot_idx]
+	var s: Dictionary = state.duplicate(true)
+	if current_in_slot != null:
+		var free: int = _first_empty_inv_slot(s["inventory"])
+		if free >= 0:
+			s["inventory"][free] = (current_in_slot as Dictionary).duplicate()
+	s["forge_slots"][forge_slot_idx] = (s["inventory"][from_inv_idx] as Dictionary).duplicate()
+	s["inventory"][from_inv_idx] = null
+	return s
+
+
+static func forge_quick_slot(state: Dictionary, inv_slot_index: int) -> Dictionary:
+	var inv: Array = state["inventory"]
+	if inv[inv_slot_index] == null:
+		return state
+	var slots: Array = state["forge_slots"]
+	var target_forge: int
+	if slots[0] == null:
+		target_forge = 0
+	elif slots[1] == null:
+		target_forge = 1
+	else:
+		target_forge = 1
+	var s: Dictionary = state.duplicate(true)
+	var displaced: Variant = s["forge_slots"][target_forge]
+	if displaced != null:
+		var free: int = _first_empty_inv_slot(s["inventory"])
+		if free >= 0:
+			s["inventory"][free] = (displaced as Dictionary).duplicate()
+	s["forge_slots"][target_forge] = (s["inventory"][inv_slot_index] as Dictionary).duplicate()
+	s["inventory"][inv_slot_index] = null
+	return s
+
+
+static func remove_from_forge_slot(state: Dictionary, forge_slot_idx: int) -> Dictionary:
+	var item: Variant = state["forge_slots"][forge_slot_idx]
+	if item == null:
+		return state
+	var free: int = _first_empty_inv_slot(state["inventory"])
+	var s: Dictionary = state.duplicate(true)
+	if free >= 0:
+		s["inventory"][free] = (item as Dictionary).duplicate()
+	s["forge_slots"][forge_slot_idx] = null
+	return s
+
+
 static func _first_empty_inv_slot(inventory: Array) -> int:
 	for i: int in inventory.size():
 		if inventory[i] == null:

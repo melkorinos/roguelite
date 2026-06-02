@@ -120,6 +120,30 @@ static func reroll_shop(state: Dictionary, is_free: bool = false) -> Dictionary:
 	return s
 
 
+static func swap_inv_to_grid(state: Dictionary, from_inv: int, to_grid: int) -> Dictionary:
+	var s: Dictionary = state.duplicate(true)
+	var temp: Variant = s["inventory"][from_inv]
+	s["inventory"][from_inv] = s["battle_grid"][to_grid]
+	s["battle_grid"][to_grid] = temp
+	return s
+
+
+static func swap_grid_to_inv(state: Dictionary, from_grid: int, to_inv: int) -> Dictionary:
+	var s: Dictionary = state.duplicate(true)
+	var temp: Variant = s["battle_grid"][from_grid]
+	s["battle_grid"][from_grid] = s["inventory"][to_inv]
+	s["inventory"][to_inv] = temp
+	return s
+
+
+static func swap_within_grid(state: Dictionary, from_grid: int, to_grid: int) -> Dictionary:
+	var s: Dictionary = state.duplicate(true)
+	var temp: Variant = s["battle_grid"][from_grid]
+	s["battle_grid"][from_grid] = s["battle_grid"][to_grid]
+	s["battle_grid"][to_grid] = temp
+	return s
+
+
 static func _first_empty_slot(inventory: Array) -> int:
 	for i: int in inventory.size():
 		if inventory[i] == null:

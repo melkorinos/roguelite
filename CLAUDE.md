@@ -86,11 +86,16 @@ Note: `-gsuffix` is not supported by this GUT version — omit it. `-gdir` must 
 - When a code decision might lock future design flexibility, say so explicitly.
 - When design is undecided, propose options — don't commit.
 
-## Agent configuration
+## Agent skills
 
-| File | Purpose |
-|------|---------|
-| [.claude/ai-helper/issue-tracker/issue-tracker.md](.claude/ai-helper/issue-tracker/issue-tracker.md) | GitHub Issues workflow |
-| [.claude/ai-helper/issue-tracker/triage-labels.md](.claude/ai-helper/issue-tracker/triage-labels.md) | Label vocabulary |
-| [.claude/ai-helper/issue-tracker/domain.md](.claude/ai-helper/issue-tracker/domain.md) | Domain doc conventions |
-| [.claude/ai-helper/issue-tracker/environment.md](.claude/ai-helper/issue-tracker/environment.md) | Local machine quirks, shell |
+### Issue tracker
+
+Issues live in GitHub Issues at `https://github.com/melkorinos/roguelite`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default label vocabulary (needs-triage, needs-info, ready-for-agent, ready-for-human, wontfix). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context repo — one `CONTEXT.md` at root, `docs/adr/` for ADRs. See `docs/agents/domain.md`.
