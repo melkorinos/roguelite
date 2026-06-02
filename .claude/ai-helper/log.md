@@ -1,5 +1,20 @@
 # Development Log
 
+## 2026-06-02 — Architecture candidates 1 & 2 from improve-architecture review
+
+### Candidate 1: Deepen ElementData into the effective-damage authority
+- `systems/BattleSystem.gd` — replaced two inline `damage * level` calculations with `ElementData.effective_damage(elem)`. Battle damage now includes tier.
+- `scenes/shared/TooltipCard.gd` — replaced inline `base_dmg * level + tier` with `ElementData.effective_damage(element)`.
+- Fixes a silent gameplay bug: Item Tooltip was showing a higher damage value than what actually landed in battle.
+
+### Candidate 2: Collapse the item-transfer interface in ShopSystem
+- `systems/ShopSystem.gd` — removed 6 public functions (`buy_item`, `buy_item_to_slot`, `buy_and_level_up`, `swap_inv_to_grid`, `swap_grid_to_inv`, `swap_within_grid`). Replaced with `transfer(state, from_loc, to_loc)` where `from_loc`/`to_loc` are `{"zone": "shop"|"inventory"|"grid", "slot": int}`; `slot = -1` = first empty.
+- `scenes/screens/Shop.gd` — all 6 removed call sites replaced with `ShopSystem.transfer(...)`.
+- `test/unit/test_shop_system.gd` — rewritten around `transfer()`; 30 tests, all passing.
+
+### Test results
+Boot: exit 0. GUT: 138/138 passing.
+
 ## 2026-06-02 — Match persistence: Lives system, 10-win goal, per-round gold
 
 ### Design decisions settled (grill-with-docs session)
