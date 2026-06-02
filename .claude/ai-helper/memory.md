@@ -61,8 +61,22 @@ Light progression between matches. Unlocks new Factions, Synergies, and game-cha
 ## Optional: PvE Bosses
 Damage or defence check encounters. Beating a Boss unlocks a milestone (new Faction, Synergy, or global modifier). Not committed; noted as a strong option.
 
+## Scene folder structure (settled 2026-06-02)
+- `scenes/screens/` — full-screen scenes (Boot, MainMenu, Settings, Shop, Battle, Compendium)
+- `scenes/slots/` — reusable tile/slot nodes (BattleSlot, ForgeSlot, InventorySlot, ShopItemTile, SellZone)
+- `scenes/shared/` — cross-scene UI components (TooltipCard)
+
+## Item Tooltip (settled 2026-06-02)
+`scenes/shared/TooltipCard.gd` — CanvasLayer (layer=100), follows cursor (flip left at screen edge). Two sections: stats (Tier, Level, Cooldown, Base Dmg, Eff. Dmg, Price) + Abilities Panel placeholder. Triggered by a 0.3s hover Timer inside each slot node (`BattleSlot`, `ShopItemTile`, `InventorySlot`, `ForgeSlot`). Slots emit `tooltip_requested(element)` / `tooltip_hide_requested()`; parent scenes call `_tooltip.show_for()` / `hide_card()`. Active in Shop (all slot types) and Battle (both player + opponent grids).
+
+## Battle speed and pause (settled 2026-06-02)
+`_speed_mult: float` (1.0/1.5/2.0) multiplies delta in `tick_battle`. `_paused: bool` short-circuits `_process` entirely — freezes simulation, progress bars, timer display, fire animations. ControlsRow (Pause + 1× 1.5× 2× buttons) sits near the top of the Battle scene; all controls disabled once result phase is reached.
+
 ## Rendering boundary
 Scene scripts (`.gd` attached to `.tscn` files) handle rendering and input only. Logic in system scripts must never reference scene nodes or the Godot SceneTree. Equivalent to the former Phaser-only-in-scenes rule.
+
+## Godot node lifecycle — set_element / child-node access
+`_ready()` fires on `add_child()`, not on `.new()`. Never call a method that reads or writes child node properties (labels, progress bars, etc.) before the node has been added to the scene tree. Safe before `add_child`: plain property assignment (`slot_index`, `draggable`), signal connections. Unsafe: anything that touches nodes built inside `_ready()`. Fix: call `add_child(node)` first, then call the method.
 
 ## Shop phase feel
 Creative expression with soft pressure. Gold is generous enough to experiment; pressure comes from opponents improving, not from scarcity. Players should feel clever, not stressed. Reroll should be usable without feeling punishing.
@@ -73,12 +87,37 @@ All three layers simultaneously: (1) Engineered — I can see exactly why I won/
 ## Meta-progression shape
 Uncertain — deferred. Do not commit to unlock-gated content vs cosmetic-only vs XP track until a dedicated design session.
 
+## Shop UX model (updated 2026-06-02)
+- **Sell**: drag inventory item OR Battlegrid element to SellZone — half-price refund
+- **Level up**: drag inventory item onto same-element, same-level slot — hard reject if levels differ
+- **Forge**: drag inventory items to ForgeSlot bench (2 slots, right panel) — auto-forges on 2nd drop; F-key quick-forge; replaces slot 2 if both full
+- **Buy (click)**: click ShopItemTile → first free inventory slot
+- **Buy (drag to empty slot)**: drag ShopItemTile onto empty inventory slot → buys into that slot, no dialog
+- **Buy + level-up (drag)**: drag ShopItemTile onto matching Lv1 inventory item → ConfirmationDialog
+- **Undo**: 1-action; GameManager.save_undo()/apply_undo(); Undo button (TopBar) + Ctrl+Z
+- **Drag hints**: SellZone highlights on drag start (inventory or Battlegrid); matching inventory slots turn green
+- **Shop grid**: fixed 6 slots; bought items show greyed-out "SOLD" placeholder (position-stable across purchases)
+
+## Battle Summary (settled 2026-06-02)
+Shown inline below result buttons via "📊 Summary" toggle. Displays fires count, total damage, and DPS per element for both player and opponent. Data accumulated in `battle_stats` (GameState) by `BattleSystem.tick_battle`. Embodies the "Clinical" win/loss feel.
+
+## Stats formula (settled 2026-06-02)
+- `effective_damage = base_damage × level + tier` — universal (level-up and forge results)
+- Cooldown: not scaled yet (deferred)
+- Forge result level: `min(level_a, level_b)` — warning shown on mismatch
+- Implemented in `ElementData.effective_damage(item)`, computed dynamically (not stored)
+
 ## Element system
 - **4 base elements**: Water, Fire, Air, Earth (tier 1, cost 5g each)
-- **Leveling**: drag same element onto same element at same level → level + 1 (needs confirmation dialog). Requires matching levels.
-- **Forging**: done at the forge bench (dedicated UI area), not directly on the board. Two different elements → check recipe → produce result element (tier 2+). Recipe is revealed on first forge; goes into discovered recipe list. Unknown combos show "→ ???", known combos show result name.
-- **~60 pre-computed recipes** planned; prototype ships 6 (all pairings of 4 basics: Steam, Rain, Mud, Smoke, Lava, Dust).
-- **Tiers**: tier 1 = basics, tier 2+ = combinations. Shop raises available tier as the run progresses. Discovered recipes only appear in shop if their tier requirement is met.
+- **Leveling**: drag same element onto same element at same level → level + 1. Requires matching levels. Works for any element that has no self-combo recipe.
+- **Forging**: done at the forge bench (dedicated UI area). Any two elements → check recipe → produce result element. Self-combos (water+water, fire+fire, air+air, earth+earth) are valid forge recipes that produce tier-2 results. Recipe is revealed on first forge; goes into discovered recipe list. Unknown combos show "→ ???", known combos show result name.
+- **Two upgrade mechanisms**: (1) Level up — same element × 2 at same level → level+1, no recipe needed; (2) Forge — two elements (same or different) with a recipe → new element identity at level 1.
+- **Scope (prototype)**: 3 tiers, 29 elements, 25 recipes. Tiers 4 and 5 removed for now.
+  - Tier 1 (4): Water, Fire, Air, Earth
+  - Tier 2 cross (6): Steam, Rain, Mud, Smoke, Lava, Dust
+  - Tier 2 self (4): Ice (W+W), Blaze (F+F), Gale (A+A), Boulder (E+E)
+  - Tier 3 (15): Cloud, Geyser, Fog, Rainbow, Storm, Plant, Swamp, Brick, Ash, Acid, Obsidian, Volcano, Sand, Sandstorm, Clay
+- **Discovery**: all recipes currently fully visible. Future plan: shadow undiscovered recipes (show "→ ???"); use `discovered_recipes` array in GameState which already tracks this.
 - **Inventory (backpack)**: 6 slots. Starts small, may expand over the run — TBD.
 
 ## Combat model (updated)

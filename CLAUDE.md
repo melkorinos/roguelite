@@ -26,7 +26,7 @@ Open the project in the Godot 4 editor and press **F5**. There is no CLI build s
 
 ```
 # From command line (if godot is on PATH):
-godot --path . scenes/Boot.tscn    # run a specific scene
+godot --path . scenes/screens/Boot.tscn    # run a specific scene
 godot --headless --quit            # headless smoke-test
 ```
 
@@ -36,7 +36,9 @@ godot --headless --quit            # headless smoke-test
 
 | Folder | Purpose |
 |--------|---------|
-| `scenes/` | Godot scene files + attached scripts — rendering and input only |
+| `scenes/screens/` | Full-screen scene files: Boot, MainMenu, Settings, Shop, Battle, Compendium |
+| `scenes/slots/` | Reusable tile/slot nodes: BattleSlot, ForgeSlot, InventorySlot, ShopItemTile, SellZone |
+| `scenes/shared/` | Cross-scene UI: TooltipCard |
 | `systems/` | Pure logic — static GDScript classes, take state Dictionary, return new Dictionary |
 | `data/` | `GameState.gd` factory, item/piece data definitions |
 | `autoloads/` | `GameManager.gd` — global state holder, registered as Autoload |

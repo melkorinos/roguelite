@@ -2,424 +2,391 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Architecture Review — roguelite</title>
+    <title>Architecture review — roguelite auto-battler</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script type="module">
       import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
       mermaid.initialize({ startOnLoad: true, theme: "neutral", securityLevel: "loose" });
     </script>
     <style>
-      .seam-line { stroke-dasharray: 5 4; stroke: #64748b; stroke-width: 1.5px; fill: none; }
-      .leak-line { stroke: #dc2626; stroke-width: 2px; fill: none; }
-      .deep-module { background: linear-gradient(135deg, #0f172a, #1e293b); }
-      .band { border-left: 4px solid; }
-      .mass-rect { transition: height 0.3s; }
+      .seam-line { stroke-dasharray: 5 4; stroke: #64748b; stroke-width: 1.5; }
+      .leak-line { stroke: #dc2626; stroke-width: 2; }
+      .deep-box { background: linear-gradient(135deg, #0f172a, #1e293b); }
+      .badge-strong  { background:#d1fae5; color:#065f46; }
+      .badge-worth   { background:#fef3c7; color:#92400e; }
+      .badge-spec    { background:#f1f5f9; color:#475569; }
     </style>
   </head>
-  <body class="bg-stone-50 text-slate-900 font-sans">
-    <main class="max-w-5xl mx-auto px-6 py-12 space-y-12">
+  <body class="bg-stone-50 text-slate-800 font-sans">
+    <main class="max-w-5xl mx-auto px-6 py-12 space-y-14">
 
       <!-- Header -->
       <header class="border-b border-slate-200 pb-6">
-        <p class="text-xs uppercase tracking-widest text-slate-400 mb-1">Architecture Review</p>
-        <h1 class="text-3xl font-serif font-bold text-slate-900">roguelite</h1>
-        <p class="text-sm text-slate-500 mt-1">2026-06-02 · Godot 4 / GDScript</p>
-        <div class="mt-4 flex flex-wrap gap-6 text-xs text-slate-500">
-          <span class="flex items-center gap-1.5"><span class="inline-block w-5 h-3 border border-slate-400 rounded-sm bg-white"></span> module</span>
-          <span class="flex items-center gap-1.5"><svg class="w-6 h-3" viewBox="0 0 24 8"><line x1="0" y1="4" x2="24" y2="4" stroke="#64748b" stroke-dasharray="4 3" stroke-width="1.5"/></svg> seam</span>
-          <span class="flex items-center gap-1.5"><svg class="w-6 h-3" viewBox="0 0 24 8"><line x1="0" y1="4" x2="24" y2="4" stroke="#dc2626" stroke-width="2"/></svg> leakage</span>
-          <span class="flex items-center gap-1.5"><span class="inline-block w-5 h-3 rounded-sm deep-module"></span> deep module</span>
+        <h1 class="text-2xl font-serif font-semibold text-slate-900">Architecture review</h1>
+        <p class="text-sm text-slate-500 mt-1">roguelite auto-battler · Godot 4 / GDScript · 2026-06-02</p>
+        <div class="mt-4 flex gap-6 text-xs text-slate-500">
+          <span class="flex items-center gap-1.5"><span class="inline-block w-4 h-4 border border-slate-400 rounded-sm bg-white"></span> module</span>
+          <span class="flex items-center gap-1.5"><svg width="24" height="12"><line x1="0" y1="6" x2="24" y2="6" class="seam-line"/></svg> seam</span>
+          <span class="flex items-center gap-1.5"><svg width="24" height="12"><line x1="0" y1="6" x2="24" y2="6" class="leak-line"/></svg> leakage</span>
+          <span class="flex items-center gap-1.5"><span class="inline-block w-4 h-4 rounded-sm deep-box"></span> deep module</span>
         </div>
       </header>
 
-      <!-- Candidates -->
-      <section id="candidates" class="space-y-14">
-
-        <!-- ═══════════════════════════════════════════════════════
-             Candidate 1 — Phase State Machine
-        ═══════════════════════════════════════════════════════ -->
-        <article id="c1" class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div class="px-7 pt-7 pb-5">
-
-            <!-- Title + badges -->
-            <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
-              <h2 class="text-xl font-serif font-semibold text-slate-900">
-                Deepen the Phase State Machine into one module
-              </h2>
-              <div class="flex gap-2 flex-shrink-0">
-                <span class="text-xs font-semibold uppercase tracking-wide bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full">Strong</span>
-                <span class="text-xs font-semibold uppercase tracking-wide bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full">in-process</span>
-              </div>
-            </div>
-
-            <!-- Files -->
-            <div class="font-mono text-sm text-slate-600 mb-5 space-y-0.5">
-              <div>scenes/Shop.gd <span class="text-slate-400">:186</span></div>
-              <div>scenes/Battle.gd <span class="text-slate-400">:57–63</span></div>
-              <div>systems/BattleSystem.gd <span class="text-slate-400">:tick_battle</span></div>
-              <div>scenes/MainMenu.gd <span class="text-slate-400">:_on_start_pressed</span></div>
-            </div>
-
-            <!-- Before / After diagrams -->
-            <div class="grid grid-cols-2 gap-4 mb-5">
-              <!-- BEFORE -->
-              <div>
-                <p class="text-xs uppercase tracking-wider text-slate-400 mb-2">Before</p>
-                <div class="rounded-lg border border-slate-200 bg-slate-50 p-3 h-64 overflow-hidden">
-                  <pre class="mermaid text-xs">
-flowchart TB
-  SM[Shop.gd]:::scene
-  BT[Battle.gd]:::scene
-  MM[MainMenu.gd]:::scene
-  BS[BattleSystem]:::sys
-  GS[GameManager.state]:::state
-
-  SM -->|"state[phase]='battle'"| GS
-  BT -->|"s[round]+=1\ns[phase]='shop'\ns[hp]=30\n..."| GS
-  BS -->|"state[phase]='result'"| GS
-  MM -->|"GameState.create()"| GS
-
-  classDef scene fill:#fef9c3,stroke:#ca8a04,stroke-width:1.5px
-  classDef sys fill:#dbeafe,stroke:#3b82f6,stroke-width:1.5px
-  classDef state fill:#f1f5f9,stroke:#94a3b8,stroke-width:2px,stroke-dasharray:4 3
-                  </pre>
-                </div>
-              </div>
-              <!-- AFTER -->
-              <div>
-                <p class="text-xs uppercase tracking-wider text-slate-400 mb-2">After</p>
-                <div class="rounded-lg border border-slate-200 bg-slate-50 p-3 h-64 overflow-hidden">
-                  <pre class="mermaid text-xs">
-flowchart TB
-  SM[Shop.gd]:::scene
-  BT[Battle.gd]:::scene
-  MM[MainMenu.gd]:::scene
-  PS["PhaseSystem\n──────────────\nto_battle(state)\nto_result(state)\nadvance_round(state)"]:::deep
-  GS[GameManager.state]:::state
-
-  SM -->|"to_battle()"| PS
-  BT -->|"advance_round()"| PS
-  MM -->|"reset_run()"| PS
-  PS --> GS
-
-  classDef scene fill:#fef9c3,stroke:#ca8a04,stroke-width:1.5px
-  classDef deep fill:#0f172a,color:#f8fafc,stroke:#0f172a,stroke-width:2px
-  classDef state fill:#f1f5f9,stroke:#94a3b8,stroke-width:2px,stroke-dasharray:4 3
-                  </pre>
-                </div>
-              </div>
-            </div>
-
-            <!-- Problem / Solution / Wins -->
-            <p class="text-sm text-slate-700 mb-1"><span class="font-semibold">Problem.</span> Phase transitions — <em>shop → battle → result → shop</em> — are not owned by any module. Each scene writes directly to <code class="text-xs bg-slate-100 px-1 rounded">GameManager.state["phase"]</code> and resets whatever state keys it happens to know about. Callers must learn the full set of keys that accompany each transition; that knowledge is the interface, and it lives spread across three scene scripts.</p>
-            <p class="text-sm text-slate-700 mb-3"><span class="font-semibold">Solution.</span> A <code class="text-xs bg-slate-100 px-1 rounded">PhaseSystem</code> module exposes <code class="text-xs bg-slate-100 px-1 rounded">to_battle(state)</code>, <code class="text-xs bg-slate-100 px-1 rounded">advance_round(state)</code>, <code class="text-xs bg-slate-100 px-1 rounded">to_result(state)</code> — pure functions that own all resets. Scenes call one function and re-render.</p>
-
-            <ul class="text-sm space-y-1 text-slate-700">
-              <li>→ <span class="font-medium">locality</span>: all valid transitions live in one module; add a new phase in one file</li>
-              <li>→ <span class="font-medium">leverage</span>: scenes shrink — no knowledge of which keys each transition resets</li>
-              <li>→ <span class="font-medium">interface is the test surface</span>: state machine can be unit-tested without spinning up scenes</li>
-              <li>→ delete 6 direct mutations from Battle.gd and 1 from Shop.gd</li>
-            </ul>
-          </div>
-        </article>
-
-        <!-- ═══════════════════════════════════════════════════════
-             Candidate 2 — BattleSystem Shallow Module
-        ═══════════════════════════════════════════════════════ -->
-        <article id="c2" class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div class="px-7 pt-7 pb-5">
-
-            <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
-              <h2 class="text-xl font-serif font-semibold text-slate-900">
-                BattleSystem is shallow — interface promises what it doesn't deliver
-              </h2>
-              <div class="flex gap-2 flex-shrink-0">
-                <span class="text-xs font-semibold uppercase tracking-wide bg-amber-100 text-amber-800 px-2.5 py-1 rounded-full">Worth exploring</span>
-                <span class="text-xs font-semibold uppercase tracking-wide bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full">in-process</span>
-              </div>
-            </div>
-
-            <div class="font-mono text-sm text-slate-600 mb-5 space-y-0.5">
-              <div>systems/BattleSystem.gd <span class="text-slate-400">:all</span></div>
-              <div>data/ElementData.gd <span class="text-slate-400">:cooldown, damage fields</span></div>
-            </div>
-
-            <!-- Mass diagram: before/after -->
-            <div class="grid grid-cols-2 gap-4 mb-5">
-              <div>
-                <p class="text-xs uppercase tracking-wider text-slate-400 mb-2">Before — interface ≈ implementation</p>
-                <div class="rounded-lg border border-slate-200 bg-slate-50 p-4 h-64 flex items-end gap-6 justify-center">
-                  <!-- BattleSystem mass diagram -->
-                  <div class="flex flex-col items-center gap-1">
-                    <div class="text-xs uppercase tracking-wider text-slate-400">BattleSystem</div>
-                    <div class="flex gap-2 items-end">
-                      <div class="flex flex-col items-center">
-                        <div class="w-16 bg-amber-200 border border-amber-400 rounded-t" style="height:140px"></div>
-                        <div class="text-xs text-slate-500 mt-1">interface</div>
-                      </div>
-                      <div class="flex flex-col items-center">
-                        <div class="w-16 bg-slate-200 border border-slate-400 rounded-t" style="height:160px"></div>
-                        <div class="text-xs text-slate-500 mt-1">impl</div>
-                      </div>
-                    </div>
-                    <div class="mt-1 text-xs text-rose-600 font-medium">shallow</div>
-                  </div>
-                  <div class="flex flex-col items-center gap-1">
-                    <div class="text-xs uppercase tracking-wider text-slate-400">ElementData</div>
-                    <div class="flex gap-2 items-end">
-                      <div class="flex flex-col items-center">
-                        <div class="w-16 bg-rose-100 border border-rose-300 rounded-t" style="height:100px"></div>
-                        <div class="text-xs text-slate-500 mt-1">interface</div>
-                      </div>
-                      <div class="flex flex-col items-center">
-                        <div class="w-16 bg-slate-200 border border-slate-400 rounded-t" style="height:120px"></div>
-                        <div class="text-xs text-slate-500 mt-1">impl</div>
-                      </div>
-                    </div>
-                    <div class="mt-1 text-xs text-rose-600 font-medium">unused fields</div>
-                  </div>
-                </div>
-              </div>
-              <div>
-                <p class="text-xs uppercase tracking-wider text-slate-400 mb-2">After — interface shrinks, implementation grows</p>
-                <div class="rounded-lg border border-slate-200 bg-slate-50 p-4 h-64 flex items-end gap-6 justify-center">
-                  <div class="flex flex-col items-center gap-1">
-                    <div class="text-xs uppercase tracking-wider text-slate-400">BattleSystem</div>
-                    <div class="flex gap-2 items-end">
-                      <div class="flex flex-col items-center">
-                        <div class="w-16 bg-emerald-200 border border-emerald-400 rounded-t" style="height:56px"></div>
-                        <div class="text-xs text-slate-500 mt-1">interface</div>
-                      </div>
-                      <div class="flex flex-col items-center">
-                        <div class="w-16 bg-slate-700 border border-slate-600 rounded-t" style="height:190px"></div>
-                        <div class="text-xs text-slate-400 mt-1">impl</div>
-                      </div>
-                    </div>
-                    <div class="mt-1 text-xs text-emerald-700 font-medium">deep</div>
-                  </div>
-                  <div class="flex flex-col items-center gap-1 opacity-40">
-                    <div class="text-xs uppercase tracking-wider text-slate-400">ElementData</div>
-                    <div class="flex gap-2 items-end">
-                      <div class="flex flex-col items-center">
-                        <div class="w-16 bg-slate-200 border border-slate-400 rounded-t" style="height:80px"></div>
-                        <div class="text-xs text-slate-500 mt-1">interface</div>
-                      </div>
-                    </div>
-                    <div class="mt-1 text-xs text-slate-400 font-medium">used internally</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <p class="text-sm text-slate-700 mb-1"><span class="font-semibold">Problem.</span> <code class="text-xs bg-slate-100 px-1 rounded">BattleSystem</code> exposes <code class="text-xs bg-slate-100 px-1 rounded">get_player_stats(inventory)</code> and reads <code class="text-xs bg-slate-100 px-1 rounded">damage</code>/<code class="text-xs bg-slate-100 px-1 rounded">cooldown</code> from <code class="text-xs bg-slate-100 px-1 rounded">ElementData</code>, but none of it affects combat — the only damage event is a hardcoded sandstorm at 10 s. The interface is nearly as complex as the implementation; the unused surface is dead weight every caller and reader must account for.</p>
-            <p class="text-sm text-slate-700 mb-3"><span class="font-semibold">Solution.</span> Two honest paths: <em>(a)</em> delete <code class="text-xs bg-slate-100 px-1 rounded">get_player_stats</code> and the <code class="text-xs bg-slate-100 px-1 rounded">cooldown</code> field on every element until real ability-chain combat is implemented — makes the interface match the reality; or <em>(b)</em> implement discrete-tick simulation so <code class="text-xs bg-slate-100 px-1 rounded">damage</code> and <code class="text-xs bg-slate-100 px-1 rounded">cooldown</code> actually drive <code class="text-xs bg-slate-100 px-1 rounded">tick_battle</code> — deepens the module significantly.</p>
-
-            <ul class="text-sm space-y-1 text-slate-700">
-              <li>→ <span class="font-medium">interface shrinks</span> with path (a): unused function and dead fields removed</li>
-              <li>→ <span class="font-medium">leverage grows</span> with path (b): one module computes deterministic combat, tests verify outcomes without scenes</li>
-              <li>→ deletion test: deleting <code class="text-xs bg-slate-100 px-1 rounded">get_player_stats</code> today costs nothing — it's not earning its keep</li>
-            </ul>
-
-            <div class="mt-3 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2 text-xs text-amber-800">
-              Design note — the memory doc confirms ability-chain combat is planned ("real-time but deterministic, discrete ticks"). Path (b) is the intended destination; path (a) is the honest holding pattern until that sprint begins.
+      <!-- ── CANDIDATE 1 ─────────────────────────────────────────── -->
+      <article id="c1" class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div class="px-8 pt-7 pb-5">
+          <div class="flex items-start justify-between gap-4">
+            <h2 class="text-xl font-serif font-semibold text-slate-900">1 — Font size scatter: 25 call sites, no seam</h2>
+            <div class="flex gap-2 shrink-0 mt-0.5">
+              <span class="badge-strong text-xs font-semibold px-2.5 py-1 rounded-full">Strong</span>
+              <span class="bg-slate-100 text-slate-600 text-xs font-semibold px-2.5 py-1 rounded-full">Godot-native available</span>
             </div>
           </div>
-        </article>
+          <p class="text-xs font-mono text-slate-400 mt-2">
+            scenes/ShopItemTile.gd · scenes/InventorySlot.gd · scenes/BattleSlot.gd ·
+            scenes/ForgeSlot.gd · scenes/SellZone.gd · scenes/Shop.gd ·
+            scenes/Battle.gd · scenes/Compendium.gd
+          </p>
+        </div>
 
-        <!-- ═══════════════════════════════════════════════════════
-             Candidate 3 — Implicit Item Contract
-        ═══════════════════════════════════════════════════════ -->
-        <article id="c3" class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div class="px-7 pt-7 pb-5">
-
-            <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
-              <h2 class="text-xl font-serif font-semibold text-slate-900">
-                Item dictionary has no seam — its shape is an implicit contract
-              </h2>
-              <div class="flex gap-2 flex-shrink-0">
-                <span class="text-xs font-semibold uppercase tracking-wide bg-amber-100 text-amber-800 px-2.5 py-1 rounded-full">Worth exploring</span>
-                <span class="text-xs font-semibold uppercase tracking-wide bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full">in-process</span>
-              </div>
-            </div>
-
-            <div class="font-mono text-sm text-slate-600 mb-5 space-y-0.5">
-              <div>systems/ShopSystem.gd <span class="text-slate-400">:buy_item (creates item)</span></div>
-              <div>systems/ForgeSystem.gd <span class="text-slate-400">:level_up, forge (creates item)</span></div>
-              <div>scenes/Shop.gd <span class="text-slate-400">:_rebuild_inventory (reads item)</span></div>
-              <div>scenes/Battle.gd <span class="text-slate-400">:_rebuild_player_items (reads item)</span></div>
-            </div>
-
-            <!-- Call-graph collapse diagram -->
-            <div class="grid grid-cols-2 gap-4 mb-5">
-              <div>
-                <p class="text-xs uppercase tracking-wider text-slate-400 mb-2">Before — shape defined in two producers, assumed by two consumers</p>
-                <div class="rounded-lg border border-slate-200 bg-slate-50 p-4 h-64 relative overflow-hidden">
-                  <svg class="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 300 220" preserveAspectRatio="xMidYMid meet">
-                    <!-- ShopSystem creates item -->
-                    <rect x="10" y="10" width="90" height="38" rx="4" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
-                    <text x="55" y="33" font-size="9" text-anchor="middle" fill="#1e40af" font-family="monospace">ShopSystem</text>
-
-                    <!-- ForgeSystem creates item -->
-                    <rect x="10" y="60" width="90" height="38" rx="4" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
-                    <text x="55" y="83" font-size="9" text-anchor="middle" fill="#1e40af" font-family="monospace">ForgeSystem</text>
-
-                    <!-- implicit item shape -->
-                    <rect x="115" y="30" width="80" height="56" rx="4" fill="#fef3c7" stroke="#d97706" stroke-width="1.5" stroke-dasharray="4 3"/>
-                    <text x="155" y="50" font-size="8" text-anchor="middle" fill="#92400e" font-family="monospace">{element_id,</text>
-                    <text x="155" y="63" font-size="8" text-anchor="middle" fill="#92400e" font-family="monospace"> level}</text>
-                    <text x="155" y="78" font-size="7" text-anchor="middle" fill="#b45309">implicit</text>
-
-                    <!-- Shop.gd reads -->
-                    <rect x="210" y="10" width="80" height="38" rx="4" fill="#fef9c3" stroke="#ca8a04" stroke-width="1.5"/>
-                    <text x="250" y="33" font-size="9" text-anchor="middle" fill="#854d0e" font-family="monospace">Shop.gd</text>
-
-                    <!-- Battle.gd reads -->
-                    <rect x="210" y="60" width="80" height="38" rx="4" fill="#fef9c3" stroke="#ca8a04" stroke-width="1.5"/>
-                    <text x="250" y="83" font-size="9" text-anchor="middle" fill="#854d0e" font-family="monospace">Battle.gd</text>
-
-                    <!-- arrows: producers → shape -->
-                    <line x1="100" y1="29" x2="115" y2="48" stroke="#3b82f6" stroke-width="1.5" marker-end="url(#arr)"/>
-                    <line x1="100" y1="79" x2="115" y2="68" stroke="#3b82f6" stroke-width="1.5" marker-end="url(#arr)"/>
-
-                    <!-- arrows: shape → consumers (red = must know the shape) -->
-                    <line x1="195" y1="48" x2="210" y2="29" stroke="#dc2626" stroke-width="1.5" marker-end="url(#arrR)"/>
-                    <line x1="195" y1="68" x2="210" y2="79" stroke="#dc2626" stroke-width="1.5" marker-end="url(#arrR)"/>
-
-                    <!-- legend: red = consumer must know dict keys -->
-                    <text x="10" y="130" font-size="8" fill="#dc2626" font-family="sans-serif">red arrow = caller must know dict keys</text>
-
-                    <defs>
-                      <marker id="arr" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
-                        <path d="M0,0 L6,3 L0,6 Z" fill="#3b82f6"/>
-                      </marker>
-                      <marker id="arrR" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
-                        <path d="M0,0 L6,3 L0,6 Z" fill="#dc2626"/>
-                      </marker>
-                    </defs>
-                  </svg>
+        <!-- Before / After diagram -->
+        <div class="grid grid-cols-2 gap-0 border-y border-slate-100">
+          <!-- BEFORE -->
+          <div class="px-8 py-6 border-r border-slate-100 bg-slate-50">
+            <p class="text-xs uppercase tracking-wider text-slate-400 mb-4">Before</p>
+            <div class="space-y-2">
+              <!-- rows: file + count of calls + inline size values -->
+              <div class="flex items-center gap-2 text-xs">
+                <span class="font-mono w-36 text-slate-600 truncate">ShopItemTile.gd</span>
+                <div class="flex gap-1.5 flex-wrap">
+                  <span class="bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-mono">50</span>
+                  <span class="bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-mono">14</span>
+                  <span class="bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-mono">14</span>
+                  <span class="bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-mono">48</span>
                 </div>
               </div>
-
-              <div>
-                <p class="text-xs uppercase tracking-wider text-slate-400 mb-2">After — one factory function is the seam</p>
-                <div class="rounded-lg border border-slate-200 bg-slate-50 p-4 h-64 relative overflow-hidden">
-                  <svg class="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 300 220" preserveAspectRatio="xMidYMid meet">
-                    <rect x="10" y="10" width="90" height="38" rx="4" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
-                    <text x="55" y="33" font-size="9" text-anchor="middle" fill="#1e40af" font-family="monospace">ShopSystem</text>
-
-                    <rect x="10" y="60" width="90" height="38" rx="4" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
-                    <text x="55" y="83" font-size="9" text-anchor="middle" fill="#1e40af" font-family="monospace">ForgeSystem</text>
-
-                    <!-- GameState item factory — the seam -->
-                    <rect x="110" y="28" width="90" height="60" rx="4" fill="#0f172a" stroke="#334155" stroke-width="1.5"/>
-                    <text x="155" y="47" font-size="8" text-anchor="middle" fill="#94a3b8" font-family="monospace">GameState</text>
-                    <text x="155" y="60" font-size="8" text-anchor="middle" fill="#f8fafc" font-family="monospace">make_item()</text>
-                    <text x="155" y="75" font-size="7" text-anchor="middle" fill="#64748b">one seam</text>
-
-                    <rect x="215" y="10" width="75" height="38" rx="4" fill="#fef9c3" stroke="#ca8a04" stroke-width="1.5"/>
-                    <text x="252" y="33" font-size="9" text-anchor="middle" fill="#854d0e" font-family="monospace">Shop.gd</text>
-
-                    <rect x="215" y="60" width="75" height="38" rx="4" fill="#fef9c3" stroke="#ca8a04" stroke-width="1.5"/>
-                    <text x="252" y="83" font-size="9" text-anchor="middle" fill="#854d0e" font-family="monospace">Battle.gd</text>
-
-                    <line x1="100" y1="29" x2="110" y2="48" stroke="#3b82f6" stroke-width="1.5" marker-end="url(#arr2)"/>
-                    <line x1="100" y1="79" x2="110" y2="72" stroke="#3b82f6" stroke-width="1.5" marker-end="url(#arr2)"/>
-
-                    <line x1="200" y1="50" x2="215" y2="29" stroke="#10b981" stroke-width="1.5" marker-end="url(#arr3)"/>
-                    <line x1="200" y1="68" x2="215" y2="79" stroke="#10b981" stroke-width="1.5" marker-end="url(#arr3)"/>
-
-                    <text x="10" y="130" font-size="8" fill="#10b981" font-family="sans-serif">green = crosses one typed seam</text>
-
-                    <defs>
-                      <marker id="arr2" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
-                        <path d="M0,0 L6,3 L0,6 Z" fill="#3b82f6"/>
-                      </marker>
-                      <marker id="arr3" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
-                        <path d="M0,0 L6,3 L0,6 Z" fill="#10b981"/>
-                      </marker>
-                    </defs>
-                  </svg>
+              <div class="flex items-center gap-2 text-xs">
+                <span class="font-mono w-36 text-slate-600 truncate">BattleSlot.gd</span>
+                <div class="flex gap-1.5 flex-wrap">
+                  <span class="bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-mono">40</span>
+                  <span class="bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-mono">11</span>
+                  <span class="bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-mono">44</span>
                 </div>
               </div>
+              <div class="flex items-center gap-2 text-xs">
+                <span class="font-mono w-36 text-slate-600 truncate">ForgeSlot.gd</span>
+                <div class="flex gap-1.5 flex-wrap">
+                  <span class="bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-mono">38</span>
+                  <span class="bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-mono">11</span>
+                </div>
+              </div>
+              <div class="flex items-center gap-2 text-xs">
+                <span class="font-mono w-36 text-slate-600 truncate">InventorySlot.gd</span>
+                <div class="flex gap-1.5 flex-wrap">
+                  <span class="bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-mono">40</span>
+                </div>
+              </div>
+              <div class="flex items-center gap-2 text-xs">
+                <span class="font-mono w-36 text-slate-600 truncate">Compendium.gd</span>
+                <div class="flex gap-1.5 flex-wrap">
+                  <span class="bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-mono">60</span>
+                  <span class="bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-mono">25</span>
+                  <span class="bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-mono">15</span>
+                  <span class="bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-mono">13</span>
+                  <span class="bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-mono">13</span>
+                  <span class="bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-mono">12</span>
+                </div>
+              </div>
+              <div class="flex items-center gap-2 text-xs">
+                <span class="font-mono w-36 text-slate-600 truncate">Battle.gd</span>
+                <div class="flex gap-1.5 flex-wrap">
+                  <span class="bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-mono">16</span>
+                  <span class="bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-mono">14</span>
+                  <span class="bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-mono">14</span>
+                  <span class="bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-mono">14</span>
+                  <span class="bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-mono">14</span>
+                  <span class="bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-mono">13</span>
+                </div>
+              </div>
+              <div class="flex items-center gap-2 text-xs">
+                <span class="font-mono w-36 text-slate-600 truncate">Shop.gd</span>
+                <div class="flex gap-1.5 flex-wrap">
+                  <span class="bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-mono">16</span>
+                  <span class="bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-mono">22</span>
+                </div>
+              </div>
+              <div class="flex items-center gap-2 text-xs">
+                <span class="font-mono w-36 text-slate-600 truncate">SellZone.gd</span>
+                <div class="flex gap-1.5 flex-wrap">
+                  <span class="bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-mono">20</span>
+                </div>
+              </div>
+              <div class="mt-3 pt-3 border-t border-slate-200 text-xs text-slate-400">
+                <span class="font-semibold text-slate-600">25</span> override calls · <span class="font-semibold text-slate-600">14</span> distinct literal integers · no shared seam
+              </div>
+            </div>
+          </div>
+
+          <!-- AFTER — the three options side by side -->
+          <div class="px-8 py-6">
+            <p class="text-xs uppercase tracking-wider text-slate-400 mb-4">After — three Godot patterns compared</p>
+
+            <!-- Option A -->
+            <div class="mb-4 rounded-lg border border-slate-200 p-3">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-semibold text-slate-700">Option A — constants class <code class="font-mono text-xs bg-slate-100 px-1 rounded">UIScale.gd</code></span>
+                <span class="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded">one file, no runtime cost</span>
+              </div>
+              <pre class="text-xs font-mono bg-slate-50 rounded p-2 text-slate-600 overflow-x-auto">class_name UIScale
+const SHOP_EMOJI  := 50
+const COMP_HEADER := 25
+…
+# call site unchanged, literal gone:
+_lbl.add_theme_font_size_override("font_size", UIScale.SHOP_EMOJI)</pre>
+              <p class="text-xs text-slate-500 mt-2">Locality: one grep finds every usage. Still 25 call sites; only the literal disappears.</p>
             </div>
 
-            <p class="text-sm text-slate-700 mb-1"><span class="font-semibold">Problem.</span> The item dictionary <code class="text-xs bg-slate-100 px-1 rounded">{"element_id": …, "level": …}</code> is assembled in two places (<code class="text-xs bg-slate-100 px-1 rounded">ShopSystem.buy_item</code> and two functions in <code class="text-xs bg-slate-100 px-1 rounded">ForgeSystem</code>) and read in two more. There is no seam — callers must know the key names, and any field addition touches all four files.</p>
-            <p class="text-sm text-slate-700 mb-3"><span class="font-semibold">Solution.</span> Add a <code class="text-xs bg-slate-100 px-1 rounded">make_item(element_id, level)</code> factory to <code class="text-xs bg-slate-100 px-1 rounded">GameState.gd</code>. Producers call it; consumers are unchanged. One place to add fields (e.g. <code class="text-xs bg-slate-100 px-1 rounded">ability_charges</code> for the ability-chain sprint).</p>
+            <!-- Option C (recommended now) -->
+            <div class="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-semibold text-emerald-800">Option C — constants + static helper <span class="italic">(recommended now)</span></span>
+                <span class="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded">seam for future swap</span>
+              </div>
+              <pre class="text-xs font-mono bg-white rounded p-2 text-slate-600 overflow-x-auto">class_name UIScale
+const SHOP_EMOJI := 50
+static func apply(node: Control, size: int) -> void:
+    node.add_theme_font_size_override("font_size", size)
 
-            <ul class="text-sm space-y-1 text-slate-700">
-              <li>→ <span class="font-medium">locality</span>: item shape concentrated at one seam</li>
-              <li>→ <span class="font-medium">leverage</span>: adding a field later touches one line, not four</li>
-              <li>→ small change, high payback as combat sprint begins</li>
+# call site:
+UIScale.apply(_emoji_lbl, UIScale.SHOP_EMOJI)</pre>
+              <p class="text-xs text-emerald-800 mt-2">Leverage: call sites never change when Option B is adopted later — swap only the helper body.</p>
+            </div>
+
+            <!-- Option B -->
+            <div class="rounded-lg border border-indigo-200 bg-indigo-50 p-3">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-semibold text-indigo-800">Option B — Godot Theme type variations <span class="italic">(right answer, future state)</span></span>
+                <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded">no override calls at all</span>
+              </div>
+              <pre class="text-xs font-mono bg-white rounded p-2 text-slate-600 overflow-x-auto"># Create res://ui_theme.tres in Godot editor
+# Define "ShopTile" variation (inherits Label), font_size=50
+
+# call site:
+_emoji_lbl.theme_type_variation = "ShopTile"
+# — no add_theme_font_size_override needed —</pre>
+              <p class="text-xs text-indigo-800 mt-2">Depth: the size lives in the theme file, not in code. Change once, every node updates. But: every programmatic node (Compendium cards, Battle summary rows) still needs the variation string set on construction.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Problem / Solution / Wins -->
+        <div class="px-8 py-6 grid grid-cols-3 gap-8 text-sm">
+          <div>
+            <p class="text-xs uppercase tracking-wider text-slate-400 mb-2">Problem</p>
+            <p class="text-slate-700">The size for each UI role is implicit — discoverable only by reading 8 different implementations. No interface, no seam; a global size change requires 25 edits.</p>
+          </div>
+          <div>
+            <p class="text-xs uppercase tracking-wider text-slate-400 mb-2">Solution</p>
+            <p class="text-slate-700">Option C now. Option B after Sprint 2 when scene layouts stop moving. Option C's <code class="font-mono text-xs bg-slate-100 px-0.5 rounded">UIScale.apply()</code> is the seam that makes that migration zero-cost at call sites.</p>
+          </div>
+          <div>
+            <p class="text-xs uppercase tracking-wider text-slate-400 mb-2">Wins</p>
+            <ul class="space-y-1 text-slate-600">
+              <li>→ locality: all role sizes in one file</li>
+              <li>→ leverage: one constant, N call sites</li>
+              <li>→ seam created: swap implementation without touching callers</li>
+              <li>→ grep-friendly: <code class="font-mono text-xs">UIScale.SHOP_EMOJI</code> shows all usage</li>
             </ul>
           </div>
-        </article>
+        </div>
 
-        <!-- ═══════════════════════════════════════════════════════
-             Candidate 4 — Shop.gd Calls Past the ForgeSystem Seam
-        ═══════════════════════════════════════════════════════ -->
-        <article id="c4" class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div class="px-7 pt-7 pb-5">
+        <!-- Godot-specific note -->
+        <div class="mx-8 mb-7 rounded-lg bg-amber-50 border border-amber-200 px-5 py-4 text-sm text-amber-900">
+          <p class="font-semibold mb-1">Godot pattern note</p>
+          <p>Godot's <em>canonical</em> answer for this is Option B (Theme type variations). It is the correct architecture once the UI is stable enough to name its roles. The tradeoff right now is that your scenes are rewritten frequently — two full scene rewrites today alone. Option B adds friction (open <code class="font-mono text-xs">.tres</code>, define variation, add to project theme) on each new component. Option C is the Godot-compatible intermediate: it respects the <code class="font-mono text-xs">add_theme_font_size_override</code> method as the official way to deviate from the project default, and puts a named constant behind it.</p>
+          <p class="mt-2">One architectural fact worth knowing: for nodes built fully in GDScript (your Compendium cards, Battle summary rows), Option B <em>also</em> requires you to set <code class="font-mono text-xs">theme_type_variation = "MyVariant"</code> on each dynamically created node — it doesn't auto-apply to code-built nodes. This means Option B doesn't remove the per-node assignment; it changes what that assignment does.</p>
+        </div>
+      </article>
 
-            <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
-              <h2 class="text-xl font-serif font-semibold text-slate-900">
-                Shop.gd reaches past the ForgeSystem seam to RecipeData
-              </h2>
-              <div class="flex gap-2 flex-shrink-0">
-                <span class="text-xs font-semibold uppercase tracking-wide bg-slate-100 text-slate-700 px-2.5 py-1 rounded-full">Speculative</span>
-                <span class="text-xs font-semibold uppercase tracking-wide bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full">local-substitutable</span>
-              </div>
+      <!-- ── CANDIDATE 2 ─────────────────────────────────────────── -->
+      <article id="c2" class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div class="px-8 pt-7 pb-5">
+          <div class="flex items-start justify-between gap-4">
+            <h2 class="text-xl font-serif font-semibold text-slate-900">2 — State mutations leaking into the Shop scene</h2>
+            <div class="flex gap-2 shrink-0 mt-0.5">
+              <span class="badge-strong text-xs font-semibold px-2.5 py-1 rounded-full">Strong</span>
+              <span class="bg-slate-100 text-slate-600 text-xs font-semibold px-2.5 py-1 rounded-full">architecture rule violated</span>
             </div>
+          </div>
+          <p class="text-xs font-mono text-slate-400 mt-2">
+            scenes/Shop.gd:269, :294, :308, :377, :385, :393 · systems/ShopSystem.gd (missing entries)
+          </p>
+        </div>
 
-            <div class="font-mono text-sm text-slate-600 mb-5 space-y-0.5">
-              <div>scenes/Shop.gd <span class="text-slate-400">:114 — RecipeData.find_result() direct call</span></div>
-              <div>systems/ForgeSystem.gd <span class="text-slate-400">:preview() — already does the same lookup</span></div>
+        <!-- Diagram -->
+        <div class="grid grid-cols-2 gap-0 border-y border-slate-100">
+          <div class="px-8 py-6 border-r border-slate-100 bg-slate-50">
+            <p class="text-xs uppercase tracking-wider text-slate-400 mb-4">Before — state logic in the scene</p>
+            <div class="rounded-lg border border-slate-200 bg-white p-4">
+              <pre class="mermaid text-xs">flowchart TD
+  Shop["Shop.gd\n(scene)"]
+  GM["GameManager.state"]
+  SS["ShopSystem"]
+
+  Shop -->|"buy / sell / reroll\n→ System fn → state"| SS
+  SS --> GM
+
+  Shop -->|"swap_inv_to_grid\nswap_grid_to_inv\nswap_within_grid\nforge_slot_placed\nforge_quick_slot\nforge_slot_removed\n⚠ direct state ops"| GM
+
+  classDef leak stroke:#dc2626,stroke-width:2px,color:#dc2626;
+  class GM leak</pre>
             </div>
+          </div>
+          <div class="px-8 py-6">
+            <p class="text-xs uppercase tracking-wider text-slate-400 mb-4">After — scene is a pure dispatcher</p>
+            <div class="rounded-lg border border-slate-200 bg-white p-4">
+              <pre class="mermaid text-xs">flowchart TD
+  Shop["Shop.gd\n(scene — thin dispatcher)"]
+  GM["GameManager.state"]
+  SS["ShopSystem\n+ swap_inv_to_grid\n+ swap_within_grid\n+ move_to_forge_slot\n+ remove_from_forge_slot"]
 
-            <!-- Cross-section diagram -->
-            <div class="grid grid-cols-2 gap-4 mb-5">
-              <div>
-                <p class="text-xs uppercase tracking-wider text-slate-400 mb-2">Before — two callers of RecipeData</p>
-                <div class="rounded-lg border border-slate-200 bg-slate-50 p-3 h-52 flex flex-col justify-center gap-1">
-                  <div class="band border-yellow-400 bg-yellow-50 px-3 py-2 rounded-r text-xs font-mono text-yellow-800">Shop.gd : line 104 → ForgeSystem.preview()</div>
-                  <div class="band border-red-400 bg-red-50 px-3 py-2 rounded-r text-xs font-mono text-red-800">Shop.gd : line 114 → RecipeData.find_result()  ← reaches past seam</div>
-                  <div class="band border-blue-400 bg-blue-50 px-3 py-2 rounded-r text-xs font-mono text-blue-700">ForgeSystem.preview() → RecipeData.find_result()</div>
-                  <div class="band border-slate-400 bg-slate-100 px-3 py-2 rounded-r text-xs font-mono text-slate-600">RecipeData.find_result()</div>
-                  <p class="text-xs text-slate-400 mt-1 pl-1">Recipe-lookup logic is duplicated; two callers update if it changes.</p>
-                </div>
-              </div>
-              <div>
-                <p class="text-xs uppercase tracking-wider text-slate-400 mb-2">After — one caller of RecipeData</p>
-                <div class="rounded-lg border border-slate-200 bg-slate-50 p-3 h-52 flex flex-col justify-center gap-1">
-                  <div class="band border-yellow-400 bg-yellow-50 px-3 py-2 rounded-r text-xs font-mono text-yellow-800">Shop.gd : line 104 → ForgeSystem.preview()</div>
-                  <div class="band border-blue-400 bg-blue-50 px-3 py-2 rounded-r text-xs font-mono text-blue-700">ForgeSystem.preview() → RecipeData.find_result()</div>
-                  <div class="band border-slate-400 bg-slate-100 px-3 py-2 rounded-r text-xs font-mono text-slate-600">RecipeData.find_result()</div>
-                  <p class="text-xs text-slate-400 mt-1 pl-1">One seam. Recipe logic change touches one file.</p>
-                </div>
-              </div>
+  Shop -->|"all state ops\n→ System fn → state"| SS
+  SS --> GM
+
+  classDef deep fill:#0f172a,color:#e2e8f0,stroke:#334155;
+  class SS deep</pre>
             </div>
+          </div>
+        </div>
 
-            <p class="text-sm text-slate-700 mb-1"><span class="font-semibold">Problem.</span> <code class="text-xs bg-slate-100 px-1 rounded">Shop.gd:114</code> calls <code class="text-xs bg-slate-100 px-1 rounded">RecipeData.find_result()</code> directly to check if a recipe is known, duplicating a lookup that <code class="text-xs bg-slate-100 px-1 rounded">ForgeSystem.preview()</code> already performs internally. If recipe-lookup logic changes, two call sites need updating.</p>
-            <p class="text-sm text-slate-700 mb-3"><span class="font-semibold">Solution.</span> Remove the direct call; let <code class="text-xs bg-slate-100 px-1 rounded">ForgeSystem.preview()</code> be the single seam between scene and recipe data. One-line fix.</p>
-
-            <ul class="text-sm space-y-1 text-slate-700">
-              <li>→ <span class="font-medium">locality</span>: recipe logic concentrated behind the ForgeSystem seam</li>
-              <li>→ smallest fix in the report — take it first as a warm-up</li>
+        <div class="px-8 py-6 grid grid-cols-3 gap-8 text-sm">
+          <div>
+            <p class="text-xs uppercase tracking-wider text-slate-400 mb-2">Problem</p>
+            <p class="text-slate-700">Six state transformations live in the scene script, bypassing the system layer. They can't be tested without constructing the Godot scene tree. Bugs in forge-slot placement or grid-swapping have no test surface.</p>
+          </div>
+          <div>
+            <p class="text-xs uppercase tracking-wider text-slate-400 mb-2">Solution</p>
+            <p class="text-slate-700">Move <code class="font-mono text-xs bg-slate-100 px-0.5">_swap_inv_to_grid</code>, <code class="font-mono text-xs bg-slate-100 px-0.5">_swap_within_grid</code>, <code class="font-mono text-xs bg-slate-100 px-0.5">_swap_grid_to_inv</code>, and the three forge-slot handlers into <code class="font-mono text-xs bg-slate-100 px-0.5">ShopSystem.gd</code> as static functions. Shop.gd becomes a thin signal dispatcher only.</p>
+          </div>
+          <div>
+            <p class="text-xs uppercase tracking-wider text-slate-400 mb-2">Wins</p>
+            <ul class="space-y-1 text-slate-600">
+              <li>→ locality: all Shop-phase state logic in ShopSystem</li>
+              <li>→ leverage: testable without scene tree</li>
+              <li>→ enforces stated architecture rule (CLAUDE.md)</li>
+              <li>→ Shop.gd shrinks by ~100 lines</li>
             </ul>
           </div>
-        </article>
+        </div>
+      </article>
 
-      </section>
+      <!-- ── CANDIDATE 3 ─────────────────────────────────────────── -->
+      <article id="c3" class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div class="px-8 pt-7 pb-5">
+          <div class="flex items-start justify-between gap-4">
+            <h2 class="text-xl font-serif font-semibold text-slate-900">3 — Drag payload is an undeclared Dictionary interface</h2>
+            <div class="flex gap-2 shrink-0 mt-0.5">
+              <span class="badge-worth text-xs font-semibold px-2.5 py-1 rounded-full">Worth exploring</span>
+            </div>
+          </div>
+          <p class="text-xs font-mono text-slate-400 mt-2">
+            scenes/ShopItemTile.gd · scenes/InventorySlot.gd · scenes/BattleSlot.gd · scenes/ForgeSlot.gd · scenes/SellZone.gd
+          </p>
+        </div>
 
-      <!-- Top Recommendation -->
-      <section id="top-recommendation" class="bg-slate-900 text-slate-100 rounded-xl p-8">
-        <p class="text-xs uppercase tracking-widest text-slate-400 mb-2">Top Recommendation</p>
-        <h2 class="text-2xl font-serif font-semibold mb-3">
-          <a href="#c1" class="hover:underline text-emerald-400">Candidate 1 — Phase State Machine</a>
-        </h2>
-        <p class="text-sm text-slate-300 max-w-2xl">
-          Phase transitions are the highest-traffic seam in the game loop — every scene touches them and every test must reason about them. Right now they are nowhere: scattered across three scene scripts as direct dictionary mutations. A <code class="text-xs bg-slate-700 px-1 rounded">PhaseSystem</code> concentrates all valid transitions in one testable module, deletes the most confusing direct mutations in <code class="text-xs bg-slate-700 px-1 rounded">Battle.gd</code>, and makes the state machine verifiable without scenes. It is also the logical prerequisite for everything in the combat sprint — new round logic, result handling, replay — so deepening it now pays forward immediately.
+        <div class="grid grid-cols-2 gap-0 border-y border-slate-100">
+          <div class="px-8 py-6 border-r border-slate-100 bg-slate-50">
+            <p class="text-xs uppercase tracking-wider text-slate-400 mb-3">Before — implicit contract</p>
+            <div class="space-y-3">
+              <div class="rounded border border-slate-200 bg-white px-3 py-2 text-xs font-mono text-slate-600">
+                <span class="text-orange-600 font-semibold">{"type": "inventory", "slot": N}</span><br/>
+                <span class="text-orange-600 font-semibold">{"type": "shop", "element_id": X, "price": P, "shop_slot": N}</span><br/>
+                <span class="text-orange-600 font-semibold">{"type": "grid", "slot": N}</span>
+              </div>
+              <p class="text-xs text-slate-500">Checked by string comparison in 5 files. Rename <code>"slot"</code> → crash. No compile-time check. Every sender and every receiver must know the undocumented schema.</p>
+            </div>
+          </div>
+          <div class="px-8 py-6">
+            <p class="text-xs uppercase tracking-wider text-slate-400 mb-3">After — declared via class_name</p>
+            <pre class="text-xs font-mono bg-slate-50 rounded p-3 text-slate-600">class_name DragPayload
+
+static func inventory(slot: int) -> Dictionary:
+    return {"type": "inventory", "slot": slot}
+
+static func shop(id: String, price: int, shop_slot: int) -> Dictionary:
+    return {"type": "shop", "element_id": id,
+            "price": price, "shop_slot": shop_slot}
+
+static func grid(slot: int) -> Dictionary:
+    return {"type": "grid", "slot": slot}</pre>
+            <p class="text-xs text-slate-500 mt-2">Senders call <code class="font-mono text-xs">DragPayload.inventory(slot_index)</code>. One grep finds all payload construction sites.</p>
+          </div>
+        </div>
+
+        <div class="px-8 py-6 grid grid-cols-3 gap-8 text-sm">
+          <div>
+            <p class="text-xs uppercase tracking-wider text-slate-400 mb-2">Problem</p>
+            <p class="text-slate-700">The drag-and-drop contract is an undeclared interface — shape is only discoverable by reading all senders and receivers. Renaming a key requires grepping across 5 files with no compiler safety net.</p>
+          </div>
+          <div>
+            <p class="text-xs uppercase tracking-wider text-slate-400 mb-2">Solution</p>
+            <p class="text-slate-700">A <code class="font-mono text-xs bg-slate-100 px-0.5">DragPayload</code> module with one static factory per drag type. The schema is declared once; senders use the factories; receivers trust the shape.</p>
+          </div>
+          <div>
+            <p class="text-xs uppercase tracking-wider text-slate-400 mb-2">Wins</p>
+            <ul class="space-y-1 text-slate-600">
+              <li>→ locality: payload schema in one file</li>
+              <li>→ one grep finds all payload construction</li>
+              <li>→ rename-safe: change factory, callers update cleanly</li>
+            </ul>
+          </div>
+        </div>
+      </article>
+
+      <!-- ── CANDIDATE 4 ─────────────────────────────────────────── -->
+      <article id="c4" class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div class="px-8 pt-7 pb-5">
+          <div class="flex items-start justify-between gap-4">
+            <h2 class="text-xl font-serif font-semibold text-slate-900">4 — <code class="font-mono text-lg">_first_empty_slot</code> duplicated across two systems</h2>
+            <div class="flex gap-2 shrink-0 mt-0.5">
+              <span class="badge-spec text-xs font-semibold px-2.5 py-1 rounded-full">Speculative</span>
+            </div>
+          </div>
+          <p class="text-xs font-mono text-slate-400 mt-2">
+            systems/ShopSystem.gd:123 · systems/ForgeSystem.gd:142
+          </p>
+        </div>
+
+        <div class="px-8 py-5 text-sm grid grid-cols-3 gap-8">
+          <div>
+            <p class="text-xs uppercase tracking-wider text-slate-400 mb-2">Problem</p>
+            <p class="text-slate-700">Identical helper function (<code class="font-mono text-xs bg-slate-100 px-0.5">_first_empty_slot</code> / <code class="font-mono text-xs bg-slate-100 px-0.5">_first_empty_inv_slot</code>) in two separate system modules. Different names, same logic.</p>
+          </div>
+          <div>
+            <p class="text-xs uppercase tracking-wider text-slate-400 mb-2">Solution</p>
+            <p class="text-slate-700">Move to <code class="font-mono text-xs bg-slate-100 px-0.5">GameState.gd</code> as <code class="font-mono text-xs bg-slate-100 px-0.5">static func first_empty_slot(inv: Array) → int</code>. Both systems call <code class="font-mono text-xs bg-slate-100 px-0.5">GameState.first_empty_slot(…)</code>.</p>
+          </div>
+          <div>
+            <p class="text-xs uppercase tracking-wider text-slate-400 mb-2">Wins</p>
+            <ul class="space-y-1 text-slate-600">
+              <li>→ locality: one place if behaviour changes</li>
+              <li>→ trivial change, zero risk</li>
+            </ul>
+          </div>
+        </div>
+      </article>
+
+      <!-- ── TOP RECOMMENDATION ─────────────────────────────────── -->
+      <section id="top-recommendation" class="rounded-2xl deep-box text-white p-8">
+        <h2 class="text-xl font-serif font-semibold mb-3">Top recommendation</h2>
+        <p class="text-slate-300 text-sm mb-5">
+          If you can only do one thing, do <strong class="text-white">Candidate 2</strong> (move the 6 in-scene state mutations into ShopSystem). It restores the architecture rule your project already committed to, and it makes the shop-phase logic testable without a scene tree.
         </p>
-        <p class="mt-3 text-xs text-slate-400">Pair with Candidate 4 (one-liner) as a warm-up before committing to Candidate 1.</p>
+        <p class="text-slate-300 text-sm mb-5">
+          For the font question specifically: <strong class="text-white">Option C now, Option B later.</strong> Godot's canonical answer is Theme type variations (Option B) — it eliminates every <code class="font-mono text-xs bg-slate-700 px-0.5 rounded">add_theme_font_size_override</code> call in favour of one assigned variation string per node. But it requires the UI to be stable enough to name its roles. Your UI had two full scene rewrites today. Option C is the right intermediate: it centralises the values, creates the seam Option B needs, and costs you nothing when you're ready to migrate.
+        </p>
+        <a href="#c1" class="inline-block text-xs bg-slate-700 hover:bg-slate-600 text-slate-200 px-4 py-2 rounded-lg transition-colors">→ See Candidate 1 (font sizes)</a>
+        <a href="#c2" class="inline-block text-xs bg-emerald-800 hover:bg-emerald-700 text-emerald-100 px-4 py-2 rounded-lg transition-colors ml-2">→ See Candidate 2 (state leakage)</a>
       </section>
 
     </main>

@@ -98,9 +98,58 @@ func test_forge_order_independent() -> void:
 
 
 func test_forge_unknown_recipe_returns_state_unchanged() -> void:
-	var state := _state_with("water", "water")
+	var state := _state_with("steam", "mud")
 	var s := ForgeSystem.forge(state, 0, 1)
 	assert_eq(s["inventory"], state["inventory"])
+
+
+func test_forge_self_combo_water_produces_ice() -> void:
+	var state := _state_with("water", "water")
+	var s := ForgeSystem.forge(state, 0, 1)
+	assert_eq((s["inventory"][0] as Dictionary)["element_id"], "ice")
+
+
+func test_forge_self_combo_fire_produces_blaze() -> void:
+	var state := _state_with("fire", "fire")
+	var s := ForgeSystem.forge(state, 0, 1)
+	assert_eq((s["inventory"][0] as Dictionary)["element_id"], "blaze")
+
+
+func test_forge_self_combo_air_produces_gale() -> void:
+	var state := _state_with("air", "air")
+	var s := ForgeSystem.forge(state, 0, 1)
+	assert_eq((s["inventory"][0] as Dictionary)["element_id"], "gale")
+
+
+func test_forge_self_combo_earth_produces_boulder() -> void:
+	var state := _state_with("earth", "earth")
+	var s := ForgeSystem.forge(state, 0, 1)
+	assert_eq((s["inventory"][0] as Dictionary)["element_id"], "boulder")
+
+
+func test_forge_self_combo_removes_consumed_slot() -> void:
+	var state := _state_with("water", "water")
+	var s := ForgeSystem.forge(state, 0, 1)
+	assert_null(s["inventory"][1])
+
+
+func test_forge_self_combo_adds_to_discovered_recipes() -> void:
+	var state := _state_with("water", "water")
+	var s := ForgeSystem.forge(state, 0, 1)
+	assert_true((s["discovered_recipes"] as Array).has("ice"))
+
+
+func test_forge_self_combo_raises_shop_tier() -> void:
+	var state := _state_with("water", "water")
+	assert_eq(state["shop_tier"], 1)
+	var s := ForgeSystem.forge(state, 0, 1)
+	assert_eq(s["shop_tier"], 2)
+
+
+func test_forge_self_combo_result_starts_at_level_1() -> void:
+	var state := _state_with("fire", "fire")
+	var s := ForgeSystem.forge(state, 0, 1)
+	assert_eq((s["inventory"][0] as Dictionary)["level"], 1)
 
 
 func test_forge_does_not_mutate_original() -> void:
@@ -113,15 +162,15 @@ func test_forge_does_not_mutate_original() -> void:
 # ── preview ───────────────────────────────────────────────────────────────────
 
 func test_preview_same_element_shows_next_level() -> void:
-	var state := _state_with("water", "water")
+	var state := _state_with("steam", "steam")
 	var p := ForgeSystem.preview(state, 0, 1)
 	assert_true(p.contains("Lv2"))
 
 
-func test_preview_undiscovered_recipe_shows_question_marks() -> void:
+func test_preview_recipe_shows_result_name() -> void:
 	var state := _state_with("water", "fire")
 	var p := ForgeSystem.preview(state, 0, 1)
-	assert_eq(p, "→ ???")
+	assert_true(p.contains("Steam"))
 
 
 func test_preview_discovered_recipe_shows_name() -> void:
@@ -132,17 +181,19 @@ func test_preview_discovered_recipe_shows_name() -> void:
 
 
 func test_preview_no_recipe_returns_no_recipe_string() -> void:
-	var state := _state_with("steam", "rain")
-	# steam + rain = fog, which IS a recipe, so use two that have no recipe:
-	# Let's use two T2 elements that have no direct recipe between them
-	# steam + mud has no recipe
-	var ea: Dictionary = ElementData.find("steam").duplicate()
-	ea["element_id"] = "steam"
-	ea["level"] = 1
-	var eb: Dictionary = ElementData.find("mud").duplicate()
-	eb["element_id"] = "mud"
-	eb["level"] = 1
-	state["inventory"][0] = ea
-	state["inventory"][1] = eb
+	var state := _state_with("steam", "mud")
 	var p := ForgeSystem.preview(state, 0, 1)
 	assert_eq(p, "No recipe")
+
+
+func test_preview_self_combo_shows_result_name() -> void:
+	var state := _state_with("water", "water")
+	var p := ForgeSystem.preview(state, 0, 1)
+	assert_true(p.contains("Ice"))
+
+
+func test_preview_self_combo_discovered_shows_element_name() -> void:
+	var state := _state_with("water", "water")
+	(state["discovered_recipes"] as Array).append("ice")
+	var p := ForgeSystem.preview(state, 0, 1)
+	assert_true(p.contains("Ice"))

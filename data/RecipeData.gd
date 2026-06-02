@@ -1,16 +1,21 @@
 class_name RecipeData
 
-# 49 recipes across 5 tiers. Multiple recipes may share a result (alternate discovery paths).
-# All combinations are order-independent: a+b == b+a.
+# 25 recipes across 3 tiers. Multiple recipes may share a result (alternate discovery paths).
+# All combinations are order-independent: a+b == b+a. Self-combos (a==b) are valid.
 static func all_recipes() -> Array[Dictionary]:
 	return [
-		# ══ Tier 2 — the 6 basic pairings ══════════════════════════════════════
+		# ══ Tier 2 — the 6 basic cross-pairings ═════════════════════════════════
 		{ "a": "water", "b": "fire",      "result": "steam"      },
 		{ "a": "water", "b": "air",       "result": "rain"       },
 		{ "a": "water", "b": "earth",     "result": "mud"        },
 		{ "a": "fire",  "b": "air",       "result": "smoke"      },
 		{ "a": "fire",  "b": "earth",     "result": "lava"       },
 		{ "a": "air",   "b": "earth",     "result": "dust"       },
+		# ══ Tier 2 — self-combos ════════════════════════════════════════════════
+		{ "a": "water", "b": "water",     "result": "ice"        },
+		{ "a": "fire",  "b": "fire",      "result": "blaze"      },
+		{ "a": "air",   "b": "air",       "result": "gale"       },
+		{ "a": "earth", "b": "earth",     "result": "boulder"    },
 		# ══ Tier 3 — basics × tier-2 ════════════════════════════════════════════
 		{ "a": "steam",  "b": "air",      "result": "cloud"      },
 		{ "a": "steam",  "b": "earth",    "result": "geyser"     },
@@ -27,38 +32,6 @@ static func all_recipes() -> Array[Dictionary]:
 		{ "a": "dust",   "b": "earth",    "result": "sand"       },
 		{ "a": "dust",   "b": "air",      "result": "sandstorm"  },
 		{ "a": "dust",   "b": "rain",     "result": "clay"       },
-		# ══ Tier 4 — tier-2 × tier-3 or tier-3 × tier-3 ════════════════════════
-		{ "a": "cloud",    "b": "fire",   "result": "lightning"  },
-		{ "a": "cloud",    "b": "earth",  "result": "mountain"   },
-		{ "a": "cloud",    "b": "water",  "result": "snow"       },
-		{ "a": "storm",    "b": "earth",  "result": "earthquake" },
-		{ "a": "storm",    "b": "water",  "result": "flood"      },
-		{ "a": "plant",    "b": "earth",  "result": "forest"     },
-		{ "a": "plant",    "b": "water",  "result": "tree"       },
-		{ "a": "sand",     "b": "fire",   "result": "glass"      },
-		{ "a": "sand",     "b": "water",  "result": "beach"      },
-		{ "a": "clay",     "b": "fire",   "result": "pottery"    },
-		{ "a": "clay",     "b": "earth",  "result": "stone"      },
-		{ "a": "volcano",  "b": "water",  "result": "island"     },
-		{ "a": "swamp",    "b": "earth",  "result": "oil"        },
-		{ "a": "ash",      "b": "earth",  "result": "coal"       },
-		{ "a": "rainbow",  "b": "earth",  "result": "gem"        },
-		{ "a": "brick",    "b": "earth",  "result": "wall"       },
-		{ "a": "obsidian", "b": "air",    "result": "shard"      },
-		{ "a": "acid",     "b": "earth",  "result": "poison"     },
-		# ══ Tier 5 — deeper combinations ════════════════════════════════════════
-		{ "a": "forest",     "b": "rain",  "result": "jungle"    },
-		{ "a": "island",     "b": "rain",  "result": "jungle"    },  # alt path
-		{ "a": "forest",     "b": "fire",  "result": "wildfire"  },
-		{ "a": "lightning",  "b": "tree",  "result": "wildfire"  },  # alt path
-		{ "a": "tree",       "b": "fire",  "result": "charcoal"  },
-		{ "a": "glass",      "b": "fire",  "result": "mirror"    },
-		{ "a": "mountain",   "b": "water", "result": "glacier"   },
-		{ "a": "oil",        "b": "fire",  "result": "explosion" },
-		{ "a": "acid",       "b": "fire",  "result": "explosion" },  # alt path
-		{ "a": "gem",        "b": "fire",  "result": "diamond"   },
-		{ "a": "charcoal",   "b": "fire",  "result": "diamond"   },  # alt path
-		{ "a": "earthquake", "b": "water", "result": "tsunami"   },
 	]
 
 

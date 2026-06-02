@@ -82,6 +82,16 @@ _Avoid_: hero power, active skill, special move — until a canonical term is ch
 A mechanic allowing the player to rewatch a lost combat and retrigger it once with their Innate Ability fired at a different moment. Consumes one Replay token. Available only after a loss.
 _Avoid_: undo, time rewind
 
+### UI zones
+
+**Battlegrid**:
+The 2×2 arrangement zone inside the Shop UI where the player positions their elements before clicking Fight. Distinct from the inventory (backpack). Elements placed here fight in the combat phase.
+_Avoid_: board, bench, lineup
+
+**Battle Summary**:
+A per-element debrief shown inline at the end of a combat phase. Shows fires count, total damage dealt, and DPS for each element on both sides. Embodies the "Clinical" win/loss feel goal.
+_Avoid_: combat log, result screen, debrief
+
 ### Economy
 
 **Gold**:
@@ -95,6 +105,16 @@ _Avoid_: pick phase, card draw
 **Rarity**:
 A tier assigned to each piece that determines how frequently it appears in the shop. Working tiers: Common, Rare, Epic.
 _Avoid_: grade, quality, tier — until a canonical term is chosen
+
+### UI overlays
+
+**Item Tooltip**:
+A stats card that appears next to the cursor after hovering over an element for 0.3 seconds. Contains two sections: a stats section (tier, level, cooldown, damage, effective damage, price) and an Abilities Panel below it. Appears in the Shop and during active Battle.
+_Avoid_: stat card, hover card, popup, preview
+
+**Abilities Panel**:
+The lower section of the Item Tooltip reserved for an element's active and passive ability descriptions. Currently a placeholder.
+_Avoid_: info section, details panel, ability card
 
 ### Optional (not committed)
 

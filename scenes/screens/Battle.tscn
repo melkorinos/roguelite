@@ -1,0 +1,191 @@
+[gd_scene format=3 uid="uid://battle00001"]
+
+[ext_resource type="Script" path="res://scenes/screens/Battle.gd" id="1_battle"]
+
+[node name="Battle" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_battle")
+
+[node name="VBox" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 24.0
+offset_top = 16.0
+offset_right = -24.0
+offset_bottom = -16.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 14
+
+[node name="Header" type="Label" parent="VBox"]
+layout_mode = 2
+text = "BATTLE — Round 1"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 28
+
+[node name="Separator1" type="HSeparator" parent="VBox"]
+layout_mode = 2
+
+[node name="ControlsRow" type="HBoxContainer" parent="VBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="PauseButton" type="Button" parent="VBox/ControlsRow"]
+layout_mode = 2
+text = "⏸ Pause"
+theme_override_font_sizes/font_size = 18
+
+[node name="ControlsSpacer" type="Control" parent="VBox/ControlsRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Speed1xButton" type="Button" parent="VBox/ControlsRow"]
+layout_mode = 2
+text = "1×"
+theme_override_font_sizes/font_size = 18
+
+[node name="Speed15xButton" type="Button" parent="VBox/ControlsRow"]
+layout_mode = 2
+text = "1.5×"
+theme_override_font_sizes/font_size = 18
+
+[node name="Speed2xButton" type="Button" parent="VBox/ControlsRow"]
+layout_mode = 2
+text = "2×"
+theme_override_font_sizes/font_size = 18
+
+[node name="HpRow" type="HBoxContainer" parent="VBox"]
+layout_mode = 2
+
+[node name="PlayerHPLabel" type="Label" parent="VBox/HpRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "❤️ YOUR HP: 30"
+theme_override_font_sizes/font_size = 22
+
+[node name="OppHPLabel" type="Label" parent="VBox/HpRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+horizontal_alignment = 2
+text = "☠️ OPP HP: 20"
+theme_override_font_sizes/font_size = 22
+
+[node name="Separator2" type="HSeparator" parent="VBox"]
+layout_mode = 2
+
+[node name="BattleRow" type="HBoxContainer" parent="VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 32
+
+[node name="PlayerSide" type="VBoxContainer" parent="VBox/BattleRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 10
+
+[node name="PlayerLabel" type="Label" parent="VBox/BattleRow/PlayerSide"]
+layout_mode = 2
+text = "YOU"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 18
+
+[node name="PlayerGrid" type="GridContainer" parent="VBox/BattleRow/PlayerSide"]
+layout_mode = 2
+columns = 2
+theme_override_constants/h_separation = 8
+theme_override_constants/v_separation = 8
+
+[node name="CenterSep" type="VSeparator" parent="VBox/BattleRow"]
+layout_mode = 2
+
+[node name="OppSide" type="VBoxContainer" parent="VBox/BattleRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 10
+
+[node name="OppLabel" type="Label" parent="VBox/BattleRow/OppSide"]
+layout_mode = 2
+text = "OPPONENT"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 18
+
+[node name="OppGrid" type="GridContainer" parent="VBox/BattleRow/OppSide"]
+layout_mode = 2
+columns = 2
+theme_override_constants/h_separation = 8
+theme_override_constants/v_separation = 8
+
+[node name="Separator3" type="HSeparator" parent="VBox"]
+layout_mode = 2
+
+[node name="TimerRow" type="HBoxContainer" parent="VBox"]
+layout_mode = 2
+
+[node name="TimerLabel" type="Label" parent="VBox/TimerRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "⏱ 30.0s"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 20
+
+[node name="Separator4" type="HSeparator" parent="VBox"]
+layout_mode = 2
+
+[node name="ResultLabel" type="Label" parent="VBox"]
+layout_mode = 2
+text = ""
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 30
+visible = false
+
+[node name="ButtonRow" type="HBoxContainer" parent="VBox"]
+layout_mode = 2
+visible = false
+
+[node name="ButtonSpacer" type="Control" parent="VBox/ButtonRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="NextRoundButton" type="Button" parent="VBox/ButtonRow"]
+layout_mode = 2
+text = "Next Round"
+theme_override_font_sizes/font_size = 22
+
+[node name="SummaryButton" type="Button" parent="VBox/ButtonRow"]
+layout_mode = 2
+text = "📊 Summary"
+theme_override_font_sizes/font_size = 22
+
+[node name="MenuButton" type="Button" parent="VBox/ButtonRow"]
+layout_mode = 2
+text = "Menu"
+theme_override_font_sizes/font_size = 22
+
+[node name="SummarySeparator" type="HSeparator" parent="VBox"]
+layout_mode = 2
+visible = false
+
+[node name="SummaryPanel" type="ScrollContainer" parent="VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+visible = false
+
+[node name="SummaryVBox" type="VBoxContainer" parent="VBox/SummaryPanel"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
+[connection signal="pressed" from="VBox/ControlsRow/PauseButton" to="." method="_on_pause_pressed"]
+[connection signal="pressed" from="VBox/ControlsRow/Speed1xButton" to="." method="_on_speed_1x_pressed"]
+[connection signal="pressed" from="VBox/ControlsRow/Speed15xButton" to="." method="_on_speed_15x_pressed"]
+[connection signal="pressed" from="VBox/ControlsRow/Speed2xButton" to="." method="_on_speed_2x_pressed"]
+[connection signal="pressed" from="VBox/ButtonRow/NextRoundButton" to="." method="_on_next_round_pressed"]
+[connection signal="pressed" from="VBox/ButtonRow/SummaryButton" to="." method="_on_summary_pressed"]
+[connection signal="pressed" from="VBox/ButtonRow/MenuButton" to="." method="_on_menu_pressed"]
