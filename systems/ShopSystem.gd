@@ -1,19 +1,28 @@
 class_name ShopSystem
 
 
-static func buy_item(state: Dictionary, item_id: String) -> Dictionary:
-	var item: Dictionary = _find_item(item_id)
-	if item.is_empty():
+static func buy_item(state: Dictionary, element_id: String) -> Dictionary:
+	var elem: Dictionary = ElementData.find(element_id)
+	if elem.is_empty():
 		return state
 	var gold: int = state["gold"]
-	if gold < (item["price"] as int):
+	if gold < (elem["price"] as int):
 		return state
 	var slot: int = _first_empty_slot(state["inventory"])
 	if slot == -1:
 		return state
 	var s: Dictionary = state.duplicate(true)
-	s["gold"] = gold - (item["price"] as int)
-	s["inventory"][slot] = item.duplicate()
+	s["gold"] = gold - (elem["price"] as int)
+	var instance: Dictionary = elem.duplicate()
+	instance["element_id"] = element_id
+	instance["level"] = 1
+	s["inventory"][slot] = instance
+	var remaining: Array = []
+	for item: Variant in s["shop_items"]:
+		var it: Dictionary = item as Dictionary
+		if it["id"] != element_id:
+			remaining.append(it)
+	s["shop_items"] = remaining
 	return s
 
 
@@ -25,7 +34,10 @@ static func sell_item(state: Dictionary, slot_index: int) -> Dictionary:
 	if item == null:
 		return state
 	var s: Dictionary = state.duplicate(true)
-	s["gold"] = (s["gold"] as int) + ((item as Dictionary)["price"] as int) / 2
+	var elem: Dictionary = item as Dictionary
+	@warning_ignore("integer_division")
+	var refund: int = (elem["price"] as int) / 2
+	s["gold"] = (s["gold"] as int) + refund
 	s["inventory"][slot_index] = null
 	return s
 
@@ -36,17 +48,14 @@ static func reroll_shop(state: Dictionary, is_free: bool = false) -> Dictionary:
 	var s: Dictionary = state.duplicate(true)
 	if not is_free:
 		s["gold"] = (s["gold"] as int) - 2
-	var all: Array[Dictionary] = ItemData.all_items()
-	all.shuffle()
-	s["shop_items"] = all.slice(0, 5)
+	var tier: int = s["shop_tier"]
+	var pool: Array[Dictionary] = []
+	for elem: Dictionary in ElementData.all_elements():
+		if (elem["tier"] as int) <= tier and (elem["price"] as int) > 0:
+			pool.append(elem)
+	pool.shuffle()
+	s["shop_items"] = pool.slice(0, 4)
 	return s
-
-
-static func _find_item(item_id: String) -> Dictionary:
-	for item: Dictionary in ItemData.all_items():
-		if item["id"] == item_id:
-			return item
-	return {}
 
 
 static func _first_empty_slot(inventory: Array) -> int:

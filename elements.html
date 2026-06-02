@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Element Compendium — Auto-Battler</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #111;
+    color: #d4d4d4;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    font-size: 14px;
+    padding: 2rem;
+  }
+
+  h1 {
+    font-size: 1.6rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: #f0f0f0;
+    margin-bottom: 0.3rem;
+  }
+  .subtitle {
+    color: #555;
+    font-size: 0.8rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 2.5rem;
+  }
+
+  .tier-section { margin-bottom: 3rem; }
+
+  .tier-label {
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    font-weight: 600;
+    padding: 0.3rem 0.8rem;
+    border-radius: 4px;
+    display: inline-block;
+    margin-bottom: 1rem;
+  }
+  .lbl-t1 { background: #1e2433; color: #93a8d4; }
+  .lbl-t2 { background: #1a2e22; color: #5fba7d; }
+  .lbl-t3 { background: #2e2212; color: #d4904a; }
+  .lbl-t4 { background: #2a1a2e; color: #b87fd4; }
+  .lbl-t5 { background: #2e1414; color: #d45f5f; }
+
+  .grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .card {
+    width: 185px;
+    background: #1a1a1a;
+    border: 1px solid #2a2a2a;
+    border-radius: 8px;
+    padding: 0.9rem;
+    position: relative;
+    transition: border-color 0.15s;
+  }
+  .card:hover { border-color: #444; }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    border-radius: 8px 8px 0 0;
+  }
+  .t1 .card::before { background: #4a6fa5; }
+  .t2 .card::before { background: #3a9c5e; }
+  .t3 .card::before { background: #b06c20; }
+  .t4 .card::before { background: #8a4db0; }
+  .t5 .card::before { background: #b03030; }
+
+  .card-emoji { font-size: 1.8rem; line-height: 1; margin-bottom: 0.4rem; }
+  .card-name  { font-weight: 600; font-size: 0.95rem; color: #eee; margin-bottom: 0.5rem; }
+
+  .stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.2rem 0;
+    margin-bottom: 0.6rem;
+  }
+  .stat-key   { font-size: 0.68rem; color: #555; text-transform: uppercase; letter-spacing: 0.05em; }
+  .stat-val   { font-size: 0.78rem; color: #aaa; text-align: right; }
+  .dps-val    { color: #c8a050; font-weight: 600; }
+  .price-val  { color: #6a9a50; }
+
+  .recipes { margin-top: 0.5rem; border-top: 1px solid #2a2a2a; padding-top: 0.5rem; }
+  .recipe-row {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.72rem;
+    color: #888;
+    margin-top: 0.3rem;
+    flex-wrap: wrap;
+  }
+  .ing {
+    background: #222;
+    border: 1px solid #333;
+    border-radius: 3px;
+    padding: 0.1rem 0.35rem;
+    color: #bbb;
+    white-space: nowrap;
+  }
+  .plus { color: #444; }
+  .arrow { color: #444; font-size: 0.65rem; }
+  .alt-badge {
+    font-size: 0.6rem;
+    background: #2e2000;
+    color: #c8870a;
+    border: 1px solid #5c3d00;
+    border-radius: 3px;
+    padding: 0 0.3rem;
+    margin-left: auto;
+  }
+
+  /* Quick-ref table */
+  .ref-section { margin-top: 3rem; }
+  .ref-section h2 { font-size: 1rem; color: #888; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 1rem; }
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    max-width: 900px;
+    font-size: 0.8rem;
+  }
+  th {
+    text-align: left;
+    color: #555;
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    border-bottom: 1px solid #2a2a2a;
+    padding: 0.4rem 0.6rem;
+  }
+  td {
+    padding: 0.35rem 0.6rem;
+    border-bottom: 1px solid #1e1e1e;
+    color: #bbb;
+  }
+  tr:hover td { background: #1c1c1c; }
+  .t-badge {
+    font-size: 0.6rem;
+    padding: 0.1rem 0.35rem;
+    border-radius: 3px;
+    font-weight: 600;
+  }
+  .alt-row td { color: #6e5a30; }
+  .alt-row .ing { background: #1a1500; border-color: #3a2a00; }
+</style>
+</head>
+<body>
+
+<h1>Element Compendium</h1>
+<div class="subtitle">Auto-Battler · 48 elements · 49 recipes · 5 tiers</div>
+
+<!-- ═══════════════════════════════════════════════════════ TIER 1 -->
+<div class="tier-section t1">
+  <div class="tier-label lbl-t1">Tier 1 — Basics &nbsp;·&nbsp; 5g &nbsp;·&nbsp; no recipe needed</div>
+  <div class="grid">
+
+    <div class="card">
+      <div class="card-emoji">💧</div>
+      <div class="card-name">Water</div>
+      <div class="stats">
+        <span class="stat-key">Cooldown</span><span class="stat-val">3.0 s</span>
+        <span class="stat-key">Damage</span><span class="stat-val">1</span>
+        <span class="stat-key">DPS</span><span class="stat-val dps-val">0.33</span>
+        <span class="stat-key">Price</span><span class="stat-val price-val">5g</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-emoji">🔥</div>
+      <div class="card-name">Fire</div>
+      <div class="stats">
+        <span class="stat-key">Cooldown</span><span class="stat-val">2.5 s</span>
+        <span class="stat-key">Damage</span><span class="stat-val">2</span>
+        <span class="stat-key">DPS</span><span class="stat-val dps-val">0.80</span>
+        <span class="stat-key">Price</span><span class="stat-val price-val">5g</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-emoji">🌬️</div>
+      <div class="card-name">Air</div>
+      <div class="stats">
+        <span class="stat-key">Cooldown</span><span class="stat-val">2.0 s</span>
+        <span class="stat-key">Damage</span><span class="stat-val">1</span>
+        <span class="stat-key">DPS</span><span class="stat-val dps-val">0.50</span>
+        <span class="stat-key">Price</span><span class="stat-val price-val">5g</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-emoji">🌍</div>
+      <div class="card-name">Earth</div>
+      <div class="stats">
+        <span class="stat-key">Cooldown</span><span class="stat-val">4.0 s</span>
+        <span class="stat-key">Damage</span><span class="stat-val">1</span>
+        <span class="stat-key">DPS</span><span class="stat-val dps-val">0.25</span>
+        <span class="stat-key">Price</span><span class="stat-val price-val">5g</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ TIER 2 -->
+<div class="tier-section t2">
+  <div class="tier-label lbl-t2">Tier 2 — Basic Pairs &nbsp;·&nbsp; 8g</div>
+  <div class="grid">
+
+    <div class="card">
+      <div class="card-emoji">♨️</div>
+      <div class="card-name">Steam</div>
+      <div class="stats">
+        <span class="stat-key">Cooldown</span><span class="stat-val">3.5 s</span>
+        <span class="stat-key">Damage</span><span class="stat-val">2</span>
+        <span class="stat-key">DPS</span><span class="stat-val dps-val">0.57</span>
+        <span class="stat-key">Price</span><span class="stat-val price-val">8g</span>
+      </div>
+      <div class="recipes">
+        <div class="recipe-row"><span class="ing">💧 Water</span><span class="plus">+</span><span class="ing">🔥 Fire</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-emoji">🌧️</div>
+      <div class="card-name">Rain</div>
+      <div class="stats">
+        <span class="stat-key">Cooldown</span><span class="stat-val">3.0 s</span>
+        <span class="stat-key">Damage</span><span class="stat-val">1</span>
+        <span class="stat-key">DPS</span><span class="stat-val dps-val">0.33</span>
+        <span class="stat-key">Price</span><span class="stat-val price-val">8g</span>
+      </div>
+      <div class="recipes">
+        <div class="recipe-row"><span class="ing">💧 Water</span><span class="plus">+</span><span class="ing">🌬️ Air</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-emoji">🟫</div>
+      <div class="card-name">Mud</div>
+      <div class="stats">
+        <span class="stat-key">Cooldown</span><span class="stat-val">4.5 s</span>
+        <span class="stat-key">Damage</span><span class="stat-val">1</span>
+        <span class="stat-key">DPS</span><span class="stat-val dps-val">0.22</span>
+        <span class="stat-key">Price</span><span class="stat-val price-val">8g</span>
+      </div>
+      <div class="recipes">
+        <div class="recipe-row"><span class="ing">💧 Water</span><span class="plus">+</span><span class="ing">🌍 Earth</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-emoji">🌫️</div>
+      <div class="card-name">Smoke</div>
+      <div class="stats">
+        <span class="stat-key">Cooldown</span><span class="stat-val">2.5 s</span>
+        <span class="stat-key">Damage</span><span class="stat-val">1</span>
+        <span class="stat-key">DPS</span><span class="stat-val dps-val">0.40</span>
+        <span class="stat-key">Price</span><span class="stat-val price-val">8g</span>
+      </div>
+      <div class="recipes">
+        <div class="recipe-row"><span class="ing">🔥 Fire</span><span class="plus">+</span><span class="ing">🌬️ Air</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-emoji">🟠</div>
+      <div class="card-name">Lava</div>
+      <div class="stats">
+        <span class="stat-key">Cooldown</span><span class="stat-val">5.0 s</span>
+        <span class="stat-key">Damage</span><span class="stat-val">3</span>
+        <span class="stat-key">DPS</span><span class="stat-val dps-val">0.60</span>
+        <span class="stat-key">Price</span><span class="stat-val price-val">8g</span>
+      </div>
+      <div class="recipes">
+        <div class="recipe-row"><span class="ing">🔥 Fire</span><span class="plus">+</span><span class="ing">🌍 Earth</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-emoji">💨</div>
+      <div class="card-name">Dust</div>
+      <div class="stats">
+        <span class="stat-key">Cooldown</span><span class="stat-val">2.5 s</span>
+        <span class="stat-key">Damage</span><span class="stat-val">1</span>
+        <span class="stat-key">DPS</span><span class="stat-val dps-val">0.40</span>
+        <span class="stat-key">Price</span><span class="stat-val price-val">8g</span>
+      </div>
+      <div class="recipes">
+        <div class="recipe-row"><span class="ing">🌬️ Air</span><span class="plus">+</span><span class="ing">🌍 Earth</span></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ TIER 3 -->
+<div class="tier-section t3">
+  <div class="tier-label lbl-t3">Tier 3 — Compounded &nbsp;·&nbsp; 12g</div>
+  <div class="grid">
+
+    <div class="card">
+      <div class="card-emoji">☁️</div>
+      <div class="card-name">Cloud</div>
+      <div class="stats">
+        <span class="stat-key">Cooldown</span><span class="stat-val">3.0 s</span>
+        <span class="stat-key">Damage</span><span class="stat-val">2</span>
+        <span class="stat-key">DPS</span><span class="stat-val dps-val">0.67</span>
+        <span class="stat-key">Price</span><span class="stat-val price-val">12g</span>
+      </div>
+      <div class="recipes">
+        <div class="recipe-row"><span class="ing">♨️ Steam</span><span class="plus">+</span><span class="ing">🌬️ Air</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-emoji">💦</div>
+      <div class="card-name">Geyser</div>
+      <div class="stats">
+        <span class="stat-key">Cooldown</span><span class="stat-val">6.0 s</span>
+        <span class="stat-key">Damage</span><span class="stat-val">4</span>
+        <span class="stat-key">DPS</span><span class="stat-val dps-val">0.67</span>
+        <span class="stat-key">Price</span><span class="stat-val price-val">12g</span>
+      </div>
+      <div class="recipes">
+        <div class="recipe-row"><span class="ing">♨️ Steam</span><span class="plus">+</span><span class="ing">🌍 Earth</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-emoji">🌁</div>
+      <div class="card-name">Fog</div>
+      <div class="stats">
+        <span class="stat-key">Cooldown</span><span class="stat-val">3.5 s</span>
+        <span class="stat-key">Damage</span><span class="stat-val">1</span>
+        <span class="stat-key">DPS</span><span class="stat-val dps-val">0.29</span>
+        <span class="stat-key">Price</span><span class="stat-val price-val">12g</span>
+      </div>
+      <div class="recipes">
+        <div class="recipe-row"><span class="ing">♨️ Steam</span><span class="plus">+</span><span class="ing">🌧️ Rain</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-emoji">🌈</div>
+      <div class="card-name">Rainbow</div>
+      <div class="stats">
+        <span class="stat-key">Cooldown</span><span class="stat-val">4.0 s</span>
+        <span class="stat-key">Damage</span><span class="stat-val">2</span>
+        <span class="stat-key">DPS</span><span class="stat-val dps-val">0.50</span>
+        <span class="stat-key">Price</span><span class="stat-val price-val">12g</span>
+      </div>
+      <div class="recipes">
+        <div class="recipe-row"><span class="ing">🌧️ Rain</span><span class="plus">+</span><span class="ing">🔥 Fire</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-emoji">⛈️</div>
+      <div class="card-name">Storm</div>
+      <div class="stats">
+        <span class="stat-key">Cooldown</span><span class="stat-val">2.5 s</span>
+        <span class="stat-key">Damage</span><span class="stat-val">3</span>
+        <span class="stat-key">DPS</span><span class="stat-val dps-val">1.20</span>
+        <span class="stat-key">Price</span><span class="stat-val price-val">12g</span>
+      </div>
+      <div class="recipes">
+        <div class="recipe-row"><span class="ing">🌧️ Rain</span><span class="plus">+</span><span class="ing">🌬️ Air</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-emoji">🌿</div>
+      <div class="card-name">Plant</div>
+      <div class="stats">
+        <span class="stat-key">Cooldown</span><span class="stat-val">4.0 s</span>
+        <span class="stat-key">Damage</span><span class="stat-val">1</span>
+        <span class="stat-key">DPS</span><span class="stat-val dps-val">0.25</span>
+        <span class="stat-key">Price</span><span class="stat-val price-val">12g</span>
+      </div>
+      <div class="recipes">
+        <div class="recipe-row"><span class="ing">🌧️ Rain</span><span class="plus">+</span><span class="ing">🌍 Earth</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-emoji">🐊</div>
+      <div class="card-name">Swamp</div>
+      <div class="stats">
+        <span class="stat-key">Cooldown</span><span class="stat-val">5.0 s</span>
+        <span class="stat-key">Damage</span><span class="stat-val">2</span>
+        <span class="stat-key">DPS</span><span class="stat-val dps-val">0.40</span>
+        <span class="stat-key">Price</span><span class="stat-val price-val">12g</span>
+      </div>
+      <div class="recipes">
+        <div class="recipe-row"><span class="ing">🟫 Mud</span><span class="plus">+</span><span class="ing">🌧️ Rain</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-emoji">🧱</div>
+      <div class="card-name">Brick</div>
+      <div class="stats">
+        <span class="stat-key">Cooldown</span><span class="stat-val">5.0 s</span>
+        <span class="stat-key">Damage</span><span class="stat-val">2</span>
+        <span class="stat-key">DPS</span><span class="stat-val dps-val">0.40</span>
+        <span class="stat-key">Price</span><span class="stat-val price-val">12g</span>
+      </div>
+      <div class="recipes">
+        <div class="recipe-row"><span class="ing">🟫 Mud</span><span class="plus">+</span><span class="ing">🔥 Fire</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-emoji">⚫</div>
+      <div class="card-name">Ash</div>
+      <div class="stats">
+        <span class="stat-key">Cooldown</span><span class="stat-val">2.0 s</span>
+        <span class="stat-key">Damage</span><span class="stat-val">1</span>
+        <span class="stat-key">DPS</span><span class="stat-val dps-val">0.50</span>
+        <span class="stat-key">Price</span><span class="stat-val price-val">12g</span>
+      </div>
+      <div class="recipes">
+        <div class="recipe-row"><span class="ing">🌫️ Smoke</span><span class="plus">+</span><span class="ing">🔥 Fire</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-emoji">🧪</div>
+      <div class="card-name">Acid</div>
+      <div class="stats">
+        <span class="stat-key">Cooldown</span><span class="stat-val">3.0 s</span>
+        <span class="stat-key">Damage</span><span class="stat-val">3</span>
+        <span class="stat-key">DPS</span><span class="stat-val dps-val">1.00</span>
+        <span class="stat-key">Price</span><span class="stat-val price-val">12g</span>
+      </div>
+      <div class="recipes">
+        <div class="recipe-row"><span class="ing">🌫️ Smoke</span><span class="plus">+</span><span class="ing">🌧️ Rain</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-emoji">🪨</div>
+      <div class="card-name">Obsidian</div>
+      <div class="stats">
+        <span class="stat-key">Cooldown</span><span class="stat-val">6.0 s</span>
+        <span class="stat-key">Damage</span><span class="stat-val">3</span>
+        <span class="stat-key">DPS</span><span class="stat-val dps-val">0.50</span>
+        <span class="stat-key">Price</span><span class="stat-val price-val">12g</span>
+      </div>
+      <div class="recipes">
+        <div class="recipe-row"><span class="ing">🟠 Lava</span><span class="plus">+</span><span class="ing">💧 Water</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-emoji">🌋</div>
+      <div class="card-name">Volcano</div>
+      <div class="stats">
+        <span class="stat-key">Cooldown</span><span class="stat-val">8.0 s</span>
+        <span class="stat-key">Damage</span><span class="stat-val">6</span>
+        <span class="stat-key">DPS</span><span class="stat-val dps-val">0.75</span>
+        <span class="stat-key">Price</span><span class="stat-val price-val">12g</span>
+      </div>
+      <div class="recipes">
+        <div class="recipe-row"><span class="ing">🟠 Lava</span><span class="plus">+</span><span class="ing">🌍 Earth</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-emoji">🏜️</div>
+      <div class="card-name">Sand</div>
+      <div class="stats">
+        <span class="stat-key">Cooldown</span><span class="stat-val">3.0 s</span>
+        <span class="stat-key">Damage</span><span class="stat-val">1</span>
+        <span class="stat-key">DPS</span><span class="stat-val dps-val">0.33</span>
+        <span class="stat-key">Price</span><span class="stat-val price-val">12g</span>
+      </div>
+      <div class="recipes">
+        <div class="recipe-row"><span class="ing">💨 Dust</span><span class="plus">+</span><span class="ing">🌍 Earth</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-emoji">🌀</div>
+      <div class="card-name">Sandstorm</div>
+      <div class="stats">
+        <span class="stat-key">Cooldown</span><span class="stat-val">2.5 s</span>
+        <span class="stat-key">Damage</span><span class="stat-val">3</span>
+        <span class="stat-key">DPS</span><span class="stat-val dps-val">1.20</span>
+        <span class="stat-key">Price</span><span class="stat-val price-val">12g</span>
+      </div>
+      <div class="recipes">
+        <div class="recipe-row"><span class="ing">💨 Dust</span><span class="plus">+</span><span class="ing">🌬️ Air</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-emoji">🏺</div>
+      <div class="card-name">Clay</div>
+      <div class="stats">
+        <span class="stat-key">Cooldown</span><span class="stat-val">4.0 s</span>
+        <span class="stat-key">Damage</span><span class="stat-val">1</span>
+        <span class="stat-key">DPS</span><span class="stat-val dps-val">0.25</span>
+        <span class="stat-key">Price</span><span class="stat-val price-val">12g</span>
+      </div>
+      <div class="recipes">
+        <div class="recipe-row"><span class="ing">💨 Dust</span><span class="plus">+</span><span class="ing">🌧️ Rain</span></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ TIER 4 -->
+<div class="tier-section t4">
+  <div class="tier-label lbl-t4">Tier 4 — Deep Combinations &nbsp;·&nbsp; 16g</div>
+  <div class="grid">
+
+    <div class="card">
+      <div class="card-emoji">⚡</div>
+      <div class="card-name">Lightning</div>
+      <div class="stats">
+        <span class="stat-key">Cooldown</span><span class="stat-val">1.5 s</span>
+        <span class="stat-key">Damage</span><span class="stat-val">5</span>
+        <span class="stat-key">DPS</span><span class="stat-val dps-val">3.33</span>
+        <span class="stat-key">Price</span><span class="stat-val price-val">16g</span>
+      </div>
+      <div class="recipes">
+        <div class="recipe-row"><span class="ing">☁️ Cloud</span><span class="plus">+</span><span class="ing">🔥 Fire</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-emoji">⛰️</div>
+      <div class="card-name">Mountain</div>
+      <div class="stats">
+        <span class="stat-key">Cooldown</span><span class="stat-val">7.0 s</span>
+        <span class="stat-key">Damage</span><span class="stat-val">4</span>
+        <span class="stat-key">DPS</span><span class="stat-val dps-val">0.57</span>
+        <span class="stat-key">Price</span><span class="stat-val price-val">16g</span>
+      </div>
+      <div class="recipes">
+        <div class="recipe-row"><span class="ing">☁️ Cloud</span><span class="plus">+</span><span class="ing">🌍 Earth</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-emoji">❄️</div>
+      <div class="card-name">Snow</div>
+      <div class="stats">
+        <span class="stat-key">Cooldown</span><span class="stat-val">3.5 s</span>
+        <span class="stat-key">Damage</span><span class="stat-val">2</span>
+        <span class="stat-key">DPS</span><span class="stat-val dps-val">0.57</span>
+        <span class="stat-key">Price</span><span class="stat-val price-val">16g</span>
+      </div>
+      <div class="recipes">
+        <div class="recipe-row"><span class="ing">☁️ Cloud</span><span class="plus">+</span><span class="ing">💧 Water</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-emoji">💢</div>
+      <div class="card-name">Earthquake</div>
+      <div class="stats">
+        <span class="stat-key">Cooldown</span><span class="stat-val">8.0 s</span>
+        <span class="stat-key">Damage</span><span class="stat-val">5</span>
+        <span class="stat-key">DPS</span><span class="stat-val dps-val">0.63</span>
+        <span class="stat-key">Price</span><span class="stat-val price-val">16g</span>
+      </div>
+      <div class="recipes">
+        <div class="recipe-row"><span class="ing">⛈️ Storm</span><span class="plus">+</span><span class="ing">🌍 Earth</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-emoji">🌊</div>
+      <div class="card-name">Flood</div>
+      <div class="stats">
+        <span class="stat-key">Cooldown</span><span class="stat-val">5.0 s</span>
+        <span class="stat-key">Damage</span><span class="stat-val">4</span>
+        <span class="stat-key">DPS</span><span class="stat-val dps-val">0.80</span>
+        <span class="stat-key">Price</span><span class="stat-val price-val">16g</span>
+      </div>
+      <div class="recipes">
+        <div class="recipe-row"><span class="ing">⛈️ Storm</span><span class="plus">+</span><span class="ing">💧 Water</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-emoji">🌲</div>
+      <div class="card-name">Forest</div>
+      <div class="stats">
+        <span class="stat-key">Cooldown</span><span class="stat-val">5.0 s</span>
+        <span class="stat-key">Damage</span><span class="stat-val">2</span>
+        <span class="stat-key">DPS</span><span class="stat-val dps-val">0.40</span>
+        <span class="stat-key">Price</span><span class="stat-val price-val">16g</span>
+      </div>
+      <div class="recipes">
+        <div class="recipe-row"><span class="ing">🌿 Plant</span><span class="plus">+</span><span class="ing">🌍 Earth</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-emoji">🌳</div>
+      <div class="card-name">Tree</div>
+      <div class="stats">
+        <span class="stat-key">Cooldown</span><span class="stat-val">4.5 s</span>
+        <span class="stat-key">Damage</span><span class="stat-val">2</span>
+        <span class="stat-key">DPS</span><span class="stat-val dps-val">0.44</span>
+        <span class="stat-key">Price</span><span class="stat-val price-val">16g</span>
+      </div>
+      <div class="recipes">
+        <div class="recipe-row"><span class="ing">🌿 Plant</span><span class="plus">+</span><span class="ing">💧 Water</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-emoji">🪟</div>
+      <div class="card-name">Glass</div>
+      <div class="stats">
+        <span class="stat-key">Cooldown</span><span class="stat-val">3.0 s</span>
+        <span class="stat-key">Damage</span><span class="stat-val">2</span>
+        <span class="stat-key">DPS</span><span class="stat-val dps-val">0.67</span>
+        <span class="stat-key">Price</span><span class="stat-val price-val">16g</span>
+      </div>
+      <div class="recipes">
+        <div class="recipe-row"><span class="ing">🏜️ Sand</span><span class="plus">+</span><span class="ing">🔥 Fire</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-emoji">🏖️</div>
+      <div class="card-name">Beach</div>
+      <div class="stats">
+        <span class="stat-key">Cooldown</span><span class="stat-val">4.0 s</span>
+        <span class="stat-key">Damage</span><span class="stat-val">1</span>
+        <span class="stat-key">DPS</span><span class="stat-val dps-val">0.25</span>
+        <span class="stat-key">Price</span><span class="stat-val price-val">16g</span>
+      </div>
+      <div class="recipes">
+        <div class="recipe-row"><span class="ing">🏜️ Sand</span><span class="plus">+</span><span class="ing">💧 Water</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-emoji">🫙</div>
+      <div class="card-name">Pottery</div>
+      <div class="stats">
+        <span class="stat-key">Cooldown</span><span class="stat-val">5.0 s</span>
+        <span class="stat-key">Damage</span><span class="stat-val">2</span>
+        <span class="stat-key">DPS</span><span class="stat-val dps-val">0.40</span>
+        <span class="stat-key">Price</span><span class="stat-val price-val">16g</span>
+      </div>
+      <div class="recipes">
+        <div class="recipe-row"><span class="ing">🏺 Clay</span><span class="plus">+</span><span class="ing">🔥 Fire</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-emoji">🗿</div>
+      <div class="card-name">Stone</div>
+      <div class="stats">
+        <span class="stat-key">Cooldown</span><span class="stat-val">6.0 s</span>
+        <span class="stat-key">Damage</span><span class="stat-val">3</span>
+        <span class="stat-key">DPS</span><span class="stat-val dps-val">0.50</span>
+        <span class="stat-key">Price</span><span class="stat-val price-val">16g</span>
+      </div>
+      <div class="recipes">
+        <div class="recipe-row"><span class="ing">🏺 Clay</span><span class="plus">+</span><span class="ing">🌍 Earth</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-emoji">🏝️</div>
+      <div class="card-name">Island</div>
+      <div class="stats">
+        <span class="stat-key">Cooldown</span><span class="stat-val">7.0 s</span>
+        <span class="stat-key">Damage</span><span class="stat-val">3</span>
+        <span class="stat-key">DPS</span><span class="stat-val dps-val">0.43</span>
+        <span class="stat-key">Price</span><span class="stat-val price-val">16g</span>
+      </div>
+      <div class="recipes">
+        <div class="recipe-row"><span class="ing">🌋 Volcano</span><span class="plus">+</span><span class="ing">💧 Water</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-emoji">🛢️</div>
+      <div class="card-name">Oil</div>
+      <div class="stats">
+        <span class="stat-key">Cooldown</span><span class="stat-val">4.0 s</span>
+        <span class="stat-key">Damage</span><span class="stat-val">2</span>
+        <span class="stat-key">DPS</span><span class="stat-val dps-val">0.50</span>
+        <span class="stat-key">Price</span><span class="stat-val price-val">16g</span>
+      </div>
+      <div class="recipes">
+        <div class="recipe-row"><span class="ing">🐊 Swamp</span><span class="plus">+</span><span class="ing">🌍 Earth</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-emoji">⛏️</div>
+      <div class="card-name">Coal</div>
+      <div class="stats">
+        <span class="stat-key">Cooldown</span><span class="stat-val">5.0 s</span>
+        <span class="stat-key">Damage</span><span class="stat-val">3</span>
+        <span class="stat-key">DPS</span><span class="stat-val dps-val">0.60</span>
+        <span class="stat-key">Price</span><span class="stat-val price-val">16g</span>
+      </div>
+      <div class="recipes">
+        <div class="recipe-row"><span class="ing">⚫ Ash</span><span class="plus">+</span><span class="ing">🌍 Earth</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-emoji">💎</div>
+      <div class="card-name">Gem</div>
+      <div class="stats">
+        <span class="stat-key">Cooldown</span><span class="stat-val">5.0 s</span>
+        <span class="stat-key">Damage</span><span class="stat-val">3</span>
+        <span class="stat-key">DPS</span><span class="stat-val dps-val">0.60</span>
+        <span class="stat-key">Price</span><span class="stat-val price-val">16g</span>
+      </div>
+      <div class="recipes">
+        <div class="recipe-row"><span class="ing">🌈 Rainbow</span><span class="plus">+</span><span class="ing">🌍 Earth</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-emoji">🏗️</div>
+      <div class="card-name">Wall</div>
+      <div class="stats">
+        <span class="stat-key">Cooldown</span><span class="stat-val">6.0 s</span>
+        <span class="stat-key">Damage</span><span class="stat-val">2</span>
+        <span class="stat-key">DPS</span><span class="stat-val dps-val">0.33</span>
+        <span class="stat-key">Price</span><span class="stat-val price-val">16g</span>
+      </div>
+      <div class="recipes">
+        <div class="recipe-row"><span class="ing">🧱 Brick</span><span class="plus">+</span><span class="ing">🌍 Earth</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-emoji">🔷</div>
+      <div class="card-name">Shard</div>
+      <div class="stats">
+        <span class="stat-key">Cooldown</span><span class="stat-val">4.0 s</span>
+        <span class="stat-key">Damage</span><span class="stat-val">3</span>
+        <span class="stat-key">DPS</span><span class="stat-val dps-val">0.75</span>
+        <span class="stat-key">Price</span><span class="stat-val price-val">16g</span>
+      </div>
+      <div class="recipes">
+        <div class="recipe-row"><span class="ing">🪨 Obsidian</span><span class="plus">+</span><span class="ing">🌬️ Air</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-emoji">☠️</div>
+      <div class="card-name">Poison</div>
+      <div class="stats">
+        <span class="stat-key">Cooldown</span><span class="stat-val">3.5 s</span>
+        <span class="stat-key">Damage</span><span class="stat-val">3</span>
+        <span class="stat-key">DPS</span><span class="stat-val dps-val">0.86</span>
+        <span class="stat-key">Price</span><span class="stat-val price-val">16g</span>
+      </div>
+      <div class="recipes">
+        <div class="recipe-row"><span class="ing">🧪 Acid</span><span class="plus">+</span><span class="ing">🌍 Earth</span></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ TIER 5 -->
+<div class="tier-section t5">
+  <div class="tier-label lbl-t5">Tier 5 — Endgame &nbsp;·&nbsp; 20g</div>
+  <div class="grid">
+
+    <div class="card">
+      <div class="card-emoji">🌴</div>
+      <div class="card-name">Jungle</div>
+      <div class="stats">
+        <span class="stat-key">Cooldown</span><span class="stat-val">5.0 s</span>
+        <span class="stat-key">Damage</span><span class="stat-val">3</span>
+        <span class="stat-key">DPS</span><span class="stat-val dps-val">0.60</span>
+        <span class="stat-key">Price</span><span class="stat-val price-val">20g</span>
+      </div>
+      <div class="recipes">
+        <div class="recipe-row"><span class="ing">🌲 Forest</span><span class="plus">+</span><span class="ing">🌧️ Rain</span></div>
+        <div class="recipe-row"><span class="ing">🏝️ Island</span><span class="plus">+</span><span class="ing">🌧️ Rain</span><span class="alt-badge">alt</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-emoji">🔆</div>
+      <div class="card-name">Wildfire</div>
+      <div class="stats">
+        <span class="stat-key">Cooldown</span><span class="stat-val">2.0 s</span>
+        <span class="stat-key">Damage</span><span class="stat-val">4</span>
+        <span class="stat-key">DPS</span><span class="stat-val dps-val">2.00</span>
+        <span class="stat-key">Price</span><span class="stat-val price-val">20g</span>
+      </div>
+      <div class="recipes">
+        <div class="recipe-row"><span class="ing">🌲 Forest</span><span class="plus">+</span><span class="ing">🔥 Fire</span></div>
+        <div class="recipe-row"><span class="ing">⚡ Lightning</span><span class="plus">+</span><span class="ing">🌳 Tree</span><span class="alt-badge">alt</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-emoji">🪵</div>
+      <div class="card-name">Charcoal</div>
+      <div class="stats">
+        <span class="stat-key">Cooldown</span><span class="stat-val">4.5 s</span>
+        <span class="stat-key">Damage</span><span class="stat-val">3</span>
+        <span class="stat-key">DPS</span><span class="stat-val dps-val">0.67</span>
+        <span class="stat-key">Price</span><span class="stat-val price-val">20g</span>
+      </div>
+      <div class="recipes">
+        <div class="recipe-row"><span class="ing">🌳 Tree</span><span class="plus">+</span><span class="ing">🔥 Fire</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-emoji">🪞</div>
+      <div class="card-name">Mirror</div>
+      <div class="stats">
+        <span class="stat-key">Cooldown</span><span class="stat-val">4.0 s</span>
+        <span class="stat-key">Damage</span><span class="stat-val">3</span>
+        <span class="stat-key">DPS</span><span class="stat-val dps-val">0.75</span>
+        <span class="stat-key">Price</span><span class="stat-val price-val">20g</span>
+      </div>
+      <div class="recipes">
+        <div class="recipe-row"><span class="ing">🪟 Glass</span><span class="plus">+</span><span class="ing">🔥 Fire</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-emoji">🧊</div>
+      <div class="card-name">Glacier</div>
+      <div class="stats">
+        <span class="stat-key">Cooldown</span><span class="stat-val">7.0 s</span>
+        <span class="stat-key">Damage</span><span class="stat-val">4</span>
+        <span class="stat-key">DPS</span><span class="stat-val dps-val">0.57</span>
+        <span class="stat-key">Price</span><span class="stat-val price-val">20g</span>
+      </div>
+      <div class="recipes">
+        <div class="recipe-row"><span class="ing">⛰️ Mountain</span><span class="plus">+</span><span class="ing">💧 Water</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-emoji">💥</div>
+      <div class="card-name">Explosion</div>
+      <div class="stats">
+        <span class="stat-key">Cooldown</span><span class="stat-val">3.0 s</span>
+        <span class="stat-key">Damage</span><span class="stat-val">6</span>
+        <span class="stat-key">DPS</span><span class="stat-val dps-val">2.00</span>
+        <span class="stat-key">Price</span><span class="stat-val price-val">20g</span>
+      </div>
+      <div class="recipes">
+        <div class="recipe-row"><span class="ing">🛢️ Oil</span><span class="plus">+</span><span class="ing">🔥 Fire</span></div>
+        <div class="recipe-row"><span class="ing">🧪 Acid</span><span class="plus">+</span><span class="ing">🔥 Fire</span><span class="alt-badge">alt</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-emoji">💠</div>
+      <div class="card-name">Diamond</div>
+      <div class="stats">
+        <span class="stat-key">Cooldown</span><span class="stat-val">6.0 s</span>
+        <span class="stat-key">Damage</span><span class="stat-val">5</span>
+        <span class="stat-key">DPS</span><span class="stat-val dps-val">0.83</span>
+        <span class="stat-key">Price</span><span class="stat-val price-val">20g</span>
+      </div>
+      <div class="recipes">
+        <div class="recipe-row"><span class="ing">💎 Gem</span><span class="plus">+</span><span class="ing">🔥 Fire</span></div>
+        <div class="recipe-row"><span class="ing">🪵 Charcoal</span><span class="plus">+</span><span class="ing">🔥 Fire</span><span class="alt-badge">alt</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-emoji">🐚</div>
+      <div class="card-name">Tsunami</div>
+      <div class="stats">
+        <span class="stat-key">Cooldown</span><span class="stat-val">6.0 s</span>
+        <span class="stat-key">Damage</span><span class="stat-val">6</span>
+        <span class="stat-key">DPS</span><span class="stat-val dps-val">1.00</span>
+        <span class="stat-key">Price</span><span class="stat-val price-val">20g</span>
+      </div>
+      <div class="recipes">
+        <div class="recipe-row"><span class="ing">💢 Earthquake</span><span class="plus">+</span><span class="ing">💧 Water</span></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ QUICK-REF TABLE -->
+<div class="ref-section">
+  <h2>All 49 Recipes — Quick Reference</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Tier</th>
+        <th>Ingredient A</th>
+        <th></th>
+        <th>Ingredient B</th>
+        <th>→</th>
+        <th>Result</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- T2 -->
+      <tr><td><span class="tier-badge lbl-t2 t-badge">T2</span></td><td>💧 Water</td><td class="plus">+</td><td>🔥 Fire</td><td class="arrow">→</td><td>♨️ Steam</td></tr>
+      <tr><td><span class="tier-badge lbl-t2 t-badge">T2</span></td><td>💧 Water</td><td class="plus">+</td><td>🌬️ Air</td><td class="arrow">→</td><td>🌧️ Rain</td></tr>
+      <tr><td><span class="tier-badge lbl-t2 t-badge">T2</span></td><td>💧 Water</td><td class="plus">+</td><td>🌍 Earth</td><td class="arrow">→</td><td>🟫 Mud</td></tr>
+      <tr><td><span class="tier-badge lbl-t2 t-badge">T2</span></td><td>🔥 Fire</td><td class="plus">+</td><td>🌬️ Air</td><td class="arrow">→</td><td>🌫️ Smoke</td></tr>
+      <tr><td><span class="tier-badge lbl-t2 t-badge">T2</span></td><td>🔥 Fire</td><td class="plus">+</td><td>🌍 Earth</td><td class="arrow">→</td><td>🟠 Lava</td></tr>
+      <tr><td><span class="tier-badge lbl-t2 t-badge">T2</span></td><td>🌬️ Air</td><td class="plus">+</td><td>🌍 Earth</td><td class="arrow">→</td><td>💨 Dust</td></tr>
+      <!-- T3 -->
+      <tr><td><span class="tier-badge lbl-t3 t-badge">T3</span></td><td>♨️ Steam</td><td class="plus">+</td><td>🌬️ Air</td><td class="arrow">→</td><td>☁️ Cloud</td></tr>
+      <tr><td><span class="tier-badge lbl-t3 t-badge">T3</span></td><td>♨️ Steam</td><td class="plus">+</td><td>🌍 Earth</td><td class="arrow">→</td><td>💦 Geyser</td></tr>
+      <tr><td><span class="tier-badge lbl-t3 t-badge">T3</span></td><td>♨️ Steam</td><td class="plus">+</td><td>🌧️ Rain</td><td class="arrow">→</td><td>🌁 Fog</td></tr>
+      <tr><td><span class="tier-badge lbl-t3 t-badge">T3</span></td><td>🌧️ Rain</td><td class="plus">+</td><td>🔥 Fire</td><td class="arrow">→</td><td>🌈 Rainbow</td></tr>
+      <tr><td><span class="tier-badge lbl-t3 t-badge">T3</span></td><td>🌧️ Rain</td><td class="plus">+</td><td>🌬️ Air</td><td class="arrow">→</td><td>⛈️ Storm</td></tr>
+      <tr><td><span class="tier-badge lbl-t3 t-badge">T3</span></td><td>🌧️ Rain</td><td class="plus">+</td><td>🌍 Earth</td><td class="arrow">→</td><td>🌿 Plant</td></tr>
+      <tr><td><span class="tier-badge lbl-t3 t-badge">T3</span></td><td>🟫 Mud</td><td class="plus">+</td><td>🌧️ Rain</td><td class="arrow">→</td><td>🐊 Swamp</td></tr>
+      <tr><td><span class="tier-badge lbl-t3 t-badge">T3</span></td><td>🟫 Mud</td><td class="plus">+</td><td>🔥 Fire</td><td class="arrow">→</td><td>🧱 Brick</td></tr>
+      <tr><td><span class="tier-badge lbl-t3 t-badge">T3</span></td><td>🌫️ Smoke</td><td class="plus">+</td><td>🔥 Fire</td><td class="arrow">→</td><td>⚫ Ash</td></tr>
+      <tr><td><span class="tier-badge lbl-t3 t-badge">T3</span></td><td>🌫️ Smoke</td><td class="plus">+</td><td>🌧️ Rain</td><td class="arrow">→</td><td>🧪 Acid</td></tr>
+      <tr><td><span class="tier-badge lbl-t3 t-badge">T3</span></td><td>🟠 Lava</td><td class="plus">+</td><td>💧 Water</td><td class="arrow">→</td><td>🪨 Obsidian</td></tr>
+      <tr><td><span class="tier-badge lbl-t3 t-badge">T3</span></td><td>🟠 Lava</td><td class="plus">+</td><td>🌍 Earth</td><td class="arrow">→</td><td>🌋 Volcano</td></tr>
+      <tr><td><span class="tier-badge lbl-t3 t-badge">T3</span></td><td>💨 Dust</td><td class="plus">+</td><td>🌍 Earth</td><td class="arrow">→</td><td>🏜️ Sand</td></tr>
+      <tr><td><span class="tier-badge lbl-t3 t-badge">T3</span></td><td>💨 Dust</td><td class="plus">+</td><td>🌬️ Air</td><td class="arrow">→</td><td>🌀 Sandstorm</td></tr>
+      <tr><td><span class="tier-badge lbl-t3 t-badge">T3</span></td><td>💨 Dust</td><td class="plus">+</td><td>🌧️ Rain</td><td class="arrow">→</td><td>🏺 Clay</td></tr>
+      <!-- T4 -->
+      <tr><td><span class="tier-badge lbl-t4 t-badge">T4</span></td><td>☁️ Cloud</td><td class="plus">+</td><td>🔥 Fire</td><td class="arrow">→</td><td>⚡ Lightning</td></tr>
+      <tr><td><span class="tier-badge lbl-t4 t-badge">T4</span></td><td>☁️ Cloud</td><td class="plus">+</td><td>🌍 Earth</td><td class="arrow">→</td><td>⛰️ Mountain</td></tr>
+      <tr><td><span class="tier-badge lbl-t4 t-badge">T4</span></td><td>☁️ Cloud</td><td class="plus">+</td><td>💧 Water</td><td class="arrow">→</td><td>❄️ Snow</td></tr>
+      <tr><td><span class="tier-badge lbl-t4 t-badge">T4</span></td><td>⛈️ Storm</td><td class="plus">+</td><td>🌍 Earth</td><td class="arrow">→</td><td>💢 Earthquake</td></tr>
+      <tr><td><span class="tier-badge lbl-t4 t-badge">T4</span></td><td>⛈️ Storm</td><td class="plus">+</td><td>💧 Water</td><td class="arrow">→</td><td>🌊 Flood</td></tr>
+      <tr><td><span class="tier-badge lbl-t4 t-badge">T4</span></td><td>🌿 Plant</td><td class="plus">+</td><td>🌍 Earth</td><td class="arrow">→</td><td>🌲 Forest</td></tr>
+      <tr><td><span class="tier-badge lbl-t4 t-badge">T4</span></td><td>🌿 Plant</td><td class="plus">+</td><td>💧 Water</td><td class="arrow">→</td><td>🌳 Tree</td></tr>
+      <tr><td><span class="tier-badge lbl-t4 t-badge">T4</span></td><td>🏜️ Sand</td><td class="plus">+</td><td>🔥 Fire</td><td class="arrow">→</td><td>🪟 Glass</td></tr>
+      <tr><td><span class="tier-badge lbl-t4 t-badge">T4</span></td><td>🏜️ Sand</td><td class="plus">+</td><td>💧 Water</td><td class="arrow">→</td><td>🏖️ Beach</td></tr>
+      <tr><td><span class="tier-badge lbl-t4 t-badge">T4</span></td><td>🏺 Clay</td><td class="plus">+</td><td>🔥 Fire</td><td class="arrow">→</td><td>🫙 Pottery</td></tr>
+      <tr><td><span class="tier-badge lbl-t4 t-badge">T4</span></td><td>🏺 Clay</td><td class="plus">+</td><td>🌍 Earth</td><td class="arrow">→</td><td>🗿 Stone</td></tr>
+      <tr><td><span class="tier-badge lbl-t4 t-badge">T4</span></td><td>🌋 Volcano</td><td class="plus">+</td><td>💧 Water</td><td class="arrow">→</td><td>🏝️ Island</td></tr>
+      <tr><td><span class="tier-badge lbl-t4 t-badge">T4</span></td><td>🐊 Swamp</td><td class="plus">+</td><td>🌍 Earth</td><td class="arrow">→</td><td>🛢️ Oil</td></tr>
+      <tr><td><span class="tier-badge lbl-t4 t-badge">T4</span></td><td>⚫ Ash</td><td class="plus">+</td><td>🌍 Earth</td><td class="arrow">→</td><td>⛏️ Coal</td></tr>
+      <tr><td><span class="tier-badge lbl-t4 t-badge">T4</span></td><td>🌈 Rainbow</td><td class="plus">+</td><td>🌍 Earth</td><td class="arrow">→</td><td>💎 Gem</td></tr>
+      <tr><td><span class="tier-badge lbl-t4 t-badge">T4</span></td><td>🧱 Brick</td><td class="plus">+</td><td>🌍 Earth</td><td class="arrow">→</td><td>🏗️ Wall</td></tr>
+      <tr><td><span class="tier-badge lbl-t4 t-badge">T4</span></td><td>🪨 Obsidian</td><td class="plus">+</td><td>🌬️ Air</td><td class="arrow">→</td><td>🔷 Shard</td></tr>
+      <tr><td><span class="tier-badge lbl-t4 t-badge">T4</span></td><td>🧪 Acid</td><td class="plus">+</td><td>🌍 Earth</td><td class="arrow">→</td><td>☠️ Poison</td></tr>
+      <!-- T5 -->
+      <tr><td><span class="tier-badge lbl-t5 t-badge">T5</span></td><td>🌲 Forest</td><td class="plus">+</td><td>🌧️ Rain</td><td class="arrow">→</td><td>🌴 Jungle</td></tr>
+      <tr class="alt-row"><td><span class="tier-badge lbl-t5 t-badge">T5</span></td><td><span class="ing">🏝️ Island</span></td><td class="plus">+</td><td><span class="ing">🌧️ Rain</span></td><td class="arrow">→</td><td>🌴 Jungle <span class="alt-badge">alt</span></td></tr>
+      <tr><td><span class="tier-badge lbl-t5 t-badge">T5</span></td><td>🌲 Forest</td><td class="plus">+</td><td>🔥 Fire</td><td class="arrow">→</td><td>🔆 Wildfire</td></tr>
+      <tr class="alt-row"><td><span class="tier-badge lbl-t5 t-badge">T5</span></td><td><span class="ing">⚡ Lightning</span></td><td class="plus">+</td><td><span class="ing">🌳 Tree</span></td><td class="arrow">→</td><td>🔆 Wildfire <span class="alt-badge">alt</span></td></tr>
+      <tr><td><span class="tier-badge lbl-t5 t-badge">T5</span></td><td>🌳 Tree</td><td class="plus">+</td><td>🔥 Fire</td><td class="arrow">→</td><td>🪵 Charcoal</td></tr>
+      <tr><td><span class="tier-badge lbl-t5 t-badge">T5</span></td><td>🪟 Glass</td><td class="plus">+</td><td>🔥 Fire</td><td class="arrow">→</td><td>🪞 Mirror</td></tr>
+      <tr><td><span class="tier-badge lbl-t5 t-badge">T5</span></td><td>⛰️ Mountain</td><td class="plus">+</td><td>💧 Water</td><td class="arrow">→</td><td>🧊 Glacier</td></tr>
+      <tr><td><span class="tier-badge lbl-t5 t-badge">T5</span></td><td>🛢️ Oil</td><td class="plus">+</td><td>🔥 Fire</td><td class="arrow">→</td><td>💥 Explosion</td></tr>
+      <tr class="alt-row"><td><span class="tier-badge lbl-t5 t-badge">T5</span></td><td><span class="ing">🧪 Acid</span></td><td class="plus">+</td><td><span class="ing">🔥 Fire</span></td><td class="arrow">→</td><td>💥 Explosion <span class="alt-badge">alt</span></td></tr>
+      <tr><td><span class="tier-badge lbl-t5 t-badge">T5</span></td><td>💎 Gem</td><td class="plus">+</td><td>🔥 Fire</td><td class="arrow">→</td><td>💠 Diamond</td></tr>
+      <tr class="alt-row"><td><span class="tier-badge lbl-t5 t-badge">T5</span></td><td><span class="ing">🪵 Charcoal</span></td><td class="plus">+</td><td><span class="ing">🔥 Fire</span></td><td class="arrow">→</td><td>💠 Diamond <span class="alt-badge">alt</span></td></tr>
+      <tr><td><span class="tier-badge lbl-t5 t-badge">T5</span></td><td>💢 Earthquake</td><td class="plus">+</td><td>💧 Water</td><td class="arrow">→</td><td>🐚 Tsunami</td></tr>
+    </tbody>
+  </table>
+</div>
+
+</body>
+</html>

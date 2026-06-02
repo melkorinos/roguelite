@@ -42,16 +42,14 @@ func _rebuild_player_items(s: Dictionary) -> void:
 	var list = $VBox/BattleRow/PlayerCol/PlayerItemList
 	for child in list.get_children():
 		child.queue_free()
-	for item in s["inventory"]:
+	for item: Variant in s["inventory"]:
 		if item == null:
 			continue
-		var lbl = Label.new()
-		var stats := []
-		if item["attack"] != 0:
-			stats.append("%+datk" % item["attack"])
-		if item["defence"] != 0:
-			stats.append("%+ddef" % item["defence"])
-		lbl.text = "%s (%s)" % [item["name"], "  ".join(stats)] if stats.size() > 0 else item["name"]
+		var elem: Dictionary = item as Dictionary
+		var lbl := Label.new()
+		lbl.text = "%s %s Lv%d  %ddmg  %.1fs" % [
+			elem["emoji"], elem["name"], elem["level"], elem["damage"], elem["cooldown"],
+		]
 		list.add_child(lbl)
 
 

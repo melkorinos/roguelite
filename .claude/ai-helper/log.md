@@ -1,5 +1,20 @@
 # Development Log
 
+## 2026-06-02 — Element system prototype (buying, leveling, forging backbone)
+- Resolved primary play object: **Scenario C confirmed** — elements are the fighters, no unit/character layer
+- `data/ItemData.gd` deleted; replaced by `data/ElementData.gd` (4 basics + 6 tier-2 combos with cooldown/damage)
+- `data/RecipeData.gd` added — order-independent recipe lookup for all 6 basic pairings
+- `data/GameState.gd` updated — 6 inventory slots, `shop_tier`, `discovered_recipes`
+- `systems/ForgeSystem.gd` added — `level_up`, `forge`, `preview` (all pure static, no scene refs)
+- `systems/ShopSystem.gd` updated — uses ElementData + tier filtering; sells refund half of price
+- `systems/BattleSystem.gd` updated — reads `damage` not `attack/defence` from elements
+- `scenes/Shop.tscn` updated — added Forge Bench section (ForgeInfoLabel, LevelUpButton, ForgeButton, SellButton, ForgeResultLabel)
+- `scenes/Shop.gd` rewritten — slot selection, forge/level-up/sell actions, result preview for known vs unknown recipes
+- `test/unit/test_game_state.gd` updated — inventory size assertion 5→6
+- Boot check: exit 0. All 6 classes registered cleanly.
+- Godot added to PATH via `C:\Users\Dimitris\bin\godot.cmd` wrapper pointing at `E:\desktop\Godot_v4.6.3-stable_win64_console.exe`
+- memory.md updated: primary play object settled, element system documented, combat model updated to real-time deterministic
+
 ## 2026-05-25
 - Initialized project scaffold via architecture grilling session
 - Confirmed toolchain: Vite + TypeScript + pnpm + Vitest + Phaser 3

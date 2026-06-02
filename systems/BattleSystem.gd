@@ -6,13 +6,11 @@ const OPPONENT_HP: int = 20
 
 
 static func get_player_stats(inventory: Array) -> Dictionary:
-	var atk: int = 0
-	var def: int = 0
+	var dmg: int = 0
 	for item: Variant in inventory:
 		if item != null:
-			atk += (item as Dictionary).get("attack", 0)
-			def += (item as Dictionary).get("defence", 0)
-	return { "attack": atk, "defence": def }
+			dmg += (item as Dictionary).get("damage", 0)
+	return { "damage": dmg }
 
 
 static func tick_battle(state: Dictionary, delta: float) -> Dictionary:

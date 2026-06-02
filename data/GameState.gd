@@ -8,8 +8,10 @@ static func create() -> Dictionary:
 		"player_hp": 30,
 		"opponent_hp": 20,
 		"gold": 10,
-		"inventory": [null, null, null, null, null],
+		"inventory": [null, null, null, null, null, null],
 		"shop_items": [],
+		"shop_tier": 1,
+		"discovered_recipes": [],
 		"battle_timer": 0.0,
 		"sandstorm_fired": false,
 	}

@@ -22,8 +22,8 @@ func test_create_has_correct_starting_hp() -> void:
 	assert_eq(state["opponent_hp"], 20)
 
 
-func test_create_inventory_has_five_empty_slots() -> void:
+func test_create_inventory_has_six_empty_slots() -> void:
 	var state := GameState.create()
-	assert_eq(state["inventory"].size(), 5)
+	assert_eq(state["inventory"].size(), 6)
 	for slot: Variant in state["inventory"]:
 		assert_null(slot)

@@ -72,10 +72,11 @@ godot --headless --quit     # boot check — exit 0 means scripts load and autol
 Requires `godot` on PATH. On Windows: add the Godot editor directory to system PATH.
 CI runs the same two commands on every push (see [.github/workflows/ci.yml](.github/workflows/ci.yml)).
 
-**When GUT tests exist**, also run:
+**Run GUT tests** (35 tests across 3 suites as of 2026-06-02):
 ```
-godot --headless -s addons/gut/gut_cmdln.gd -gdir=test/ -gexit
+godot --headless -s addons/gut/gut_cmdln.gd -gdir=res://test/unit/ -gprefix=test_ -gexit
 ```
+Note: `-gsuffix` is not supported by this GUT version — omit it. `-gdir` must use `res://` prefix.
 
 ## Assistant behavior
 

@@ -52,12 +52,8 @@ Two sources of Synergy:
 1. **Faction threshold**: N pieces of the same Faction (e.g. 3 Orcs) activate a bonus for all pieces of that Faction.
 2. **Passive ability interactions**: specific piece abilities interact with other piece abilities, producing emergent Synergies.
 
-## Primary play object
-Undefined — three open scenarios:
-- **A (Menagerie)**: 6 unit slots; each unit equips 1 item; items have trinket slots.
-- **B (Single character, PoE-inspired)**: 1 character equips 6 items; items have gem/trinket slots; character stats derive entirely from items.
-- **C (Items as fighters)**: items are the combatants directly; no separate character or unit concept.
-Resolve before Sprint 1 coding begins.
+## Primary play object — SETTLED: Scenario C (Elements as fighters)
+Elements are the combatants directly. No separate unit or character concept. Players fill a grid board with elements; the board fights the opponent's board. Elements have individual cooldown timers and damage values. Adjacency on the grid determines buffing relationships (not targeting — combat always fires at the opponent's HP bar like Super Auto Pets).
 
 ## Meta-progression
 Light progression between matches. Unlocks new Factions, Synergies, and game-changing milestones. The player's theoretical maximum slowly rises over sessions. Unlock economy TBD.
@@ -77,8 +73,28 @@ All three layers simultaneously: (1) Engineered — I can see exactly why I won/
 ## Meta-progression shape
 Uncertain — deferred. Do not commit to unlock-gated content vs cosmetic-only vs XP track until a dedicated design session.
 
-## Primary play object
-Still open between Scenario A (Menagerie: units + items) and Scenario B (single character, items as build). Scenario C (items as fighters) is not ruled out but ranked lowest. Do not architect around any one model until resolved.
+## Element system
+- **4 base elements**: Water, Fire, Air, Earth (tier 1, cost 5g each)
+- **Leveling**: drag same element onto same element at same level → level + 1 (needs confirmation dialog). Requires matching levels.
+- **Forging**: done at the forge bench (dedicated UI area), not directly on the board. Two different elements → check recipe → produce result element (tier 2+). Recipe is revealed on first forge; goes into discovered recipe list. Unknown combos show "→ ???", known combos show result name.
+- **~60 pre-computed recipes** planned; prototype ships 6 (all pairings of 4 basics: Steam, Rain, Mud, Smoke, Lava, Dust).
+- **Tiers**: tier 1 = basics, tier 2+ = combinations. Shop raises available tier as the run progresses. Discovered recipes only appear in shop if their tier requirement is met.
+- **Inventory (backpack)**: 6 slots. Starts small, may expand over the run — TBD.
+
+## Combat model (updated)
+Real-time but deterministic. Each element has a cooldown timer; when it fires it deals damage to the opponent's HP bar. Ties (same-tick firings) are resolved by grid position (top-left first). Simulation runs discrete ticks; result is computed upfront and played back visually. Replay mechanic is preserved.
+
+## Board / grid
+Simple grid. Shape TBD. Adjacency bonuses apply at board setup (not during combat). Each element has its own buff direction — some broadcast to neighbours, some receive from neighbours, some both. Opposition board is revealed before battle so the player can arrange their grid strategically.
+
+## Opponent board visibility
+Full visibility before battle starts. Player can rearrange their grid after seeing the opponent.
+
+## Trinkets
+Passive bonuses that last the whole run (e.g. "+5 gold on win"). No combat-phase cooldowns at current scope. Primary source: PvE rounds.
+
+## Starting run decision (Identity pick)
+One choice per run — "I am playing Water this run." Flavour + mechanical angle. Exact bonuses TBD. May buff the chosen element family and its crafted descendants. Do not architect around a specific mechanism until a dedicated design session.
 
 ## Toolchain
 Godot 4 + GDScript. TypeScript / Vite / pnpm / Phaser 3 scaffold is kept as reference only — to be deleted once the Godot port is verified.
@@ -92,4 +108,4 @@ Business model: Free to play initially → eventually paid once. Gameplay unlock
 Clean, minimal, weird, surreal. Not cute, not grimdark.
 
 ## Simulation model
-Ability Chain resolution is turn-based / discrete (deterministic, fully testable). Visual presentation can be animated — those are separate concerns.
+Real-time but deterministic. Discrete ticks simulate all element cooldowns simultaneously. RNG (if any) is seeded at combat start so the full fight is reproducible and replayable. Visual presentation is a playback of the pre-computed event log.
