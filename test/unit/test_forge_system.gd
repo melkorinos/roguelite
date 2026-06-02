@@ -197,3 +197,105 @@ func test_preview_self_combo_discovered_shows_element_name() -> void:
 	(state["discovered_recipes"] as Array).append("ice")
 	var p := ForgeSystem.preview(state, 0, 1)
 	assert_true(p.contains("Ice"))
+
+
+# ── move_to_forge_slot ────────────────────────────────────────────────────────
+
+func _state_with_inv(id: String, inv_slot: int = 0) -> Dictionary:
+	var state := GameState.create()
+	var elem: Dictionary = ElementData.find(id).duplicate()
+	elem["element_id"] = id
+	elem["level"] = 1
+	state["inventory"][inv_slot] = elem
+	return state
+
+
+func test_move_to_forge_slot_places_item_in_bench() -> void:
+	var state := _state_with_inv("water")
+	var s := ForgeSystem.move_to_forge_slot(state, 0, 0)
+	assert_not_null(s["forge_slots"][0])
+	assert_eq((s["forge_slots"][0] as Dictionary)["element_id"], "water")
+	assert_null(s["inventory"][0])
+
+
+func test_move_to_forge_slot_returns_displaced_item_to_inventory() -> void:
+	var state := _state_with_inv("water", 0)
+	var displaced: Dictionary = ElementData.find("fire").duplicate()
+	displaced["element_id"] = "fire"; displaced["level"] = 1
+	state["forge_slots"][0] = displaced
+	var s := ForgeSystem.move_to_forge_slot(state, 0, 0)
+	var found_fire: bool = false
+	for item: Variant in s["inventory"]:
+		if item != null and (item as Dictionary)["element_id"] == "fire":
+			found_fire = true
+	assert_true(found_fire)
+
+
+func test_move_to_forge_slot_noop_when_inv_slot_empty() -> void:
+	var state := GameState.create()
+	var s := ForgeSystem.move_to_forge_slot(state, 0, 0)
+	assert_null(s["forge_slots"][0])
+
+
+func test_move_to_forge_slot_does_not_mutate_original() -> void:
+	var state := _state_with_inv("water")
+	ForgeSystem.move_to_forge_slot(state, 0, 0)
+	assert_not_null(state["inventory"][0])
+
+
+# ── forge_quick_slot ──────────────────────────────────────────────────────────
+
+func test_forge_quick_slot_fills_first_empty_bench_slot() -> void:
+	var state := _state_with_inv("water")
+	var s := ForgeSystem.forge_quick_slot(state, 0)
+	assert_not_null(s["forge_slots"][0])
+	assert_eq((s["forge_slots"][0] as Dictionary)["element_id"], "water")
+	assert_null(s["inventory"][0])
+
+
+func test_forge_quick_slot_fills_second_slot_when_first_full() -> void:
+	var state := _state_with_inv("air", 0)
+	var fire: Dictionary = ElementData.find("fire").duplicate()
+	fire["element_id"] = "fire"; fire["level"] = 1
+	state["forge_slots"][0] = fire
+	var s := ForgeSystem.forge_quick_slot(state, 0)
+	assert_not_null(s["forge_slots"][1])
+	assert_eq((s["forge_slots"][1] as Dictionary)["element_id"], "air")
+
+
+func test_forge_quick_slot_noop_when_inv_slot_empty() -> void:
+	var state := GameState.create()
+	var s := ForgeSystem.forge_quick_slot(state, 0)
+	assert_null(s["forge_slots"][0])
+	assert_null(s["forge_slots"][1])
+
+
+# ── remove_from_forge_slot ────────────────────────────────────────────────────
+
+func test_remove_from_forge_slot_returns_item_to_inventory() -> void:
+	var state := GameState.create()
+	var elem: Dictionary = ElementData.find("earth").duplicate()
+	elem["element_id"] = "earth"; elem["level"] = 1
+	state["forge_slots"][1] = elem
+	var s := ForgeSystem.remove_from_forge_slot(state, 1)
+	assert_null(s["forge_slots"][1])
+	var found: bool = false
+	for item: Variant in s["inventory"]:
+		if item != null and (item as Dictionary)["element_id"] == "earth":
+			found = true
+	assert_true(found)
+
+
+func test_remove_from_forge_slot_on_empty_is_noop() -> void:
+	var state := GameState.create()
+	var s := ForgeSystem.remove_from_forge_slot(state, 0)
+	assert_null(s["forge_slots"][0])
+
+
+func test_remove_from_forge_slot_does_not_mutate_original() -> void:
+	var state := GameState.create()
+	var elem: Dictionary = ElementData.find("water").duplicate()
+	elem["element_id"] = "water"; elem["level"] = 1
+	state["forge_slots"][0] = elem
+	ForgeSystem.remove_from_forge_slot(state, 0)
+	assert_not_null(state["forge_slots"][0])

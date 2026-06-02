@@ -86,7 +86,7 @@ func _render() -> void:
 	var s: Dictionary = GameManager.state
 	var is_result: bool = s["phase"] == "result"
 
-	$VBox/Header.text = "BATTLE — Round %d" % s["round"]
+	$VBox/Header.text = "BATTLE — Round %d  |  Lives: %d  Wins: %d/10" % [s["round"], s["lives"], s["wins"]]
 	$VBox/HpRow/PlayerHPLabel.text = "❤️ YOUR HP: %d" % s["player_hp"]
 	$VBox/HpRow/OppHPLabel.text = "☠️ OPP HP: %d" % s["opponent_hp"]
 	var remaining: float = maxf(0.0, BattleSystem.BATTLE_TIME_LIMIT - (s["battle_timer"] as float))
@@ -103,12 +103,41 @@ func _render() -> void:
 
 	if is_result:
 		var outcome: String = BattleSystem.compute_result(s)
+		var lives: int = s["lives"] as int
+		var wins: int = s["wins"] as int
+		var opp_hp: int = s["opponent_hp"] as int
+		var opp_start: int = s["opponent_starting_hp"] as int
+		var result_text: String
+		var next_label: String = "▶ Next Round"
 		match outcome:
-			"player_wins": $VBox/ResultLabel.text = "✅ YOU WIN"
-			"opponent_wins": $VBox/ResultLabel.text = "💀 YOU LOSE"
-			"draw": $VBox/ResultLabel.text = "🤝 DRAW"
+			"player_wins":
+				if wins + 1 >= 10:
+					result_text = "🏆 VICTORY — 10 wins!"
+					next_label = "▶ Finish"
+				else:
+					result_text = "✅ YOU WIN  (Wins: %d→%d)" % [wins, wins + 1]
+			"draw":
+				if wins + 1 >= 10:
+					result_text = "🏆 VICTORY — 10 wins!"
+					next_label = "▶ Finish"
+				else:
+					result_text = "🤝 DRAW — counts as a win  (Wins: %d→%d)" % [wins, wins + 1]
+			"opponent_wins":
+				var ratio: float = float(opp_hp) / float(maxi(opp_start, 1))
+				var lives_lost: int = 1
+				if ratio >= 0.70:
+					lives_lost = 3
+				elif ratio >= 0.30:
+					lives_lost = 2
+				if lives - lives_lost <= 0:
+					result_text = "💀 ELIMINATED — %d wins in %d rounds" % [wins, s["round"] as int]
+					next_label = "▶ End"
+				else:
+					result_text = "💀 YOU LOSE  (Lives: %d→%d)" % [lives, lives - lives_lost]
+		$VBox/ResultLabel.text = result_text
 		$VBox/ResultLabel.visible = true
 		$VBox/ButtonRow.visible = true
+		($VBox/ButtonRow/NextRoundButton as Button).text = next_label
 
 
 func _on_summary_pressed() -> void:
@@ -143,7 +172,7 @@ func _add_summary_header(parent: Node, title: String, color: Color) -> void:
 	var lbl := Label.new()
 	lbl.text = title
 	lbl.modulate = color
-	lbl.add_theme_font_size_override("font_size", 16)
+	UIScale.apply(lbl, UIScale.SUMMARY_HEADER)
 	parent.add_child(lbl)
 
 
@@ -164,25 +193,25 @@ func _add_summary_rows(parent: Node, grid: Array, stats: Array, battle_time: flo
 
 		var name_lbl := Label.new()
 		name_lbl.text = "%s  %s Lv%d" % [elem["emoji"], elem["name"], elem["level"] as int]
-		name_lbl.add_theme_font_size_override("font_size", 14)
+		UIScale.apply(name_lbl, UIScale.SUMMARY_ROW)
 		name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(name_lbl)
 
 		var fires_lbl := Label.new()
 		fires_lbl.text = "fired %d×" % fires
-		fires_lbl.add_theme_font_size_override("font_size", 14)
+		UIScale.apply(fires_lbl, UIScale.SUMMARY_ROW)
 		fires_lbl.modulate = Color(0.8, 0.8, 0.8)
 		row.add_child(fires_lbl)
 
 		var dmg_lbl := Label.new()
 		dmg_lbl.text = "%d dmg" % dmg
-		dmg_lbl.add_theme_font_size_override("font_size", 14)
+		UIScale.apply(dmg_lbl, UIScale.SUMMARY_ROW)
 		dmg_lbl.modulate = Color(1.0, 0.75, 0.4)
 		row.add_child(dmg_lbl)
 
 		var dps_lbl := Label.new()
 		dps_lbl.text = "%.1f dps" % dps
-		dps_lbl.add_theme_font_size_override("font_size", 14)
+		UIScale.apply(dps_lbl, UIScale.SUMMARY_ROW)
 		dps_lbl.modulate = Color(0.6, 0.85, 1.0)
 		row.add_child(dps_lbl)
 
@@ -192,7 +221,7 @@ func _add_summary_rows(parent: Node, grid: Array, stats: Array, battle_time: flo
 		var empty := Label.new()
 		empty.text = "  (no elements)"
 		empty.modulate = Color(0.5, 0.5, 0.5)
-		empty.add_theme_font_size_override("font_size", 13)
+		UIScale.apply(empty, UIScale.SUMMARY_EMPTY)
 		parent.add_child(empty)
 
 
@@ -230,7 +259,14 @@ func _on_speed_2x_pressed() -> void:
 
 func _on_next_round_pressed() -> void:
 	GameManager.state = PhaseSystem.advance_round(GameManager.state)
-	get_tree().change_scene_to_file("res://scenes/screens/Shop.tscn")
+	var phase: String = GameManager.state["phase"] as String
+	match phase:
+		"victory":
+			get_tree().change_scene_to_file("res://scenes/screens/MainMenu.tscn")
+		"eliminated":
+			get_tree().change_scene_to_file("res://scenes/screens/MainMenu.tscn")
+		_:
+			get_tree().change_scene_to_file("res://scenes/screens/Shop.tscn")
 
 
 func _on_menu_pressed() -> void:

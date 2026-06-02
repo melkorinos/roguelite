@@ -28,6 +28,12 @@ const SUMMARY_HEADER := 16
 const SUMMARY_ROW    := 14
 const SUMMARY_EMPTY  := 13
 
+# ── Tooltip card ──────────────────────────────────────────────────────────────
+const TOOLTIP_TITLE   := 16
+const TOOLTIP_STAT    := 13
+const TOOLTIP_SECTION := 11
+const TOOLTIP_BODY    := 12
+
 
 static func apply(node: Control, size: int) -> void:
 	node.add_theme_font_size_override("font_size", size)

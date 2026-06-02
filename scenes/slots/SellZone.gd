@@ -25,7 +25,7 @@ func _ready() -> void:
 	_hint_lbl = Label.new()
 	_hint_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_hint_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_hint_lbl.add_theme_font_size_override("font_size", 20)
+	UIScale.apply(_hint_lbl, UIScale.SELL_HINT)
 	_hint_lbl.modulate = Color(0.3, 1.0, 0.45, 0.95)
 	_hint_lbl.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_hint_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE

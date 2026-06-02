@@ -61,8 +61,12 @@ A Round where a player's Composition fights an opponent's Composition asynchrono
 _Avoid_: battle round, fight round
 
 **Player HP**:
-The resource that tracks a player's survival across Rounds. Each loss in a PvP Round deals damage proportional to the losing margin. A player is eliminated when HP reaches zero. HP is not reset between Rounds.
-_Avoid_: health, lives, hearts
+The in-battle resource representing how much damage a player's side can absorb before losing that Round. Resets to its full value at the start of every battle.
+_Avoid_: health, hearts
+
+**Lives**:
+The match-level resource that tracks how close a player is to elimination. Starts at 10 per match. Lost 1–3 per defeat depending on severity (hard loss ≥70% opponent HP remaining = –3; medium 30–70% = –2; close <30% = –1). A draw counts as a player win (opponent is async). Reaching 0 Lives eliminates the player. The match goal is 10 wins before Lives run out.
+_Avoid_: health, HP, hearts
 
 ### Abilities and combat
 

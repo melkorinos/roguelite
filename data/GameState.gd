@@ -23,4 +23,7 @@ static func create() -> Dictionary:
 			"player": [{"fires": 0, "damage": 0}, {"fires": 0, "damage": 0}, {"fires": 0, "damage": 0}, {"fires": 0, "damage": 0}],
 			"opponent": [{"fires": 0, "damage": 0}, {"fires": 0, "damage": 0}, {"fires": 0, "damage": 0}, {"fires": 0, "damage": 0}],
 		},
+		"lives": 10,
+		"wins": 0,
+		"opponent_starting_hp": 0,
 	}

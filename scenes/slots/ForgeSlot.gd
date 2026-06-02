@@ -41,13 +41,13 @@ func _ready() -> void:
 	_emoji_lbl = Label.new()
 	_emoji_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_emoji_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_emoji_lbl.add_theme_font_size_override("font_size", 38)
+	UIScale.apply(_emoji_lbl, UIScale.FORGE_EMOJI)
 	_emoji_lbl.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	vbox.add_child(_emoji_lbl)
 
 	_name_lbl = Label.new()
 	_name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_name_lbl.add_theme_font_size_override("font_size", 11)
+	UIScale.apply(_name_lbl, UIScale.SLOT_NAME)
 	vbox.add_child(_name_lbl)
 
 	add_child(vbox)

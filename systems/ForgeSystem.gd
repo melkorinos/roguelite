@@ -14,11 +14,13 @@ static func level_up(state: Dictionary, slot_a: int, slot_b: int) -> Dictionary:
 		return state
 	if (da["level"] as int) != (db["level"] as int):
 		return state
+	var result_slot: int = mini(slot_a, slot_b)
+	var clear_slot: int = maxi(slot_a, slot_b)
 	var s: Dictionary = state.duplicate(true)
-	var upgraded: Dictionary = (s["inventory"][slot_a] as Dictionary).duplicate()
+	var upgraded: Dictionary = (s["inventory"][result_slot] as Dictionary).duplicate()
 	upgraded["level"] = (da["level"] as int) + 1
-	s["inventory"][slot_a] = upgraded
-	s["inventory"][slot_b] = null
+	s["inventory"][result_slot] = upgraded
+	s["inventory"][clear_slot] = null
 	return s
 
 

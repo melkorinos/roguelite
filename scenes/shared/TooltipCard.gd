@@ -35,7 +35,7 @@ func _build_ui() -> void:
 	margin.add_child(vbox)
 
 	_name_lbl = Label.new()
-	_name_lbl.add_theme_font_size_override("font_size", 16)
+	UIScale.apply(_name_lbl, UIScale.TOOLTIP_TITLE)
 	vbox.add_child(_name_lbl)
 
 	var stats_sep := HSeparator.new()
@@ -46,12 +46,12 @@ func _build_ui() -> void:
 		var row := HBoxContainer.new()
 		var k_lbl := Label.new()
 		k_lbl.text = key
-		k_lbl.add_theme_font_size_override("font_size", 13)
+		UIScale.apply(k_lbl, UIScale.TOOLTIP_STAT)
 		k_lbl.modulate = Color(0.72, 0.72, 0.78)
 		k_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(k_lbl)
 		var v_lbl := Label.new()
-		v_lbl.add_theme_font_size_override("font_size", 13)
+		UIScale.apply(v_lbl, UIScale.TOOLTIP_STAT)
 		v_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		row.add_child(v_lbl)
 		_stat_vals[key] = v_lbl
@@ -62,13 +62,13 @@ func _build_ui() -> void:
 
 	var ab_header := Label.new()
 	ab_header.text = "ABILITIES"
-	ab_header.add_theme_font_size_override("font_size", 11)
+	UIScale.apply(ab_header, UIScale.TOOLTIP_SECTION)
 	ab_header.modulate = Color(0.55, 0.55, 0.62)
 	vbox.add_child(ab_header)
 
 	var ab_lbl := Label.new()
 	ab_lbl.text = "— none yet —"
-	ab_lbl.add_theme_font_size_override("font_size", 12)
+	UIScale.apply(ab_lbl, UIScale.TOOLTIP_BODY)
 	ab_lbl.modulate = Color(0.42, 0.42, 0.48)
 	vbox.add_child(ab_lbl)
 
@@ -77,15 +77,15 @@ func _build_ui() -> void:
 
 func show_for(element: Dictionary) -> void:
 	var emoji: String = element.get("emoji", "") as String
-	var name: String = element.get("name", "") as String
+	var elem_name: String = element.get("name", "") as String
 	var tier: int = element.get("tier", 1) as int
 	var level: int = element.get("level", 1) as int
 	var cooldown: float = element.get("cooldown", 0.0) as float
 	var base_dmg: int = element.get("damage", 0) as int
-	var eff_dmg: int = base_dmg * level + tier
+	var eff_dmg: int = ElementData.effective_damage(element)
 	var price: int = element.get("price", 0) as int
 
-	_name_lbl.text = "%s  %s" % [emoji, name]
+	_name_lbl.text = "%s  %s" % [emoji, elem_name]
 	(_stat_vals["Tier"] as Label).text = "T%d" % tier
 	(_stat_vals["Level"] as Label).text = "Lv%d" % level
 	(_stat_vals["Cooldown"] as Label).text = "%.1fs" % cooldown

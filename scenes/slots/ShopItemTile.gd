@@ -45,18 +45,18 @@ func _ready() -> void:
 	_emoji_lbl = Label.new()
 	_emoji_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_emoji_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_emoji_lbl.add_theme_font_size_override("font_size", 50)
+	UIScale.apply(_emoji_lbl, UIScale.SHOP_EMOJI)
 	_emoji_lbl.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	vbox.add_child(_emoji_lbl)
 
 	_name_lbl = Label.new()
 	_name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_name_lbl.add_theme_font_size_override("font_size", 14)
+	UIScale.apply(_name_lbl, UIScale.SHOP_LABEL)
 	vbox.add_child(_name_lbl)
 
 	_price_lbl = Label.new()
 	_price_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_price_lbl.add_theme_font_size_override("font_size", 14)
+	UIScale.apply(_price_lbl, UIScale.SHOP_LABEL)
 	vbox.add_child(_price_lbl)
 
 	add_child(vbox)
@@ -109,7 +109,7 @@ func _gui_input(event: InputEvent) -> void:
 func _get_drag_data(_at_position: Vector2) -> Variant:
 	var preview := Label.new()
 	preview.text = _emoji_text
-	preview.add_theme_font_size_override("font_size", 48)
+	UIScale.apply(preview, UIScale.DRAG_SHOP)
 	set_drag_preview(preview)
 	return {"type": "shop", "element_id": element_id, "price": _price, "shop_slot": shop_slot_index}
 

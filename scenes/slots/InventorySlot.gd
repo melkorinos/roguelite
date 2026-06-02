@@ -68,7 +68,7 @@ func _get_drag_data(_at_position: Vector2) -> Variant:
 		return null
 	var preview := Label.new()
 	preview.text = text.split("\n")[0]
-	preview.add_theme_font_size_override("font_size", 40)
+	UIScale.apply(preview, UIScale.SLOT_EMOJI)
 	set_drag_preview(preview)
 	@warning_ignore("integer_division")
 	drag_started.emit(element_id, slot_index, element_price / 2)

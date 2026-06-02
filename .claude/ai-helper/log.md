@@ -1,5 +1,46 @@
 # Development Log
 
+## 2026-06-02 — Match persistence: Lives system, 10-win goal, per-round gold
+
+### Design decisions settled (grill-with-docs session)
+- **Player HP**: in-battle only, resets to 30 at start of every battle via `to_battle()`
+- **Lives**: match-level resource, starts at 10; lost 1–3 per defeat by severity; 0 = eliminated
+  - Hard (opp HP remaining ≥70% of starting) → –3; Medium (30–70%) → –2; Close (<30%) → –1
+- **Wins**: goal is 10; draw counts as player win (opponent is async)
+- **Victory**: phase set to "victory" at 10 wins; "eliminated" at 0 lives; both route to MainMenu
+- **Gold income**: +5 gold per round added in `advance_round()`
+
+### Files changed
+- `data/GameState.gd` — added `lives: 10`, `wins: 0`, `opponent_starting_hp: 0`
+- `systems/PhaseSystem.gd` — `to_battle()` resets `player_hp = 30` and stores `opponent_starting_hp`; `advance_round()` handles win/loss/lives/gold/phase transitions
+- `scenes/screens/Battle.gd` — header shows Lives + Wins; result label previews match outcome (victory / eliminated / lives remaining); next button label updates; `_on_next_round_pressed` routes to MainMenu on victory/eliminated
+- `scenes/screens/Shop.gd` — TopBar shows Lives + Wins counter
+- `scenes/screens/Shop.tscn` — added `LivesLabel` node to TopBar
+- `test/unit/test_game_state.gd` — 3 new tests: lives, wins, opponent_starting_hp
+- `test/unit/test_phase_system.gd` — 13 new/updated tests: to_battle reset, gold income, win tracking, Lives deduction, phase transitions; renamed `test_advance_round_resets_player_hp` → `test_advance_round_does_not_reset_player_hp`
+- `scenes/Boot.tscn` (deleted) — stale leftover from folder restructure pointing at non-existent Boot.gd
+- `CONTEXT.md` — Player HP and Lives terms added/updated
+
+### Test results
+Boot: exit 0. GUT: **140/140 passing** (was 80 before session).
+
+
+
+## 2026-06-02 — UIScale constants + shop-phase state mutations moved to systems
+
+### Changes
+- `data/UIScale.gd` — new `class_name UIScale` with named constants for every font-size role and a `static func apply(node, size)` helper. All font-size overrides in scene scripts now go through `UIScale.apply(node, UIScale.SOME_CONST)` — zero bare integers remain.
+- `systems/ShopSystem.gd` — added `swap_inv_to_grid`, `swap_grid_to_inv`, `swap_within_grid` (pure static, take/return GameState).
+- `systems/ForgeSystem.gd` — added `move_to_forge_slot`, `forge_quick_slot`, `remove_from_forge_slot` (pure static).
+- `scenes/screens/Shop.gd` — all inline state mutations removed; now a pure signal dispatcher.
+- `test/unit/test_shop_system.gd` — 8 new tests covering the three swap functions.
+- `test/unit/test_forge_system.gd` — 10 new tests covering the three forge-bench functions.
+- `CLAUDE.md` — theme-override rule updated to mandate `UIScale.apply()`; `data/` folder description updated.
+- `memory.md` — rendering boundary and UIScale sections updated.
+
+### Architecture note
+`UIScale.apply()` wraps `add_theme_font_size_override()`. When the UI stabilises (post-Sprint 2), migrating to Godot Theme type variations only requires changing the helper body — call sites stay unchanged.
+
 ## 2026-06-02 — Item Tooltip, battle speed/pause, scenes folder restructure
 
 ### Decisions settled (grill-with-docs session)

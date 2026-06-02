@@ -48,13 +48,13 @@ func _ready() -> void:
 	_emoji_lbl = Label.new()
 	_emoji_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_emoji_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_emoji_lbl.add_theme_font_size_override("font_size", 40)
+	UIScale.apply(_emoji_lbl, UIScale.SLOT_EMOJI)
 	_emoji_lbl.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	vbox.add_child(_emoji_lbl)
 
 	_name_lbl = Label.new()
 	_name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_name_lbl.add_theme_font_size_override("font_size", 11)
+	UIScale.apply(_name_lbl, UIScale.SLOT_NAME)
 	vbox.add_child(_name_lbl)
 
 	add_child(vbox)
@@ -128,7 +128,7 @@ func _get_drag_data(_at_position: Vector2) -> Variant:
 		sell_price = (elem as Dictionary).get("price", 0) as int / 2
 	var preview := Label.new()
 	preview.text = _emoji_text
-	preview.add_theme_font_size_override("font_size", 44)
+	UIScale.apply(preview, UIScale.DRAG_SLOT)
 	set_drag_preview(preview)
 	drag_started.emit(element_id, slot_index, sell_price)
 	return {"type": "grid", "slot": slot_index}

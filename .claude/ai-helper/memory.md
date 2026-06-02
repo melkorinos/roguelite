@@ -75,6 +75,11 @@ Damage or defence check encounters. Beating a Boss unlocks a milestone (new Fact
 ## Rendering boundary
 Scene scripts (`.gd` attached to `.tscn` files) handle rendering and input only. Logic in system scripts must never reference scene nodes or the Godot SceneTree. Equivalent to the former Phaser-only-in-scenes rule.
 
+All state transformations during the shop phase — including inventory↔grid swaps (`ShopSystem.swap_inv_to_grid`, `swap_grid_to_inv`, `swap_within_grid`) and forge-bench placement (`ForgeSystem.move_to_forge_slot`, `forge_quick_slot`, `remove_from_forge_slot`) — live in the system layer. Scene scripts only dispatch to those functions.
+
+## Font size constants — UIScale (settled 2026-06-02)
+All font-size deviations from the project default live in `data/UIScale.gd`. Scene scripts call `UIScale.apply(node, UIScale.SOME_CONST)`. Direct `add_theme_font_size_override()` calls and bare integers are banned in scene scripts. The `apply()` wrapper creates the seam to migrate to Godot Theme type variations later without touching call sites.
+
 ## Godot node lifecycle — set_element / child-node access
 `_ready()` fires on `add_child()`, not on `.new()`. Never call a method that reads or writes child node properties (labels, progress bars, etc.) before the node has been added to the scene tree. Safe before `add_child`: plain property assignment (`slot_index`, `draggable`), signal connections. Unsafe: anything that touches nodes built inside `_ready()`. Fix: call `add_child(node)` first, then call the method.
 
@@ -139,6 +144,20 @@ One choice per run — "I am playing Water this run." Flavour + mechanical angle
 Godot 4 + GDScript. TypeScript / Vite / pnpm / Phaser 3 scaffold is kept as reference only — to be deleted once the Godot port is verified.
 Needs added eventually: Steam packaging (Godot export), backend (async PvP state, user accounts).
 
+## Steam + backend architecture (settled 2026-06-02)
+Five seams identified in architecture review (`docs/reviews/architecture-review-20260602.html`):
+
+1. **OpponentProvider** — extract `BattleSystem.create_opponent_grid` behind a seam. `LocalDaySeededAdapter` (day-seeded RNG, same opponent per calendar day for all players) ships first; `BackendHTTPAdapter` slots in later without touching PhaseSystem or BattleSystem.
+2. **AchievementSystem** — pure static `check(state, profile)` called by `PhaseSystem.advance_round()` after state update. Reads win/loss/forge events, updates PlayerProfile, calls PlatformLayer. Covers both Steam achievements and internal milestones.
+3. **PlayerProfile autoload** — cross-match persistence to `user://profile.cfg` (follows SettingsManager pattern). Fields: `total_damage`, `matches_won`, `achievements[]`, `milestones{}`, `discovered_recipes[]`. Steam Cloud Save is a future adapter behind the same seam.
+4. **PlatformLayer autoload** — isolates GodotSteam from all game code. Detects platform; delegates to SteamAdapter on desktop, NoOpAdapter on web. Required because GodotSteam needs a custom engine build incompatible with web export.
+5. **Opponent Snapshot shape** — collapse flat `opponent_grid/hp/timers` fields into one `opponent_snapshot` dict with `player_id`, `player_name`, `grid`, `source ("local"|"remote")`, `acquired_day`.
+
+All five can be built with no backend. Backend unlocks only the `BackendHTTPAdapter` and player accounts.
+
+## Internal Milestones (feature planned, not in scope until dedicated session)
+Milestones are in-game achievements that surface inside the meta-progression layer (unlock Factions, Synergies, run modifiers) — e.g. "deal 20,000 total damage." They are separate from Steam achievements but share the same AchievementSystem + PlayerProfile infrastructure. Build the seam once, wire both outputs. Do not design milestone rewards until a dedicated design session.
+
 ## Platform and business model
 Steam desktop. Async multiplayer. Target session: 20–30 minutes.
 Business model: Free to play initially → eventually paid once. Gameplay unlocks (Factions, Synergies) through meta-progression.
@@ -148,3 +167,18 @@ Clean, minimal, weird, surreal. Not cute, not grimdark.
 
 ## Simulation model
 Real-time but deterministic. Discrete ticks simulate all element cooldowns simultaneously. RNG (if any) is seeded at combat start so the full fight is reproducible and replayable. Visual presentation is a playback of the pre-computed event log.
+
+## Match persistence — Lives system (settled 2026-06-02)
+- **Player HP**: in-battle only. Resets to full (30) at start of every battle via `to_battle()`. Does NOT persist across rounds.
+- **Lives**: match-level resource, starts at 10. Lost 1–3 per defeat. Reaching 0 = eliminated.
+  - Hard loss (opponent HP remaining ≥ 70% of `opponent_starting_hp`) → –3 Lives
+  - Medium loss (30–70%) → –2 Lives
+  - Close loss (<30%) → –1 Life
+  - Draw = player win (opponent is async), 0 Lives lost
+- **Win condition**: 10 wins ends the match immediately (victory screen, then Main Menu). Endgame/infinite session deferred to a future session.
+- **Elimination**: 0 Lives → eliminated screen, then Main Menu.
+- **Gold income**: +5 gold at start of each Shop phase (added in `advance_round()`). No streak/interest mechanic yet.
+- **State fields added**: `lives: int = 10`, `wins: int = 0`, `opponent_starting_hp: int` (set in `to_battle()`).
+- **`advance_round()` responsibilities**: calculate Lives lost (if loss), increment wins (if win/draw), add 5 gold, reset Player HP via `to_battle()` eventually, set phase. Does NOT reset Player HP directly — that happens in `to_battle()`.
+- **Display**: Lives and wins shown in both Shop and Battle HUDs.
+- **Result screen**: simple inline text ("YOU WIN — 10 rounds" / "ELIMINATED — X wins, round N"), reuses Battle result flow, no new scene.

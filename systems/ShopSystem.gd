@@ -1,72 +1,29 @@
 class_name ShopSystem
 
+# Moves an item from one location to another.
+# from_loc / to_loc: {"zone": "shop"|"inventory"|"grid", "slot": int}
+# slot = -1 in to_loc means "first empty slot" in that zone.
+static func transfer(state: Dictionary, from_loc: Dictionary, to_loc: Dictionary) -> Dictionary:
+	var from_zone: String = from_loc["zone"] as String
+	var from_slot: int = from_loc["slot"] as int
+	var to_zone: String = to_loc["zone"] as String
+	var to_slot: int = to_loc["slot"] as int
 
-static func buy_item(state: Dictionary, element_id: String, shop_slot: int) -> Dictionary:
-	var elem: Dictionary = ElementData.find(element_id)
-	if elem.is_empty():
-		return state
-	var gold: int = state["gold"]
-	if gold < (elem["price"] as int):
-		return state
-	var inv_slot: int = _first_empty_slot(state["inventory"])
-	if inv_slot == -1:
-		return state
-	var s: Dictionary = state.duplicate(true)
-	s["gold"] = gold - (elem["price"] as int)
-	var instance: Dictionary = elem.duplicate()
-	instance["element_id"] = element_id
-	instance["level"] = 1
-	s["inventory"][inv_slot] = instance
-	s["shop_items"][shop_slot] = null
-	return s
+	if to_slot == -1:
+		var target_arr: Array = state["inventory"] if to_zone == "inventory" else state["battle_grid"]
+		to_slot = _first_empty_slot(target_arr)
+		if to_slot == -1:
+			return state
 
-
-# Buy a shop item and place it directly in a specific inventory slot.
-static func buy_item_to_slot(state: Dictionary, element_id: String, target_inv_slot: int, shop_slot: int) -> Dictionary:
-	var elem: Dictionary = ElementData.find(element_id)
-	if elem.is_empty():
-		return state
-	var gold: int = state["gold"] as int
-	if gold < (elem["price"] as int):
-		return state
-	var inv: Array = state["inventory"]
-	if inv[target_inv_slot] != null:
-		return state
-	var s: Dictionary = state.duplicate(true)
-	s["gold"] = gold - (elem["price"] as int)
-	var instance: Dictionary = elem.duplicate()
-	instance["element_id"] = element_id
-	instance["level"] = 1
-	s["inventory"][target_inv_slot] = instance
-	s["shop_items"][shop_slot] = null
-	return s
-
-
-# Buy a shop item and immediately level-up the inventory item at to_inv_index.
-# The bought item is always level 1; to_inv_index must also be level 1.
-static func buy_and_level_up(state: Dictionary, element_id: String, to_inv_index: int, shop_slot: int) -> Dictionary:
-	var elem_def: Dictionary = ElementData.find(element_id)
-	if elem_def.is_empty():
-		return state
-	var gold: int = state["gold"] as int
-	if gold < (elem_def["price"] as int):
-		return state
-	var inv: Array = state["inventory"]
-	var target: Variant = inv[to_inv_index]
-	if target == null:
-		return state
-	var target_elem: Dictionary = target as Dictionary
-	if target_elem["element_id"] != element_id:
-		return state
-	if (target_elem["level"] as int) != 1:
-		return state
-	var s: Dictionary = state.duplicate(true)
-	s["gold"] = gold - (elem_def["price"] as int)
-	s["shop_items"][shop_slot] = null
-	var upgraded: Dictionary = (s["inventory"][to_inv_index] as Dictionary).duplicate()
-	upgraded["level"] = 2
-	s["inventory"][to_inv_index] = upgraded
-	return s
+	if from_zone == "shop" and to_zone == "inventory":
+		return _buy(state, from_slot, to_slot)
+	if from_zone == "inventory" and to_zone == "grid":
+		return _swap_arrays(state, "inventory", from_slot, "battle_grid", to_slot)
+	if from_zone == "grid" and to_zone == "inventory":
+		return _swap_arrays(state, "battle_grid", from_slot, "inventory", to_slot)
+	if from_zone == "grid" and to_zone == "grid":
+		return _swap_arrays(state, "battle_grid", from_slot, "battle_grid", to_slot)
+	return state
 
 
 static func sell_item(state: Dictionary, slot_index: int) -> Dictionary:
@@ -120,32 +77,56 @@ static func reroll_shop(state: Dictionary, is_free: bool = false) -> Dictionary:
 	return s
 
 
-static func swap_inv_to_grid(state: Dictionary, from_inv: int, to_grid: int) -> Dictionary:
+static func _buy(state: Dictionary, shop_slot: int, inv_slot: int) -> Dictionary:
+	var shop_items: Array = state["shop_items"]
+	if shop_slot < 0 or shop_slot >= shop_items.size():
+		return state
+	var item: Variant = shop_items[shop_slot]
+	if item == null:
+		return state
+	var elem_def: Dictionary = item as Dictionary
+	var price: int = elem_def["price"] as int
+	var gold: int = state["gold"] as int
+	if gold < price:
+		return state
+	var inv: Array = state["inventory"]
+	if inv_slot < 0 or inv_slot >= inv.size():
+		return state
+	var existing: Variant = inv[inv_slot]
+	if existing == null:
+		var s: Dictionary = state.duplicate(true)
+		var instance: Dictionary = elem_def.duplicate()
+		instance["element_id"] = elem_def["id"] as String
+		instance["level"] = 1
+		s["inventory"][inv_slot] = instance
+		s["gold"] = gold - price
+		s["shop_items"][shop_slot] = null
+		return s
+	else:
+		var target: Dictionary = existing as Dictionary
+		if (target["element_id"] as String) != (elem_def["id"] as String):
+			return state
+		if (target["level"] as int) != 1:
+			return state
+		var s: Dictionary = state.duplicate(true)
+		var upgraded: Dictionary = (s["inventory"][inv_slot] as Dictionary).duplicate()
+		upgraded["level"] = 2
+		s["inventory"][inv_slot] = upgraded
+		s["gold"] = gold - price
+		s["shop_items"][shop_slot] = null
+		return s
+
+
+static func _swap_arrays(state: Dictionary, from_key: String, from_slot: int, to_key: String, to_slot: int) -> Dictionary:
 	var s: Dictionary = state.duplicate(true)
-	var temp: Variant = s["inventory"][from_inv]
-	s["inventory"][from_inv] = s["battle_grid"][to_grid]
-	s["battle_grid"][to_grid] = temp
+	var temp: Variant = s[from_key][from_slot]
+	s[from_key][from_slot] = s[to_key][to_slot]
+	s[to_key][to_slot] = temp
 	return s
 
 
-static func swap_grid_to_inv(state: Dictionary, from_grid: int, to_inv: int) -> Dictionary:
-	var s: Dictionary = state.duplicate(true)
-	var temp: Variant = s["battle_grid"][from_grid]
-	s["battle_grid"][from_grid] = s["inventory"][to_inv]
-	s["inventory"][to_inv] = temp
-	return s
-
-
-static func swap_within_grid(state: Dictionary, from_grid: int, to_grid: int) -> Dictionary:
-	var s: Dictionary = state.duplicate(true)
-	var temp: Variant = s["battle_grid"][from_grid]
-	s["battle_grid"][from_grid] = s["battle_grid"][to_grid]
-	s["battle_grid"][to_grid] = temp
-	return s
-
-
-static func _first_empty_slot(inventory: Array) -> int:
-	for i: int in inventory.size():
-		if inventory[i] == null:
+static func _first_empty_slot(arr: Array) -> int:
+	for i: int in arr.size():
+		if arr[i] == null:
 			return i
 	return -1

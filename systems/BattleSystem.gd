@@ -3,16 +3,16 @@ class_name BattleSystem
 const BATTLE_TIME_LIMIT: float = 30.0
 
 
-static func create_opponent_grid(round: int) -> Array:
+static func create_opponent_grid(round_num: int) -> Array:
 	var ids: Array[String] = []
-	match round:
+	match round_num:
 		1: ids = ["fire", "water"]
 		2: ids = ["fire", "water", "air"]
 		3: ids = ["fire", "steam", "air", "earth"]
 		4: ids = ["lava", "storm", "cloud", "rain"]
 		_: ids = ["lava", "lightning", "storm", "volcano"]
 	@warning_ignore("integer_division")
-	var level: int = 1 + round / 4
+	var level: int = 1 + round_num / 4
 	var grid: Array = [null, null, null, null]
 	for i: int in mini(ids.size(), 4):
 		var def: Dictionary = ElementData.find(ids[i]).duplicate()
@@ -50,7 +50,7 @@ static func tick_battle(state: Dictionary, delta: float) -> Dictionary:
 		var t: float = (ptimers[i] as float) + delta
 		if t >= (elem["cooldown"] as float):
 			t -= (elem["cooldown"] as float)
-			var dmg: int = (elem["damage"] as int) * (elem["level"] as int)
+			var dmg: int = ElementData.effective_damage(elem)
 			s["opponent_hp"] = maxi(0, (s["opponent_hp"] as int) - dmg)
 			events.append({"side": "player", "slot": i})
 			var ps: Dictionary = pstats[i] as Dictionary
@@ -69,7 +69,7 @@ static func tick_battle(state: Dictionary, delta: float) -> Dictionary:
 		var t: float = (otimers[i] as float) + delta
 		if t >= (elem["cooldown"] as float):
 			t -= (elem["cooldown"] as float)
-			var dmg: int = (elem["damage"] as int) * (elem["level"] as int)
+			var dmg: int = ElementData.effective_damage(elem)
 			s["player_hp"] = maxi(0, (s["player_hp"] as int) - dmg)
 			events.append({"side": "opponent", "slot": i})
 			var os: Dictionary = ostats[i] as Dictionary

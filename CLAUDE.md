@@ -40,7 +40,7 @@ godot --headless --quit            # headless smoke-test
 | `scenes/slots/` | Reusable tile/slot nodes: BattleSlot, ForgeSlot, InventorySlot, ShopItemTile, SellZone |
 | `scenes/shared/` | Cross-scene UI: TooltipCard |
 | `systems/` | Pure logic — static GDScript classes, take state Dictionary, return new Dictionary |
-| `data/` | `GameState.gd` factory, item/piece data definitions |
+| `data/` | `GameState.gd` factory, item/piece data definitions, `UIScale.gd` font-size constants |
 | `autoloads/` | `GameManager.gd` — global state holder, registered as Autoload |
 
 **GameState** is a plain `Dictionary` created by `GameState.create()` in [data/GameState.gd](data/GameState.gd). All scenes read and write it via `GameManager.state`. Systems must not mutate state in-place — return a new Dictionary.
@@ -59,9 +59,10 @@ godot --headless --quit            # headless smoke-test
 - `Array[Dictionary]` for typed collections; plain `Array` when the collection is mixed or nullable
 - Scene scripts (`scenes/`) follow the same rule for function signatures; local render variables may be untyped
 
-**Theme overrides — don't use per-node overrides for font size:**
-- Set the global default in Project Settings → GUI → Theme → Default Font Size
-- Use `add_theme_font_size_override()` only when a specific node must deviate from the global default
+**Theme overrides — font size deviations must go through `UIScale`:**
+- The global default font size lives in Project Settings → GUI → Theme → Default Font Size
+- Any node that deviates from the global default must use `UIScale.apply(node, UIScale.SOME_CONST)` — never call `add_theme_font_size_override()` directly in scene scripts
+- Named constants live in [data/UIScale.gd](data/UIScale.gd); add a new constant there for each new UI role rather than using a bare integer
 - Never set theme properties via dictionary access (`node.theme_override_font_sizes["font_size"]`) in GDScript — use the method form
 
 ## Build validation — run before closing any task
@@ -74,7 +75,7 @@ godot --headless --quit     # boot check — exit 0 means scripts load and autol
 Requires `godot` on PATH. On Windows: add the Godot editor directory to system PATH.
 CI runs the same two commands on every push (see [.github/workflows/ci.yml](.github/workflows/ci.yml)).
 
-**Run GUT tests** (35 tests across 3 suites as of 2026-06-02):
+**Run GUT tests** (80 tests across 3 suites as of 2026-06-02):
 ```
 godot --headless -s addons/gut/gut_cmdln.gd -gdir=res://test/unit/ -gprefix=test_ -gexit
 ```
@@ -85,6 +86,10 @@ Note: `-gsuffix` is not supported by this GUT version — omit it. `-gdir` must 
 - Coding-first. Slight design awareness.
 - When a code decision might lock future design flexibility, say so explicitly.
 - When design is undecided, propose options — don't commit.
+
+## Skill output — mandatory rule
+
+**`/improve-architecture` output always goes in `docs/reviews/`** — never in the OS temp directory. Filename: `architecture-review-YYYYMMDD.html`. Open with `start docs/reviews/<filename>` after writing.
 
 ## Agent skills
 

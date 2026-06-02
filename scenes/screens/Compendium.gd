@@ -29,7 +29,7 @@ func _build_content() -> void:
 			# Tier header
 			var header := Label.new()
 			header.text = TIER_NAMES.get(tier, "Tier %d" % tier) as String
-			header.add_theme_font_size_override("font_size", 25)
+			UIScale.apply(header, UIScale.COMP_HEADER)
 			header.modulate = Color(0.9, 0.75, 0.3)
 			root.add_child(header)
 			# New card grid for this tier
@@ -63,7 +63,7 @@ func _make_card(elem: Dictionary) -> PanelContainer:
 	var emoji_lbl := Label.new()
 	emoji_lbl.text = elem["emoji"] as String
 	emoji_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	emoji_lbl.add_theme_font_size_override("font_size", 60)
+	UIScale.apply(emoji_lbl, UIScale.COMP_EMOJI)
 	emoji_lbl.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	vbox.add_child(emoji_lbl)
 
@@ -71,7 +71,7 @@ func _make_card(elem: Dictionary) -> PanelContainer:
 	var name_lbl := Label.new()
 	name_lbl.text = elem["name"] as String
 	name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	name_lbl.add_theme_font_size_override("font_size", 15)
+	UIScale.apply(name_lbl, UIScale.COMP_NAME)
 	vbox.add_child(name_lbl)
 
 	# Stats line
@@ -79,7 +79,7 @@ func _make_card(elem: Dictionary) -> PanelContainer:
 	var stats_lbl := Label.new()
 	stats_lbl.text = "cd %.1f  dmg %d  %dg" % [elem["cooldown"] as float, elem["damage"] as int, elem["price"] as int]
 	stats_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	stats_lbl.add_theme_font_size_override("font_size", 13)
+	UIScale.apply(stats_lbl, UIScale.COMP_STATS)
 	stats_lbl.modulate = Color(0.7, 0.8, 0.9)
 	vbox.add_child(stats_lbl)
 
@@ -87,7 +87,7 @@ func _make_card(elem: Dictionary) -> PanelContainer:
 	var dps_lbl := Label.new()
 	dps_lbl.text = "%.2f dps" % dps
 	dps_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	dps_lbl.add_theme_font_size_override("font_size", 13)
+	UIScale.apply(dps_lbl, UIScale.COMP_STATS)
 	dps_lbl.modulate = Color(1.0, 0.75, 0.35)
 	vbox.add_child(dps_lbl)
 
@@ -100,7 +100,7 @@ func _make_card(elem: Dictionary) -> PanelContainer:
 			var r_lbl := Label.new()
 			r_lbl.text = recipe_str
 			r_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-			r_lbl.add_theme_font_size_override("font_size", 12)
+			UIScale.apply(r_lbl, UIScale.COMP_RECIPE)
 			r_lbl.modulate = Color(0.6, 0.9, 0.6)
 			r_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			vbox.add_child(r_lbl)

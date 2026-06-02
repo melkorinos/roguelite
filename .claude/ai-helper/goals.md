@@ -32,24 +32,27 @@ Goal: player lands in a shop, buys items, clicks Fight, sandstorm resolves, sees
 - [x] CLAUDE.md updated with typing rules, theme rules, build check step
 
 ## Deferred / open
-- Primary play object decision (Scenario A / B — units vs single character)
 - Draft system (Items / Trinkets)
-- Merge mechanic (3× same → upgrade)
-- Forge mechanic (A + B → C)
-- Ability Chain combat (real combat, not sandstorm placeholder)
+- Ability Chain combat (real combat, not placeholder)
 - Innate Ability + Replay mechanic
 - Faction synergy system
 - Meta-progression layer
-- Backend (async PvP)
-- Steam packaging (Godot export)
-
-## Deferred / open
-- Primary play object decision (Scenario A / B / C) — resolve before Sprint 1 coding begins
-- Draft system (Items/Trinkets)
-- Forge system
-- Innate Ability + Replay mechanic
-- Faction synergy system
-- Meta-progression layer
-- Backend (async PvP)
-- Electron (Steam packaging)
 - PvE Bosses (optional)
+
+## Steam + Backend — architecture settled 2026-06-02
+Five seams to build (all can be done without a backend — see docs/reviews/architecture-review-20260602.html):
+- [ ] OpponentProvider seam + LocalDaySeededAdapter
+- [ ] PlayerProfile autoload (user://profile.cfg)
+- [ ] AchievementSystem.check(state, profile) — called from PhaseSystem.advance_round()
+- [ ] PlatformLayer autoload (SteamAdapter + NoOpAdapter for web)
+- [ ] opponent_snapshot shape in GameState
+
+Needs backend / custom engine build (future):
+- BackendHTTPAdapter for OpponentProvider
+- GodotSteam custom build + real SDK calls
+- Steam Cloud Save sync
+- Player accounts + match IDs
+- Opponent board submission endpoint
+
+## Internal Milestones (future dedicated session)
+In-game achievements that unlock meta-progression content (Factions, Synergies, modifiers). Share AchievementSystem + PlayerProfile infrastructure with Steam achievements. Do not design reward specifics until dedicated session.

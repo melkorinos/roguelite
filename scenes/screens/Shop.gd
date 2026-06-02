@@ -37,6 +37,7 @@ func _render() -> void:
 	$VBox/TopBar/RoundLabel.text = "Round %d" % s["round"]
 	$VBox/TopBar/GoldLabel.text = "Gold: %dg" % s["gold"]
 	$VBox/TopBar/HPLabel.text = "HP: %d/30" % s["player_hp"]
+	$VBox/TopBar/LivesLabel.text = "Lives: %d  Wins: %d/10" % [s["lives"], s["wins"]]
 	$VBox/DebugRow/TierLabel.text = "Shop T%d" % s["shop_tier"]
 	$VBox/TopBar/UndoButton.disabled = GameManager.undo_state == null
 	_rebuild_shop_grid(s)
@@ -69,7 +70,7 @@ func _rebuild_shop_grid(s: Dictionary) -> void:
 			lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 			lbl.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 			lbl.modulate = Color(0.4, 0.4, 0.45, 0.7)
-			lbl.add_theme_font_size_override("font_size", 16)
+			UIScale.apply(lbl, UIScale.SOLD_LABEL)
 			sold_tile.add_child(lbl)
 			grid.add_child(sold_tile)
 		else:
@@ -93,7 +94,7 @@ func _rebuild_inventory(s: Dictionary) -> void:
 		var slot: InventorySlot = InventorySlot.new()
 		slot.slot_index = i
 		slot.custom_minimum_size = Vector2(110, 110)
-		slot.add_theme_font_size_override("font_size", 22)
+		UIScale.apply(slot, UIScale.INV_SLOT)
 		if item != null:
 			var elem: Dictionary = item as Dictionary
 			slot.has_item = true
@@ -230,9 +231,9 @@ func _on_sell_zone_sold(from_type: String, from_index: int) -> void:
 
 # ── Buy ───────────────────────────────────────────────────────────────────────
 
-func _on_buy_pressed(element_id: String, shop_slot: int) -> void:
+func _on_buy_pressed(_element_id: String, shop_slot: int) -> void:
 	GameManager.save_undo()
-	GameManager.state = ShopSystem.buy_item(GameManager.state, element_id, shop_slot)
+	GameManager.state = ShopSystem.transfer(GameManager.state, {"zone": "shop", "slot": shop_slot}, {"zone": "inventory", "slot": -1})
 	_render()
 
 
@@ -244,33 +245,40 @@ func _on_reroll_pressed() -> void:
 
 # ── Buy → empty inventory slot (no dialog) ───────────────────────────────────
 
-func _on_shop_buy_to_slot_requested(element_id: String, to_inv_index: int, shop_slot: int) -> void:
+func _on_shop_buy_to_slot_requested(_element_id: String, to_inv_index: int, shop_slot: int) -> void:
 	GameManager.save_undo()
-	GameManager.state = ShopSystem.buy_item_to_slot(GameManager.state, element_id, to_inv_index, shop_slot)
+	GameManager.state = ShopSystem.transfer(GameManager.state, {"zone": "shop", "slot": shop_slot}, {"zone": "inventory", "slot": to_inv_index})
 	_render()
 
 
 # ── Buy + level-up combo ──────────────────────────────────────────────────────
 
-func _on_shop_buy_upgrade_requested(element_id: String, to_inv_index: int, shop_slot: int) -> void:
+func _on_shop_buy_upgrade_requested(_element_id: String, to_inv_index: int, shop_slot: int) -> void:
 	var s: Dictionary = GameManager.state
-	var elem_def: Dictionary = ElementData.find(element_id)
-	_pending_buy_upgrade = {"element_id": element_id, "to_inv_index": to_inv_index, "shop_slot": shop_slot}
+	var shop_item: Variant = (s["shop_items"] as Array)[shop_slot]
+	if shop_item == null:
+		return
+	var elem: Dictionary = shop_item as Dictionary
+	_pending_buy_upgrade = {
+		"from_loc": {"zone": "shop", "slot": shop_slot},
+		"to_loc": {"zone": "inventory", "slot": to_inv_index},
+	}
 	_confirm_dialog.title = "Buy + Level Up"
 	_confirm_dialog.dialog_text = "Buy %s %s for %dg and level up?\n(You have %dg)" % [
-		elem_def["emoji"], elem_def["name"],
-		elem_def["price"] as int,
+		elem["emoji"], elem["name"],
+		elem["price"] as int,
 		s["gold"] as int,
 	]
 	_confirm_dialog.popup_centered()
 
 
 func _on_buy_upgrade_confirmed() -> void:
-	var element_id: String = _pending_buy_upgrade["element_id"]
-	var to_inv_index: int = _pending_buy_upgrade["to_inv_index"] as int
-	var shop_slot: int = _pending_buy_upgrade["shop_slot"] as int
 	GameManager.save_undo()
-	GameManager.state = ShopSystem.buy_and_level_up(GameManager.state, element_id, to_inv_index, shop_slot)
+	GameManager.state = ShopSystem.transfer(
+		GameManager.state,
+		_pending_buy_upgrade["from_loc"] as Dictionary,
+		_pending_buy_upgrade["to_loc"] as Dictionary
+	)
 	_pending_buy_upgrade = {}
 	_render()
 
@@ -278,58 +286,17 @@ func _on_buy_upgrade_confirmed() -> void:
 # ── Forge bench ───────────────────────────────────────────────────────────────
 
 func _on_forge_slot_item_placed(forge_slot_idx: int, from_inv_idx: int) -> void:
-	var s: Dictionary = GameManager.state
-	var inv: Array = s["inventory"]
-	if inv[from_inv_idx] == null:
-		return
-	var current_in_slot: Variant = s["forge_slots"][forge_slot_idx]
-	s = s.duplicate(true)
-	if current_in_slot != null:
-		var free: int = ForgeSystem._first_empty_inv_slot(s["inventory"])
-		if free >= 0:
-			s["inventory"][free] = (current_in_slot as Dictionary).duplicate()
-	s["forge_slots"][forge_slot_idx] = (s["inventory"][from_inv_idx] as Dictionary).duplicate()
-	s["inventory"][from_inv_idx] = null
-	GameManager.state = s
+	GameManager.state = ForgeSystem.move_to_forge_slot(GameManager.state, forge_slot_idx, from_inv_idx)
 	_render()
 
 
 func _on_forge_quick_slot(inv_slot_index: int) -> void:
-	var s: Dictionary = GameManager.state
-	var inv: Array = s["inventory"]
-	if inv[inv_slot_index] == null:
-		return
-	var target_forge: int = -1
-	var slots: Array = s["forge_slots"]
-	if slots[0] == null:
-		target_forge = 0
-	elif slots[1] == null:
-		target_forge = 1
-	else:
-		target_forge = 1
-	s = s.duplicate(true)
-	var displaced: Variant = s["forge_slots"][target_forge]
-	if displaced != null:
-		var free: int = ForgeSystem._first_empty_inv_slot(s["inventory"])
-		if free >= 0:
-			s["inventory"][free] = (displaced as Dictionary).duplicate()
-	s["forge_slots"][target_forge] = (s["inventory"][inv_slot_index] as Dictionary).duplicate()
-	s["inventory"][inv_slot_index] = null
-	GameManager.state = s
+	GameManager.state = ForgeSystem.forge_quick_slot(GameManager.state, inv_slot_index)
 	_render()
 
 
 func _on_forge_slot_item_removed(forge_slot_idx: int) -> void:
-	var s: Dictionary = GameManager.state
-	var item: Variant = s["forge_slots"][forge_slot_idx]
-	if item == null:
-		return
-	var free: int = ForgeSystem._first_empty_inv_slot(s["inventory"])
-	s = s.duplicate(true)
-	if free >= 0:
-		s["inventory"][free] = (item as Dictionary).duplicate()
-	s["forge_slots"][forge_slot_idx] = null
-	GameManager.state = s
+	GameManager.state = ForgeSystem.remove_from_forge_slot(GameManager.state, forge_slot_idx)
 	_render()
 
 
@@ -366,7 +333,7 @@ func _on_inv_slot_received_drop(from_type: String, from_index: int, to_inv_index
 		GameManager.save_undo()
 		GameManager.state = ForgeSystem.level_up(GameManager.state, from_index, to_inv_index)
 	elif from_type == "grid":
-		_swap_grid_to_inv(from_index, to_inv_index)
+		GameManager.state = ShopSystem.transfer(GameManager.state, {"zone": "grid", "slot": from_index}, {"zone": "inventory", "slot": to_inv_index})
 	_render()
 
 
@@ -374,9 +341,9 @@ func _on_inv_slot_received_drop(from_type: String, from_index: int, to_inv_index
 
 func _on_grid_slot_received_drop(from_type: String, from_index: int, to_grid_index: int) -> void:
 	if from_type == "inventory":
-		_swap_inv_to_grid(from_index, to_grid_index)
+		GameManager.state = ShopSystem.transfer(GameManager.state, {"zone": "inventory", "slot": from_index}, {"zone": "grid", "slot": to_grid_index})
 	elif from_type == "grid":
-		_swap_within_grid(from_index, to_grid_index)
+		GameManager.state = ShopSystem.transfer(GameManager.state, {"zone": "grid", "slot": from_index}, {"zone": "grid", "slot": to_grid_index})
 	_render()
 
 
@@ -389,32 +356,6 @@ func _on_undo_pressed() -> void:
 func _do_undo() -> void:
 	if GameManager.apply_undo():
 		_render()
-
-
-# ── State swaps (scene script — rendering/input only) ─────────────────────────
-
-func _swap_inv_to_grid(from_inv: int, to_grid: int) -> void:
-	var s: Dictionary = GameManager.state.duplicate(true)
-	var temp: Variant = s["inventory"][from_inv]
-	s["inventory"][from_inv] = s["battle_grid"][to_grid]
-	s["battle_grid"][to_grid] = temp
-	GameManager.state = s
-
-
-func _swap_grid_to_inv(from_grid: int, to_inv: int) -> void:
-	var s: Dictionary = GameManager.state.duplicate(true)
-	var temp: Variant = s["battle_grid"][from_grid]
-	s["battle_grid"][from_grid] = s["inventory"][to_inv]
-	s["inventory"][to_inv] = temp
-	GameManager.state = s
-
-
-func _swap_within_grid(from_grid: int, to_grid: int) -> void:
-	var s: Dictionary = GameManager.state.duplicate(true)
-	var temp: Variant = s["battle_grid"][from_grid]
-	s["battle_grid"][from_grid] = s["battle_grid"][to_grid]
-	s["battle_grid"][to_grid] = temp
-	GameManager.state = s
 
 
 # ── Debug ─────────────────────────────────────────────────────────────────────
