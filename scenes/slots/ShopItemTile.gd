@@ -18,6 +18,7 @@ var _hover_timer: Timer
 var _emoji_lbl: Label
 var _name_lbl: Label
 var _price_lbl: Label
+var _style: StyleBoxFlat
 
 
 func _ready() -> void:
@@ -31,12 +32,12 @@ func _ready() -> void:
 	mouse_entered.connect(_on_mouse_entered_hover)
 	mouse_exited.connect(_on_mouse_exited_hover)
 
-	var style := StyleBoxFlat.new()
-	style.set_border_width_all(2)
-	style.border_color = Color(0.4, 0.45, 0.55, 0.8)
-	style.bg_color = Color(0.13, 0.13, 0.19, 0.97)
-	style.set_corner_radius_all(5)
-	add_theme_stylebox_override("panel", style)
+	_style = StyleBoxFlat.new()
+	_style.set_border_width_all(2)
+	_style.border_color = ThemeData.SLOT_BORDER_EMPTY
+	_style.bg_color = ThemeData.SLOT_BG_EMPTY
+	_style.set_corner_radius_all(6)
+	add_theme_stylebox_override("panel", _style)
 
 	var vbox := VBoxContainer.new()
 	vbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -72,6 +73,9 @@ func setup(elem: Dictionary, gold: int, slot: int = -1) -> void:
 	_name_lbl.text = elem["name"]
 	_price_lbl.text = "%dg" % _price
 	modulate = Color.WHITE if gold >= _price else Color(0.5, 0.5, 0.5, 0.8)
+	var tier: int = elem.get("tier", 1) as int
+	_style.border_color = ThemeData.tier_border(tier)
+	_style.bg_color = ThemeData.tier_bg(tier)
 
 
 func _on_mouse_entered_hover() -> void:

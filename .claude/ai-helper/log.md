@@ -1,5 +1,125 @@
 # Development Log
 
+## 2026-06-03 — Floating combat labels + shop section color separation
+
+### Floating damage/effect numbers in battle
+- `BattleSystem.tick_battle()`: fire events now include `damage`, `effect`, and `is_miss` fields
+- `Battle.gd`: `_process_fire_events()` now calls `_spawn_float_labels(slot, event)` per event
+- `_float_label()` spawns a Label above the firing slot, Tweens it 52px upward over 0.85s while fading; auto-freed after animation
+- All 12 T1 effects have distinct colors: burn=orange, poison=lime, heal/leech=green, shock=electric-blue, blind=gray, curse=purple, weaken=teal, armor=silver, cleanse=yellow, haste=cyan; damage=red; miss=dim-gray
+- Miss events no longer trigger `play_fire_animation()` (blinded elements don't visually fire)
+
+### Shop section color separation
+- `ThemeData.gd`: added `SHOP_FORSALE_*`, `SHOP_INVENTORY_*`, `SHOP_BATTLEGRID_*` constants (warm amber / cool blue / warm red respectively)
+- `Shop.gd` `_apply_theme()`: per-section StyleBoxFlat applied to SellZone (PanelContainer), InventoryRow (HBoxContainer), BattleGrid (GridContainer) via Container "panel" stylebox override
+- `SELL_BG/BORDER` updated to match warm-amber FOR SALE theme
+- Forge panel remains deep purple; shop left panel no longer gets a single flat override
+
+### Test result
+238/238 passing.
+
+## 2026-06-03 — Visual overhaul: elemental area colors + tier-colored item tiles
+
+### Goal
+Replace default gray Godot theme with distinct elemental color identities per area, and tier-colored item borders to support playtesting readability.
+
+### New file
+- `data/ThemeData.gd` — single-source color config. All scene backgrounds, panel tints, tier colors, label accents, slot styles live here. Tweak one file to change the entire visual identity.
+
+### Files changed
+- `scenes/screens/MainMenu.tscn` — deep indigo-black background `Color(0.05, 0.03, 0.11)`
+- `scenes/screens/Shop.tscn` — dark navy merchant background `Color(0.06, 0.07, 0.12)`
+- `scenes/screens/Battle.tscn` — dark crimson war background `Color(0.09, 0.04, 0.07)`
+- `scenes/screens/Compendium.tscn` — dark teal library background `Color(0.04, 0.09, 0.12)`
+- `scenes/screens/MainMenu.gd` — added `_ready()`: title label purple tint
+- `scenes/screens/Shop.gd` — added `_apply_theme()`: forge panel purple background (via Container "panel" stylebox), shop section blue tint, all section headers colored; SOLD tile uses ThemeData
+- `scenes/screens/Battle.gd` — added header/player/opponent label color overrides; summary headers use ThemeData
+- `scenes/screens/Compendium.gd` — card borders + tier headers via ThemeData tier functions
+- `scenes/slots/ShopItemTile.gd` — tier-based border + bg color in `setup()`; stored `_style` ref
+- `scenes/slots/BattleSlot.gd` — panel StyleBoxFlat added; tier colors in `set_element()`/`_apply_empty()`; progress bar styled (dark bg + blue fill)
+- `scenes/slots/ForgeSlot.gd` — ThemeData FORGE_SLOT colors (deep purple)
+- `scenes/slots/SellZone.gd` — ThemeData SELL colors
+- `scenes/slots/InventorySlot.gd` — Button style overrides (normal/hover/pressed/focus/disabled) with panel look
+
+### Color scheme summary
+| Area | Vibe | Key color |
+|---|---|---|
+| Main Menu | Cosmic void | deep indigo `#0D0809` |
+| Shop | Merchant hall | dark navy |
+| Battle | War chamber | dark crimson |
+| Forge (panel) | Alchemy bench | deep purple |
+| Compendium | Arcane library | dark teal |
+| T1 items | Common | green border |
+| T2 items | Uncommon | blue border |
+| T3 items | Rare | gold border |
+
+### Build result
+Headless import + boot check: clean (exit 0).
+
+## 2026-06-03 — T4 expansion: 10 new elements, 30 new recipes (132 elements, 169 recipes)
+
+### Design decisions (grill-with-docs session)
+- T4 scale: mythological, astronomical, geological epoch — beyond natural phenomena
+- T4 recipe rule: T3+T3 only, 3 convergence paths per element
+- T4 elements: Ice Age, Maelstrom, Tectonic, Supernova, Singularity, World Tree, Pandemic, Ragnarok, Primordial, Aether
+- Price: 16g. Compendium label: "Tier 4 — Phenomena"
+
+### Files changed
+- `data/ElementData.gd` — 122 → 132 elements; 10 T4 entries
+- `data/RecipeData.gd` — 139 → 169 recipes; 30 T4 recipes, comment updated
+- `scenes/screens/Compendium.gd` — TIER_NAMES extended with tier 4 entry
+- `test/unit/data/test_element_data.gd` — tier range test updated 1–3 → 1–4
+
+### Test result
+279/279 passing.
+
+## 2026-06-03 — T3 expansion: 17 new elements, 46 new recipes, legacy recipe redesign (122 elements, 139 recipes)
+
+### Design decisions (grill-with-docs session)
+- T3 recipe rule settled: all T3 requires T2+T2 — no T1+T2 paths allowed
+- All 11 existing T1+T2 T3 recipes redesigned to T2+T2 equivalents (e.g. rain+fire→rainbow became rain+solar→rainbow)
+- Convergence mechanic: 2–3 distinct T2+T2 ingredient pairs per T3 element
+- T3 scale = natural wonders and large-scale phenomena; T4 reserved for cosmic/mythological
+- Thunderhead renamed → Tempest; Sanguine Tide renamed → Hemorrhage; Canker renamed → Underrot; Crimsonfield renamed → Carnage
+
+### New T3 elements (17)
+Frost: Glacier, Blizzard, Tundra
+Nature: Rainforest, Ancient Grove
+Storm: Hurricane, Tempest
+Earth: Mountain, Tsunami
+Light/Dark: Eclipse, Voidrift
+Fungus: Plague, Underrot
+Fire: Inferno
+Blood: Hemorrhage, Carnage
+Metal: Meteorite
+
+### Files changed
+- `data/ElementData.gd` — 105 → 122 elements; 17 new T3 entries with cluster comments
+- `data/RecipeData.gd` — 93 → 139 recipes; 11 T1+T2 swapped to T2+T2, 46 new T3 recipes added, comment updated
+- `.claude/ai-helper/memory.md` — element/recipe counts updated, T3 design rules documented
+
+### Test result
+279/279 passing (no new tests needed — test_all_recipes_produce_findable_elements validated all 46 new result IDs automatically).
+
+## 2026-06-03 — Full T2 expansion: Blood, Frost, and all cross-combos (105 elements, 93 recipes)
+
+### Design decisions
+- Water+Water renamed Ice → **Sea** (ice evoked Frost; sea leaves ocean/T3 space)
+- Air+Air renamed Gale → **Gust** (preserves Tornado/Storm at T3)
+- Frost+Frost self-combo added as **Freeze** (intermediate between Frost T1 and Glacier/Tundra at T3)
+- Metal+Earth renamed Ore → **Flint**
+- Fungus cross-combos renamed: Sonar → Sporeflow, Resonance → Fireshroom, Howl → Haze, Tremor → Rootrot, Echo → Mycelium
+- 15 Group-G combos use placeholder names (e.g. "Blood+Nature") pending next brainstorm
+- T3 convergence design intent established: Frost+Water (Blackice) + Frost+Air (Razorwind) → Blizzard at T3
+
+### Files changed
+- `data/ElementData.gd` — 67 → 105 elements; 8 renames + 38 new T2 elements
+- `data/RecipeData.gd` — 55 → 93 recipes; 8 result-ID renames + 38 new recipes
+- `test/unit/systems/test_forge_system.gd` — updated 5 test assertions for renamed IDs (ice→sea, gale→gust)
+
+### Test result
+279/279 passing.
+
 ## 2026-06-03 — Status Effects system + T1 expansion to 12 elements
 
 ### Design session (grill-with-docs)

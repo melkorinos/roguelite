@@ -173,6 +173,24 @@ _Avoid_: options menu, escape menu
 **PvE Boss**:
 A special PvE encounter that functions as a damage or defence check. Beating a Boss unlocks a milestone (new Faction, new Synergy, or a game-changing modifier). Not confirmed for launch; noted as a strong design option.
 
+### Developer tooling
+
+**Efficiency Score**:
+A two-axis developer-only score assigned to each Element: DPS Score and Effect Score. Used in the Balance Sandbox and Compendium dev column to identify balance outliers across the element roster. Never shown to players. Gated by `FeatureFlags.efficiency_scoring`.
+_Avoid_: power level, rating, rank
+
+**DPS Score**:
+`effective_damage(elem, level) / cooldown`. The offensive output axis of the Efficiency Score. Computed per level; the balance tool shows Level 1 and Level 2 side by side.
+_Avoid_: damage output, attack rating
+
+**Effect Score**:
+A designer-estimated utility value representing the combat impact of an Element's Effect. Drawn from a hardcoded lookup table in `BalanceSystem`. T2/T3 Elements without an assigned Effect score 0 until their effects are designed and values are added.
+_Avoid_: utility score, passive value, OffDef
+
+**Balance Sandbox**:
+A dev-only panel inside the Compendium scene (visible when `FeatureFlags.efficiency_scoring` is true) where the developer drags any four Elements into a test Composition and sees their live Efficiency Scores (DPS + Effect Score per slot, and a summed board total). No battle simulation — score display only.
+_Avoid_: test bench, simulator, dev board
+
 ## Example dialogue
 
 > "I have three identical swords — what do I do?"

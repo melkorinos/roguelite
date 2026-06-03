@@ -21,6 +21,11 @@ func _ready() -> void:
 	_pause_overlay.quit_to_menu_requested.connect(_on_pause_menu)
 	_pause_overlay.quit_to_desktop_requested.connect(func() -> void: get_tree().quit())
 
+	($VBox/Header as Label).add_theme_color_override("font_color", ThemeData.COLOR_HEADER_BATTLE)
+	($VBox/BattleRow/PlayerSide/PlayerLabel as Label).add_theme_color_override("font_color", ThemeData.COLOR_PLAYER_SIDE)
+	($VBox/BattleRow/OppSide/OppLabel as Label).add_theme_color_override("font_color", ThemeData.COLOR_OPP_SIDE)
+	($VBox/TimerRow/TimerLabel as Label).add_theme_color_override("font_color", ThemeData.COLOR_ROUND_LABEL)
+
 	_build_grids()
 	_render()
 
@@ -101,10 +106,58 @@ func _process_fire_events(s: Dictionary) -> void:
 	for event: Variant in s["battle_events"]:
 		var e: Dictionary = event as Dictionary
 		var idx: int = e["slot"] as int
+		var slot: BattleSlot
 		if e["side"] == "player":
-			_player_slots[idx].play_fire_animation()
+			slot = _player_slots[idx]
 		else:
-			_opp_slots[idx].play_fire_animation()
+			slot = _opp_slots[idx]
+		if not (e.get("is_miss", false) as bool):
+			slot.play_fire_animation()
+		_spawn_float_labels(slot, e)
+
+
+func _spawn_float_labels(slot: BattleSlot, event: Dictionary) -> void:
+	var is_miss: bool = event.get("is_miss", false) as bool
+	if is_miss:
+		_float_label(slot, "MISS", Color(0.55, 0.55, 0.55, 0.9), 0.0)
+		return
+	var dmg: int = event.get("damage", 0) as int
+	var effect: String = event.get("effect", "") as String
+	if dmg > 0:
+		_float_label(slot, "-%d" % dmg, Color(1.00, 0.35, 0.35, 1.0), 0.0)
+	match effect:
+		"burn":    _float_label(slot, "🔥 BURN",    Color(1.00, 0.55, 0.15), -4.0)
+		"poison":  _float_label(slot, "☠ POISON",  Color(0.55, 0.92, 0.28), -4.0)
+		"heal":    _float_label(slot, "+1 HP",      Color(0.30, 1.00, 0.55),  0.0)
+		"leech":   _float_label(slot, "+%d HP" % dmg, Color(0.30, 1.00, 0.55), 0.0)
+		"shock":   _float_label(slot, "⚡ SHOCK",   Color(0.50, 0.80, 1.00), -4.0)
+		"blind":   _float_label(slot, "👁 BLIND",   Color(0.75, 0.75, 0.75), -4.0)
+		"curse":   _float_label(slot, "🌑 CURSE",   Color(0.75, 0.32, 1.00), -4.0)
+		"weaken":  _float_label(slot, "↓ WEAKEN",   Color(0.38, 0.80, 0.80), -4.0)
+		"armor":   _float_label(slot, "🛡 ARMOR",   Color(0.72, 0.72, 0.72), -4.0)
+		"plating": _float_label(slot, "⚙ PLATE",   Color(0.60, 0.65, 0.72), -4.0)
+		"cleanse": _float_label(slot, "✨ CLEANSE",  Color(0.92, 0.92, 0.45), -4.0)
+		"haste":   _float_label(slot, "💨 HASTE",   Color(0.55, 0.92, 0.92), -4.0)
+
+
+func _float_label(slot: BattleSlot, text: String, color: Color, y_nudge: float) -> void:
+	var lbl := Label.new()
+	lbl.text = text
+	lbl.add_theme_color_override("font_color", color)
+	UIScale.apply(lbl, 17)
+	lbl.z_index = 120
+	add_child(lbl)
+	# Position at top-centre of the slot in Battle scene local space
+	var slot_gr: Rect2 = slot.get_global_rect()
+	var self_gr: Rect2 = get_global_rect()
+	var lx: float = slot_gr.position.x - self_gr.position.x + slot_gr.size.x * 0.5 - 24.0
+	var ly: float = slot_gr.position.y - self_gr.position.y + y_nudge - 8.0
+	lbl.position = Vector2(lx, ly)
+	var tween := create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(lbl, "position:y", ly - 52.0, 0.85)
+	tween.tween_property(lbl, "modulate:a", 0.0, 0.85).set_delay(0.30)
+	tween.chain().tween_callback(lbl.queue_free)
 
 
 func _render() -> void:
@@ -176,13 +229,13 @@ func _build_summary() -> void:
 	var battle_time: float = maxf(s["battle_timer"] as float, 0.001)
 	var bstats: Dictionary = s["battle_stats"] as Dictionary
 
-	_add_summary_header(vbox, "YOUR ELEMENTS", Color(0.4, 0.9, 0.5))
+	_add_summary_header(vbox, "YOUR ELEMENTS", ThemeData.COLOR_PLAYER_SIDE)
 	_add_summary_rows(vbox, s["battle_grid"] as Array, bstats["player"] as Array, battle_time)
 
 	var sep := HSeparator.new()
 	vbox.add_child(sep)
 
-	_add_summary_header(vbox, "OPPONENT", Color(0.9, 0.4, 0.4))
+	_add_summary_header(vbox, "OPPONENT", ThemeData.COLOR_OPP_SIDE)
 	_add_summary_rows(vbox, s["opponent_grid"] as Array, bstats["opponent"] as Array, battle_time)
 
 

@@ -18,11 +18,58 @@ func _ready() -> void:
 	_pause_overlay.quit_to_menu_requested.connect(_on_pause_menu)
 	_pause_overlay.quit_to_desktop_requested.connect(func() -> void: get_tree().quit())
 
+	_apply_theme()
+
 	var s: Dictionary = GameManager.state
 	var all_null: bool = (s["shop_items"] as Array).all(func(x: Variant) -> bool: return x == null)
 	if all_null:
 		GameManager.state = ShopSystem.reroll_shop(s, true)
 	_render()
+
+
+func _apply_theme() -> void:
+	# Forge bench: purple panel background via Container's built-in "panel" stylebox
+	var forge_style := StyleBoxFlat.new()
+	forge_style.bg_color = ThemeData.FORGE_PANEL_BG
+	forge_style.set_border_width_all(1)
+	forge_style.border_color = ThemeData.FORGE_PANEL_BORDER
+	forge_style.set_corner_radius_all(8)
+	forge_style.content_margin_left = 10.0
+	forge_style.content_margin_right = 10.0
+	forge_style.content_margin_top = 8.0
+	forge_style.content_margin_bottom = 8.0
+	$VBox/MainArea/RightPanel.add_theme_stylebox_override("panel", forge_style)
+
+	# FOR SALE section — warm amber tint (applied directly to SellZone panel)
+	var forsale_style := StyleBoxFlat.new()
+	forsale_style.bg_color = ThemeData.SHOP_FORSALE_BG
+	forsale_style.set_border_width_all(1)
+	forsale_style.border_color = ThemeData.SHOP_FORSALE_BORDER
+	forsale_style.set_corner_radius_all(6)
+	($VBox/MainArea/LeftPanel/SellZone as PanelContainer).add_theme_stylebox_override("panel", forsale_style)
+
+	# INVENTORY section — cool blue tint on the row container
+	var inv_style := StyleBoxFlat.new()
+	inv_style.bg_color = ThemeData.SHOP_INVENTORY_BG
+	inv_style.set_border_width_all(1)
+	inv_style.border_color = ThemeData.SHOP_INVENTORY_BORDER
+	inv_style.set_corner_radius_all(6)
+	$VBox/MainArea/LeftPanel/InventoryRow.add_theme_stylebox_override("panel", inv_style)
+
+	# BATTLE GRID section — warm amber-red tint on the grid container
+	var grid_style := StyleBoxFlat.new()
+	grid_style.bg_color = ThemeData.SHOP_BATTLEGRID_BG
+	grid_style.set_border_width_all(1)
+	grid_style.border_color = ThemeData.SHOP_BATTLEGRID_BORDER
+	grid_style.set_corner_radius_all(6)
+	$VBox/MainArea/LeftPanel/BattleGrid.add_theme_stylebox_override("panel", grid_style)
+
+	# Header label colors
+	($VBox/MainArea/LeftPanel/SellZone/SellZoneVBox/ShopHeaderRow/ShopHeader as Label).add_theme_color_override("font_color", ThemeData.COLOR_HEADER_SHOP)
+	($VBox/MainArea/LeftPanel/InventoryHeader as Label).add_theme_color_override("font_color", ThemeData.COLOR_HEADER_INVENTORY)
+	($VBox/MainArea/LeftPanel/BattleGridHeader as Label).add_theme_color_override("font_color", ThemeData.COLOR_HEADER_GRID)
+	($VBox/MainArea/RightPanel/ForgeHeader as Label).add_theme_color_override("font_color", ThemeData.COLOR_HEADER_FORGE)
+	($VBox/TopBar/RoundLabel as Label).add_theme_color_override("font_color", ThemeData.COLOR_ROUND_LABEL)
 
 
 func _unhandled_key_input(event: InputEvent) -> void:
@@ -88,10 +135,10 @@ func _rebuild_shop_grid(s: Dictionary) -> void:
 			var sold_tile := PanelContainer.new()
 			sold_tile.custom_minimum_size = ShopItemTile.SIZE
 			var style := StyleBoxFlat.new()
-			style.bg_color = Color(0.08, 0.08, 0.1, 0.7)
+			style.bg_color = ThemeData.SOLD_TILE_BG
 			style.set_border_width_all(1)
-			style.border_color = Color(0.25, 0.25, 0.3, 0.5)
-			style.set_corner_radius_all(5)
+			style.border_color = ThemeData.SOLD_TILE_BORDER
+			style.set_corner_radius_all(6)
 			sold_tile.add_theme_stylebox_override("panel", style)
 			var lbl := Label.new()
 			lbl.text = "SOLD"

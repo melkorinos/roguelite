@@ -29,6 +29,44 @@ func _ready() -> void:
 	_hover_timer.one_shot = true
 	add_child(_hover_timer)
 	_hover_timer.timeout.connect(_on_hover_timeout)
+	_apply_base_style()
+
+
+func _apply_base_style() -> void:
+	var normal := StyleBoxFlat.new()
+	normal.bg_color = ThemeData.SLOT_BG_EMPTY
+	normal.set_border_width_all(2)
+	normal.border_color = ThemeData.SLOT_BORDER_EMPTY
+	normal.set_corner_radius_all(6)
+	add_theme_stylebox_override("normal", normal)
+
+	var hover := StyleBoxFlat.new()
+	hover.bg_color = ThemeData.SLOT_BG_EMPTY.lightened(0.07)
+	hover.set_border_width_all(2)
+	hover.border_color = ThemeData.SLOT_BORDER_EMPTY.lightened(0.25)
+	hover.set_corner_radius_all(6)
+	add_theme_stylebox_override("hover", hover)
+
+	var pressed_style := StyleBoxFlat.new()
+	pressed_style.bg_color = ThemeData.SLOT_BG_EMPTY.darkened(0.10)
+	pressed_style.set_border_width_all(2)
+	pressed_style.border_color = ThemeData.SLOT_BORDER_EMPTY
+	pressed_style.set_corner_radius_all(6)
+	add_theme_stylebox_override("pressed", pressed_style)
+
+	var focus_style := StyleBoxFlat.new()
+	focus_style.bg_color = ThemeData.SLOT_BG_EMPTY
+	focus_style.set_border_width_all(2)
+	focus_style.border_color = ThemeData.SLOT_BORDER_EMPTY.lightened(0.35)
+	focus_style.set_corner_radius_all(6)
+	add_theme_stylebox_override("focus", focus_style)
+
+	var disabled_style := StyleBoxFlat.new()
+	disabled_style.bg_color = ThemeData.SLOT_BG_EMPTY.darkened(0.15)
+	disabled_style.set_border_width_all(1)
+	disabled_style.border_color = ThemeData.SLOT_BORDER_EMPTY.darkened(0.30)
+	disabled_style.set_corner_radius_all(6)
+	add_theme_stylebox_override("disabled", disabled_style)
 
 
 func _on_mouse_entered() -> void:

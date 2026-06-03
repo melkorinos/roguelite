@@ -22,6 +22,7 @@ var _progress: ProgressBar
 var _emoji_lbl: Label
 var _name_lbl: Label
 var _emoji_text: String = ""
+var _style: StyleBoxFlat
 
 
 func _ready() -> void:
@@ -35,6 +36,13 @@ func _ready() -> void:
 	mouse_entered.connect(_on_mouse_entered_hover)
 	mouse_exited.connect(_on_mouse_exited_hover)
 
+	_style = StyleBoxFlat.new()
+	_style.set_border_width_all(2)
+	_style.border_color = ThemeData.BATTLE_SLOT_BORDER_EMPTY
+	_style.bg_color = ThemeData.BATTLE_SLOT_BG_EMPTY
+	_style.set_corner_radius_all(6)
+	add_theme_stylebox_override("panel", _style)
+
 	var vbox := VBoxContainer.new()
 	vbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	vbox.add_theme_constant_override("separation", 2)
@@ -44,7 +52,13 @@ func _ready() -> void:
 	_progress.max_value = 1.0
 	_progress.value = 0.0
 	_progress.show_percentage = false
-	_progress.custom_minimum_size = Vector2(0, 10)
+	_progress.custom_minimum_size = Vector2(0, 8)
+	var pb_bg := StyleBoxFlat.new()
+	pb_bg.bg_color = ThemeData.BATTLE_PROGRESS_BG
+	_progress.add_theme_stylebox_override("background", pb_bg)
+	var pb_fill := StyleBoxFlat.new()
+	pb_fill.bg_color = ThemeData.BATTLE_PROGRESS_FILL
+	_progress.add_theme_stylebox_override("fill", pb_fill)
 	vbox.add_child(_progress)
 
 	_emoji_lbl = Label.new()
@@ -77,6 +91,9 @@ func set_element(item: Variant) -> void:
 	_name_lbl.text = "%s L%d" % [elem["name"], elem["level"] as int]
 	_progress.value = 0.0
 	modulate = Color.WHITE
+	var tier: int = elem.get("tier", 1) as int
+	_style.border_color = ThemeData.tier_border(tier)
+	_style.bg_color = ThemeData.tier_bg(tier)
 
 
 func _apply_empty() -> void:
@@ -86,7 +103,10 @@ func _apply_empty() -> void:
 	_emoji_lbl.text = "+"
 	_name_lbl.text = ""
 	_progress.value = 0.0
-	modulate = Color(0.55, 0.55, 0.55, 0.7)
+	modulate = Color(0.6, 0.6, 0.6, 0.75)
+	if _style != null:
+		_style.border_color = ThemeData.BATTLE_SLOT_BORDER_EMPTY
+		_style.bg_color = ThemeData.BATTLE_SLOT_BG_EMPTY
 
 
 func set_cooldown_progress(ratio: float) -> void:

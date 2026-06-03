@@ -99,6 +99,7 @@ static func tick(statuses: Dictionary) -> Dictionary:
 		var raw_burn: int = burn_stacks + curse_bonus
 		var armor: Dictionary = s["armor"] as Dictionary
 		var armor_val: int = armor["value"] as int
+		@warning_ignore("integer_division")
 		var armor_absorbed: int = mini(armor_val, raw_burn / 2)
 		armor["value"] = armor_val - armor_absorbed
 		hp_damage += raw_burn - armor_absorbed

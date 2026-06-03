@@ -5,6 +5,7 @@ const TIER_NAMES: Dictionary = {
 	1: "Tier 1 — Basics",
 	2: "Tier 2 — Combinations",
 	3: "Tier 3 — Compounded",
+	4: "Tier 4 — Phenomena",
 }
 
 
@@ -30,7 +31,7 @@ func _build_content() -> void:
 			var header := Label.new()
 			header.text = TIER_NAMES.get(tier, "Tier %d" % tier) as String
 			UIScale.apply(header, UIScale.COMP_HEADER)
-			header.modulate = Color(0.9, 0.75, 0.3)
+			header.modulate = ThemeData.comp_tier_color(tier)
 			root.add_child(header)
 			# New card grid for this tier
 			current_grid = GridContainer.new()
@@ -46,10 +47,11 @@ func _make_card(elem: Dictionary) -> PanelContainer:
 	var card := PanelContainer.new()
 	card.custom_minimum_size = Vector2(CARD_WIDTH, 0)
 
+	var tier: int = elem.get("tier", 1) as int
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.11, 0.11, 0.16, 0.97)
+	style.bg_color = ThemeData.tier_bg(tier)
 	style.set_border_width_all(2)
-	style.border_color = Color(0.35, 0.38, 0.5, 0.85)
+	style.border_color = ThemeData.tier_border(tier)
 	style.set_corner_radius_all(6)
 	card.add_theme_stylebox_override("panel", style)
 
@@ -98,12 +100,12 @@ func _make_card(elem: Dictionary) -> PanelContainer:
 		sep.add_theme_constant_override("separation", 4)
 		vbox.add_child(sep)
 		for recipe: Dictionary in recipes:
-			var emoji_lbl := Label.new()
-			emoji_lbl.text = "%s  +  %s" % [recipe["a_emoji"] as String, recipe["b_emoji"] as String]
-			emoji_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-			UIScale.apply(emoji_lbl, UIScale.COMP_RECIPE_EMOJI)
-			emoji_lbl.modulate = Color(0.65, 0.95, 0.65)
-			vbox.add_child(emoji_lbl)
+			var recipe_emoji_lbl := Label.new()
+			recipe_emoji_lbl.text = "%s  +  %s" % [recipe["a_emoji"] as String, recipe["b_emoji"] as String]
+			recipe_emoji_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			UIScale.apply(recipe_emoji_lbl, UIScale.COMP_RECIPE_EMOJI)
+			recipe_emoji_lbl.modulate = Color(0.65, 0.95, 0.65)
+			vbox.add_child(recipe_emoji_lbl)
 
 			var names_lbl := Label.new()
 			names_lbl.text = "%s + %s" % [recipe["a_name"] as String, recipe["b_name"] as String]

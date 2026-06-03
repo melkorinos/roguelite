@@ -26,27 +26,35 @@ Check at any code boundary before activating deferred behaviour: `if FeatureFlag
 ## Combat model
 Real-time deterministic. Elements fire on individual cooldown timers → deal `effective_damage` to opponent HP bar. Discrete ticks; result pre-computed, played back visually. Ties: top-left first. RNG seeded at combat start → reproducible.
 
-## Ability Chain + Innate + Replay
-Abilities activate in sequence; no positional targeting — whole Composition vs opponent. Player fires one Innate Ability once per combat. After loss: spend Replay token, retrigger with Innate at different moment; new result replaces original. Tokens: finite per-match resource. *(Combat is still placeholder; real Ability Chain is deferred.)*
+## Innate + Replay
+Combat model is settled: elements fire on individual CDs, status interactions produce emergent sequencing naturally — no separate Ability Chain architecture planned. Higher-tier elements will have richer passives that deepen interactions organically.
+Player fires one Innate Ability once per combat at a chosen moment. After loss: spend Replay token, retrigger with Innate at different moment; new result replaces original. Tokens: finite per-match resource. Economy design TBD.
 
-## Element system (67 elements, 55 recipes, 3 tiers)
-- **T1 (12, 5g):** Water 💧 Cleanse, Fire 🔥 Burn, Air 🌬️ Haste, Earth 🌍 Armor, Lightning ⚡ Shock, Nature 🌿 Heal, Light ☀️ Blind, Dark 🌑 Curse, Metal ⚙️ Plating, Fungus 🍄 Poison, Blood 🩸 Leech, Frost 🌨️ Weaken. **Sound retired** → replaced by Fungus.
-- **T2 cross original (6, 8g):** Steam, Rain, Mud, Smoke, Lava, Dust — Water/Fire/Air/Earth pairs only
+## Element system (132 elements, 169 recipes, 4 tiers)
+- **T1 (12, 5g):** Water 💧 Cleanse, Fire 🔥 Burn, Air 🌬️ Haste, Earth 🌍 Armor, Lightning ⚡ Shock, Nature 🌿 Heal, Light ☀️ Blind, Dark 🌑 Curse, Metal ⚙️ Plating, Fungus 🍄 Poison, Blood 🩸 Leech, Frost 🌨️ Weaken. Sound retired → replaced by Fungus.
+- **T2 cross original (6, 8g):** Steam, Rain, Mud, Smoke, Lava, Dust
 - **T2 cross extended (24, 8g):** Lightning/Nature/Light/Dark/Metal/Fungus × {Water, Fire, Air, Earth}
-  - Lightning: Surge 💫, Arc 🌠, Static 💠, Lodestone 🧲
-  - Nature: Bloom 🌸, Ember 🪵, Pollen 🌼, Root 🌱
-  - Light: Prism 💎, Solar 🌞, Aurora 🌌, Crystal 🔮
-  - Dark: Abyss 🌊, Blight 🥀, Miasma ☣️, Shade 🌘
-  - Metal: Rust 🟤, Molten 🔶, Shrapnel 💥, Ore ⛏️
-  - Fungus: Sonar 📡, Resonance 〰️, Howl 🐺, Tremor 🫨 *(names pending rename)*
-- **T2 self (10, 8g):** Ice, Blaze, Gale, Boulder, Plasma, Forest, Radiance, Void, Steel, Echo. Blood+Frost self-combos deferred.
-- **No T2 combos yet for Blood 🩸 or Frost 🌨️**
-- **T3 (15, 12g):** Cloud, Geyser, Fog, Rainbow, Storm, Plant, Swamp, Brick, Ash, Acid, Obsidian, Volcano, Sand, Sandstorm, Clay
+  - Lightning: Surge, Arc, Static, Lodestone
+  - Nature: Bloom, Ember, Pollen, Root
+  - Light: Prism, Solar, Aurora, Crystal
+  - Dark: Abyss, Blight, Miasma, Shade
+  - Metal: Rust, Molten, Shrapnel, Flint (was Ore)
+  - Fungus: Sporeflow (was Sonar), Fireshroom (was Resonance), Haze (was Howl), Rootrot (was Tremor)
+- **T2 Blood cross (11, 8g):** Pulse, Fever, Hemowind, Ironblood, Sparkblood (named); Blood+{Nature,Light,Dark,Metal,Fungus,Frost} (placeholder)
+- **T2 Frost cross (10, 8g):** Black Ice, Frostburn, Razorwind, Permafrost, Hail, Chill, Whiteout, Wither, Tempered, Cryptbloom
+- **T2 extended-to-extended (15, 8g):** Murk (Dark+Fungus), Voltspore (⚡+🍄), Photosynthesis (🌿+☀️), Ironwood (🌿+⚙️), Beacon (☀️+⚙️), Lucent (☀️+🍄), Hexcore (🌑+⚙️); Lightning+{Nature,Light,Dark,Metal}, Nature+{Dark,Fungus}, Light+Dark, Metal+Fungus (placeholder)
+- **T2 self (12, 8g):** Sea (was Ice), Blaze, Gust (was Gale), Boulder, Plasma, Forest, Radiance, Void, Steel, Mycelium (was Echo), Freeze (Frost+Frost), Blood+Blood (placeholder)
+- **T3 (32, 12g):** Cloud, Geyser, Fog, Rainbow, Storm, Plant, Swamp, Brick, Ash, Acid, Obsidian, Volcano, Sand, Sandstorm, Clay, Glacier, Blizzard, Tundra, Rainforest, Ancient Grove, Hurricane, Tempest, Mountain, Tsunami, Eclipse, Voidrift, Plague, Underrot, Inferno, Hemorrhage, Carnage, Meteorite
+- **T4 (10, 16g):** Ice Age, Maelstrom, Tectonic, Supernova, Singularity, World Tree, Pandemic, Ragnarok, Primordial, Aether
+- **T4 recipe rule:** T3+T3 only. 3 convergence paths per element. Compendium label: "Tier 4 — Phenomena".
+- **Placeholder naming:** 15 G-group combos use `element_a+element_b` display names (e.g. "Blood+Nature") pending final names next brainstorm session
 - **Level up**: same element ×2 same level → level+1. Drag-drop. No recipe needed.
 - **Forge**: 2 elements at bench → recipe → new element at level 1. Self-combos valid.
 - `effective_damage = base_damage × level + tier` (universal, via `ElementData.effective_damage(item)`).
 - Forge result level = `min(level_a, level_b)`. Warning shown on mismatch.
 - `discovered_recipes[]` in GameState tracks recipe history. All visible now; shadow TBD.
+- **T3 recipe rule (settled 2026-06-03):** All T3 recipes require two T2 ingredients — no T1+T2 paths. The original 15 T3 recipes were redesigned from T1+T2 to T2+T2 to match this rule.
+- **T3 convergence mechanic:** Multiple distinct T2+T2 pairs can produce the same T3 result (2–3 paths per element). Rewards players who pursue a theme via different routes.
 
 ## Shop UX (all item moves via ShopSystem.transfer)
 - `ShopSystem.transfer(state, from_loc, to_loc)` — `{"zone":"shop"|"inventory"|"grid","slot":int}`; slot=-1=first empty.
@@ -174,6 +182,44 @@ Effects fire via `_apply_element_effect(s, effect, is_player_side, timers, dmg_d
 - Poison is permanent (never expires); all other timed effects use ticks_remaining
 - Feature flag `FeatureFlags.status_effects` gates all paths; existing behavior unchanged when false
 
+## Balance tooling (settled 2026-06-03)
+
+### BalanceSystem — Efficiency Score
+- Pure static `systems/BalanceSystem.gd`. Gated by `FeatureFlags.efficiency_scoring` (already defined, false by default).
+- Two axes per Element: **DPS Score** (`effective_damage(elem, level) / cooldown`) and **Effect Score** (hardcoded lookup table).
+- Scored at **Level 1 and Level 2** (early-game balance focus). Level 3+ deferred.
+- No Forge cost weighting. No Synergy multiplier (deferred until Synergy system exists).
+- **Composition score** = sum of 4 slot scores (partial boards score lower than full ones).
+
+### Effect value table (T1 only; T2/T3 = 0 until effects are designed)
+All values are designer estimates, marked `# estimated` in code. Replace with simulation-derived values in a future session.
+
+| Effect | Type | Value |
+|---|---|---|
+| poison | offensive | 4.5 |
+| shock | offensive | 4.0 |
+| burn | offensive | 3.5 |
+| curse | offensive | 3.5 |
+| blind | offensive | 3.0 |
+| weaken | offensive | 2.5 |
+| plating | defensive | 3.5 |
+| haste | defensive | 3.0 |
+| armor | defensive | 2.5 |
+| cleanse | defensive | 2.5 |
+| leech | defensive | 2.0 |
+| heal | defensive | 2.0 |
+
+### Balance Sandbox (Compendium dev column)
+- Dev-only panel inside `scenes/screens/Compendium.gd`, visible when `FeatureFlags.efficiency_scoring` is true.
+- Dev column appended to each element card row: shows DPS_lv1, DPS_lv2, Effect Score.
+- Sandbox panel: 4 drag-drop slots (accepts elements from Compendium cards), shows live per-slot and summed board Efficiency Score. No battle simulation — score display only.
+- Score bands per tier: **deferred** — derive from data distribution once tool exists.
+- Automated outlier flagging: **deferred**.
+- Full board sweep simulation: **deferred**.
+
+### ADR
+`docs/adr/0002-two-axis-efficiency-scoring.md` — records 2-axis vs 3-axis vs 1-axis decision.
+
 ## Deferred / TBD
 Full brainstorm backlog lives in `.claude/ai-helper/ideas.md`. Key items with near-term implementation implications:
 
@@ -181,7 +227,6 @@ Full brainstorm backlog lives in `.claude/ai-helper/ideas.md`. Key items with ne
 - Damage types and status effects — T1 implemented; T2 effects + T3 inheritance TBD
 - Open-ended forging as discovery mechanic (see ideas.md)
 - Level 2 Reward implementation (design settled above)
-- Ability Chain combat (real, not placeholder — major chunk)
 - Innate Ability + Replay token economy
 - Merge mechanic: 3× same → upgrade (distinct from the current 2-copy level-up; not yet implemented)
 - Faction synergy system + grid adjacency logic

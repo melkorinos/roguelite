@@ -10,31 +10,18 @@ Element/combat reference lives in the in-game Compendium scene, not a separate H
 
 ### Damage types and status effects *(T1 implemented 2026-06-03)*
 All 12 T1 elements have effects. Gated by `FeatureFlags.status_effects`. See `memory.md` for full spec.
-- **Open for future sessions:** Do T3 results inherit effects from both ingredients? T2 element effects? Effect display in Compendium and Tooltip (Abilities Panel placeholder).
-
-### Open-ended forging *(exploring)*
-Forge recipes as a discovery mechanic rather than a visible lookup table. Players experiment; the Compendium unlocks as they discover. `discovered_recipes[]` already exists in PlayerProfile as the seam.
-- Open questions: hidden entirely vs silhouetted ("???")?  Per-run or persistent across matches? What happens when you forge a pair with no recipe — random output, failure, or junk element? Community shared discovery pool?
+- **Open for future sessions:** Effect display in Compendium and Tooltip (Abilities Panel placeholder).
 
 ### Hidden item efficiency function *(internal balance tool)*
 Developer-only scoring: `efficiency = w_dps × (eff_dmg / cooldown) + w_effect × effect_value + w_tier × tier_bonus`. Used to detect outliers. Weights are tunable constants, never shown to players.
 - Open questions: single score or multi-axis (offence / utility / support)? Target bands per tier (e.g. T1: 3–5, T2: 6–9, T3: 10–14)? Dev Compendium view or CI lint check only?
 
-### T2 cross-recipe expansion
-Lightning ⚡, Nature 🌿, Light ☀️, Dark 🌑, Metal ⚙️, Fungus 🍄 have cross-combo recipes with the original 4. Blood 🩸 and Frost 🌨️ have **no T2 combos yet** — most obvious gap for the next recipe pass.
-
-### T4 / T5 element tiers
-Pyramid target (early idea, not committed): 10 / 20 / 30 / 20 / 10 = 90 elements across T1–T5. T4/T5 design fully deferred.
-
 ---
 
 ## Ability Chain & Combat
 
-### Real Ability Chain combat *(major future milestone)*
-Current combat is placeholder damage ticks. Real design: each element fires its Ability in sequence per CONTEXT.md. Interactions between abilities in the chain produce emergent outcomes.
-
 ### Innate Ability
-One player-owned ability fired once per combat at a chosen moment. The primary player action during combat. Token economy and interaction with chain timing TBD.
+One player-owned ability fired once per combat at a chosen moment. The primary player action during combat. Token economy TBD.
 
 ### Replay token economy
 After a loss, spend a Replay token to re-run combat with Innate fired at a different moment. Finite per-match tokens. Economy design (how many per match, replenishment) TBD.
@@ -65,18 +52,12 @@ Free selection of Items and Trinkets offered each round, separate from the gold 
 ### Grid shape & adjacency
 Current prototype is 2×2 (Battlegrid). Adjacency bonuses apply at setup, direction per element, not during combat. Whether the grid grows or stays 2×2 for the final game is TBD.
 
-### Faction system
-Category tags on pieces (e.g. Construct, Rogue, Storm). Reaching a threshold count activates a bonus for all pieces of that Faction. Passive ability interactions between specific pieces form emergent Synergies.
-
 ---
 
 ## Progression & Meta
 
 ### Meta-progression shape *(dedicated session needed)*
 Options: unlock-gated (new Factions/Synergies), cosmetic, XP-based, or hybrid. Do not commit without a session specifically for this — the decision shapes the whole long-term game.
-
-### Milestones / Internal achievements
-In-game achievements that unlock meta-progression content. Infrastructure exists via AchievementSystem + PlayerProfile. First 5 Steam achievements already defined (`ACH_FIRST_WIN` etc.). Reward specifics for internal milestones TBD.
 
 ### PvE Rounds & Bosses *(strong option, not committed)*
 PvE Rounds on a fixed schedule — all players fight the same encounter. Primary source of Trinkets.

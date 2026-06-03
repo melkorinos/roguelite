@@ -29,9 +29,9 @@ func _ready() -> void:
 
 	var style := StyleBoxFlat.new()
 	style.set_border_width_all(2)
-	style.border_color = Color(0.5, 0.5, 0.8, 0.9)
-	style.bg_color = Color(0.12, 0.12, 0.22, 0.95)
-	style.set_corner_radius_all(4)
+	style.border_color = ThemeData.FORGE_SLOT_BORDER
+	style.bg_color = ThemeData.FORGE_SLOT_BG
+	style.set_corner_radius_all(6)
 	add_theme_stylebox_override("panel", style)
 
 	var vbox := VBoxContainer.new()

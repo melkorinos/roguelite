@@ -81,12 +81,15 @@ static func tick_battle(state: Dictionary, delta: float) -> Dictionary:
 					dmg = hit["damage"] as int
 					s["opponent_statuses"] = hit["defender_statuses"] as Dictionary
 				s["opponent_hp"] = maxi(0, (s["opponent_hp"] as int) - dmg)
-				events.append({"side": "player", "slot": i})
+				var effect_str: String = elem.get("effect", "") as String
+				events.append({"side": "player", "slot": i, "damage": dmg, "effect": effect_str, "is_miss": false})
 				var ps: Dictionary = pstats[i] as Dictionary
 				ps["fires"] = (ps["fires"] as int) + 1
 				ps["damage"] = (ps["damage"] as int) + dmg
 				if use_effects and elem.has("effect"):
-					_apply_element_effect(s, elem["effect"] as String, true, ptimers, dmg)
+					_apply_element_effect(s, effect_str, true, ptimers, dmg)
+			else:
+				events.append({"side": "player", "slot": i, "damage": 0, "effect": "", "is_miss": true})
 		ptimers[i] = t
 	s["element_timers"] = ptimers
 
@@ -117,12 +120,15 @@ static func tick_battle(state: Dictionary, delta: float) -> Dictionary:
 					dmg = hit["damage"] as int
 					s["player_statuses"] = hit["defender_statuses"] as Dictionary
 				s["player_hp"] = maxi(0, (s["player_hp"] as int) - dmg)
-				events.append({"side": "opponent", "slot": i})
+				var effect_str: String = elem.get("effect", "") as String
+				events.append({"side": "opponent", "slot": i, "damage": dmg, "effect": effect_str, "is_miss": false})
 				var os: Dictionary = ostats[i] as Dictionary
 				os["fires"] = (os["fires"] as int) + 1
 				os["damage"] = (os["damage"] as int) + dmg
 				if use_effects and elem.has("effect"):
-					_apply_element_effect(s, elem["effect"] as String, false, otimers, dmg)
+					_apply_element_effect(s, effect_str, false, otimers, dmg)
+			else:
+				events.append({"side": "opponent", "slot": i, "damage": 0, "effect": "", "is_miss": true})
 		otimers[i] = t
 	s["opponent_timers"] = otimers
 

@@ -13,10 +13,10 @@ func test_all_elements_all_have_required_keys() -> void:
 		assert_true(elem.has("damage"),   elem.get("id", "?") + " missing 'damage'")
 
 
-func test_all_elements_tiers_are_in_range_1_to_3() -> void:
+func test_all_elements_tiers_are_in_range_1_to_4() -> void:
 	for elem: Dictionary in ElementData.all_elements():
 		var t: int = elem["tier"] as int
-		assert_true(t >= 1 and t <= 3, elem["id"] + " has tier " + str(t))
+		assert_true(t >= 1 and t <= 4, elem["id"] + " has tier " + str(t))
 
 
 func test_all_elements_has_12_tier1_elements() -> void:

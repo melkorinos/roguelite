@@ -10,17 +10,17 @@ var _hover_style: StyleBoxFlat
 
 func _ready() -> void:
 	_base_style = StyleBoxFlat.new()
-	_base_style.bg_color = Color(0.1, 0.1, 0.14, 0.6)
+	_base_style.bg_color = ThemeData.SELL_BG
 	_base_style.set_border_width_all(1)
-	_base_style.border_color = Color(0.35, 0.35, 0.45, 0.6)
-	_base_style.set_corner_radius_all(4)
+	_base_style.border_color = ThemeData.SELL_BORDER
+	_base_style.set_corner_radius_all(6)
 	add_theme_stylebox_override("panel", _base_style)
 
 	_hover_style = StyleBoxFlat.new()
-	_hover_style.bg_color = Color(0.1, 0.3, 0.12, 0.7)
+	_hover_style.bg_color = ThemeData.SELL_HOVER_BG
 	_hover_style.set_border_width_all(2)
-	_hover_style.border_color = Color(0.2, 0.9, 0.3, 0.9)
-	_hover_style.set_corner_radius_all(4)
+	_hover_style.border_color = ThemeData.SELL_HOVER_BORDER
+	_hover_style.set_corner_radius_all(6)
 
 	_hint_lbl = Label.new()
 	_hint_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

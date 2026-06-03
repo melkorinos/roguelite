@@ -103,10 +103,10 @@ func test_forge_unknown_recipe_returns_state_unchanged() -> void:
 	assert_eq(s["inventory"], state["inventory"])
 
 
-func test_forge_self_combo_water_produces_ice() -> void:
+func test_forge_self_combo_water_produces_sea() -> void:
 	var state := _state_with("water", "water")
 	var s := ForgeSystem.forge(state, 0, 1)
-	assert_eq((s["inventory"][0] as Dictionary)["element_id"], "ice")
+	assert_eq((s["inventory"][0] as Dictionary)["element_id"], "sea")
 
 
 func test_forge_self_combo_fire_produces_blaze() -> void:
@@ -115,10 +115,10 @@ func test_forge_self_combo_fire_produces_blaze() -> void:
 	assert_eq((s["inventory"][0] as Dictionary)["element_id"], "blaze")
 
 
-func test_forge_self_combo_air_produces_gale() -> void:
+func test_forge_self_combo_air_produces_gust() -> void:
 	var state := _state_with("air", "air")
 	var s := ForgeSystem.forge(state, 0, 1)
-	assert_eq((s["inventory"][0] as Dictionary)["element_id"], "gale")
+	assert_eq((s["inventory"][0] as Dictionary)["element_id"], "gust")
 
 
 func test_forge_self_combo_earth_produces_boulder() -> void:
@@ -136,7 +136,7 @@ func test_forge_self_combo_removes_consumed_slot() -> void:
 func test_forge_self_combo_adds_to_discovered_recipes() -> void:
 	var state := _state_with("water", "water")
 	var s := ForgeSystem.forge(state, 0, 1)
-	assert_true((s["discovered_recipes"] as Array).has("ice"))
+	assert_true((s["discovered_recipes"] as Array).has("sea"))
 
 
 func test_forge_self_combo_raises_shop_tier() -> void:
@@ -189,14 +189,14 @@ func test_preview_no_recipe_returns_no_recipe_string() -> void:
 func test_preview_self_combo_shows_result_name() -> void:
 	var state := _state_with("water", "water")
 	var p := ForgeSystem.preview(state, 0, 1)
-	assert_true(p.contains("Ice"))
+	assert_true(p.contains("Sea"))
 
 
 func test_preview_self_combo_discovered_shows_element_name() -> void:
 	var state := _state_with("water", "water")
-	(state["discovered_recipes"] as Array).append("ice")
+	(state["discovered_recipes"] as Array).append("sea")
 	var p := ForgeSystem.preview(state, 0, 1)
-	assert_true(p.contains("Ice"))
+	assert_true(p.contains("Sea"))
 
 
 # ── move_to_forge_slot ────────────────────────────────────────────────────────
