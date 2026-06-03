@@ -10,6 +10,12 @@ static func to_battle(state: Dictionary, opponent_snapshot: Dictionary) -> Dicti
 	s["opponent_snapshot"] = opponent_snapshot
 	s["opponent_grid"] = opponent_snapshot.get("grid", [null, null, null, null]) as Array
 	s["opponent_timers"] = [0.0, 0.0, 0.0, 0.0]
+	s["player_frozen_seconds"] = [0.0, 0.0, 0.0, 0.0]
+	s["opponent_frozen_seconds"] = [0.0, 0.0, 0.0, 0.0]
+	s["player_last_frozen_slot"] = -1
+	s["opponent_last_frozen_slot"] = -1
+	s["player_ability_timers"] = [0.0, 0.0, 0.0, 0.0]
+	s["opponent_ability_timers"] = [0.0, 0.0, 0.0, 0.0]
 	s["battle_events"] = []
 	var opp_hp: int = BattleSystem.compute_opponent_hp(s["opponent_grid"])
 	s["opponent_hp"] = opp_hp
@@ -21,6 +27,7 @@ static func to_battle(state: Dictionary, opponent_snapshot: Dictionary) -> Dicti
 	s["player_statuses"] = StatusSystem.empty_statuses()
 	s["opponent_statuses"] = StatusSystem.empty_statuses()
 	s["status_tick_timer"] = 0.0
+	s = AbilitySystem.resolve_combat_start(s)
 	return s
 
 

@@ -87,5 +87,15 @@ T1 mechanics: burn (ramp stacks, tick dmg), poison (permanent stacks), armor (ab
 ## Balance tooling (settled 2026-06-03)
 **BalanceSystem** (`systems/`, gated by `FeatureFlags.efficiency_scoring`). Two axes: DPS Score (`effective_damage / cooldown`) + Effect Score (hardcoded table, T1 only; T2/T3 = 0 pending design). Board score = sum of 4 slots. Dev panel in Compendium. ADR: `docs/adr/0002-two-axis-efficiency-scoring.md`.
 
+## Ability System (settled 2026-06-03, grilling) — see ADR 0003/0004
+- **Time = integer deciseconds.** No decimals in combat design values. `cooldown` 2.5s→25; haste −0.3s→−3; penalties +0.8s→+8. Float `delta` converted at one chokepoint. Effective CD floored at 10 (1 fire/sec). Shock-slow result rounded to nearest decisecond. Blind = integer percent (+15/stack, cap 50). Plating = integer everywhere (T2→1, T3→2, T4→3–4). Rebalance cooldowns up so effective firing ≈ 2–5s.
+- **`data/AbilityData.gd`** (pure data, keyed by id) + **`systems/AbilitySystem.gd`** (execution). One ability/element for v1. Schema: `{trigger, effects:[{kind,status/amount/seconds,target}], interval_deciseconds?, adjacency_upgrade?, description}`. Compound = array of atomic effects. Buffs→own side, debuffs→opponent (violating spec rows auto-corrected).
+- **Triggers:** combat_start (t=0 in `to_battle`), periodic (first fire at +interval), passive (queried at calc site, probabilistic ones roll per-hit from combat-seeded RNG in slot order), reactive `on_*`. **Depth-1 rule:** reactive output emits no further reactives and never multicasts. Scan order slot 0…N.
+- **Multicast:** repeats full cooldown fire N× (T2/3 cap 2×, T4 3×). Each repeat is an independent reactive trigger (1 multicast = 2 synergy triggers). Periodic/combat_start never multicast. Echo cut from v1; conditional refire supported.
+- **Curse** expanded: `{ticks_remaining, is_permanent, damage_amplifier}` — amplifier adds flat dmg to cursed side's incoming hits; permanent ignores tick-down until cleansed.
+- **New StatusSystem fields:** `burn_tick_damage_bonus`, `shock_effective_stack_bonus`, `poison_tick_damage_bonus`, side-wide `cooldown_penalty_seconds` (deciseconds). Dead `slow` status kept reserved (may reimplement).
+- **Freeze:** per-slot `frozen_slot_deciseconds_remaining` array (grid-agnostic), counts down, blocks fire, cleansable, anti-permalock (skip last-frozen slot). Own logic, not StatusSystem.
+- **Grid-agnostic backend:** size derived from slot array; orthogonal `neighbors(slot,w,h)` helper. Adjacency-upgrade abilities ship global by default, gated by `FeatureFlags.combat_adjacency`. v1: implement T2+T3 fully, T4 stubbed `{tbd:true}`. Armor-strip cut from v1.
+
 ## Deferred / TBD
 Backlog in `.claude/ai-helper/ideas.md`. Key: T2 placeholder names (8 Group-G combos remaining), T2/T3 action design, Level 2 Reward impl, Innate Ability economy, Faction synergy + grid adjacency, Draft system, Meta-progression shape, PlatformLayer, Battlegrid size. Code renames pending: `"effect"` field → `"action"`, `effect_score` → `action_score`.

@@ -1,5 +1,14 @@
 # Development Log
 
+## 2026-06-03 — Ability system: decisecond refactor + AbilitySystem engine + T2/T3 data
+- Grilled full ability design (5 rounds); decisions in ADR 0003/0004 + memory.md. Built test-first in 6 slices.
+- **Decisecond time model:** `cooldown`→`cooldown_deciseconds` (int ×10) across ElementData/BattleSystem/scenes; `StatusSystem.effective_cooldown_deciseconds` floors at 10 (1 fire/sec) + shock-slow round. Tooltip shows `2.5s`.
+- **StatusSystem:** integer blind percent, curse `{ticks_remaining,is_permanent,damage_amplifier}`, burn/poison `tick_damage_bonus`, shock `effective_stack_bonus`, signed side-wide `cooldown_modifier_deciseconds`; plating+haste de-decimalised.
+- **GridSystem** NEW (dimensions + orthogonal neighbors, grid-agnostic). **Freeze**: per-side `*_frozen_seconds` + `*_last_frozen_slot`, anti-permalock `select_freeze_target`, paused-CD skip; `_tick_side` loops `grid.size()`.
+- **AbilitySystem** NEW: apply_status/deal_damage/modify_cooldown/freeze/set_status_field effects; resolve_combat_start/periodic/reactive(depth-1)/multicast (1 multicast=2 triggers)/on_hit query. Wired into to_battle + tick_battle.
+- **AbilityData** NEW: ~87 T2+T3 abilities; T4 stubbed. ~23 needing unbuilt passive-modifier hooks skipped (gust/steel/aurora/miasma/rust/shrapnel/rootrot/pulse/gore/blackice/razorwind/magnet/rot/moldsteel/rainbow/plant/ash/acid/ancientgrove/tempest/mountain/voidrift). Conditional "if X then +Y" clauses reduced to base.
+- **341/341 passing** (was 284; +57 new, all existing migrated). Boot exit 0.
+
 ## 2026-06-03 — Architecture: AchievementSystem pure + BattleSystem loop collapse
 - `AchievementSystem.check()` now pure: takes `profile: Dictionary`, returns `{profile, unlocked}`. Scene layer owns I/O.
 - `BattleSystem.tick_battle()` collapsed to single `_tick_side()` helper; `_apply_element_effect` takes explicit key strings.

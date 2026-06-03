@@ -4,6 +4,7 @@ extends CanvasLayer
 var _panel: PanelContainer
 var _name_lbl: Label
 var _stat_vals: Dictionary = {}
+var _ability_lbl: Label
 
 
 func _ready() -> void:
@@ -66,11 +67,13 @@ func _build_ui() -> void:
 	ab_header.modulate = Color(0.55, 0.55, 0.62)
 	vbox.add_child(ab_header)
 
-	var ab_lbl := Label.new()
-	ab_lbl.text = "— none yet —"
-	UIScale.apply(ab_lbl, UIScale.TOOLTIP_BODY)
-	ab_lbl.modulate = Color(0.42, 0.42, 0.48)
-	vbox.add_child(ab_lbl)
+	_ability_lbl = Label.new()
+	_ability_lbl.text = "— none yet —"
+	_ability_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD
+	_ability_lbl.custom_minimum_size = Vector2(210, 0)
+	UIScale.apply(_ability_lbl, UIScale.TOOLTIP_BODY)
+	_ability_lbl.modulate = Color(0.42, 0.42, 0.48)
+	vbox.add_child(_ability_lbl)
 
 	add_child(_panel)
 
@@ -80,7 +83,7 @@ func show_for(element: Dictionary) -> void:
 	var elem_name: String = element.get("name", "") as String
 	var tier: int = element.get("tier", 1) as int
 	var level: int = element.get("level", 1) as int
-	var cooldown: float = element.get("cooldown", 0.0) as float
+	var cooldown_seconds: float = float(element.get("cooldown_deciseconds", 0) as int) / 10.0
 	var base_dmg: int = element.get("damage", 0) as int
 	var eff_dmg: int = ElementData.effective_damage(element)
 	var price: int = element.get("price", 0) as int
@@ -88,10 +91,20 @@ func show_for(element: Dictionary) -> void:
 	_name_lbl.text = "%s  %s" % [emoji, elem_name]
 	(_stat_vals["▲ Tier"] as Label).text = "T%d" % tier
 	(_stat_vals["⬆ Level"] as Label).text = "Lv%d" % level
-	(_stat_vals["⏱ Cooldown"] as Label).text = "%.1fs" % cooldown
+	(_stat_vals["⏱ Cooldown"] as Label).text = "%.1fs" % cooldown_seconds
 	(_stat_vals["⚔ Base Dmg"] as Label).text = str(base_dmg)
 	(_stat_vals["💥 Eff. Dmg"] as Label).text = str(eff_dmg)
 	(_stat_vals["💰 Price"] as Label).text = "%dg" % price
+
+	var element_id: String = element.get("element_id", element.get("id", "")) as String
+	var ability: Dictionary = AbilityData.get_ability(element_id)
+	var description: String = ability.get("description", "") as String
+	if description != "":
+		_ability_lbl.text = description
+		_ability_lbl.modulate = Color(0.82, 0.82, 0.9)
+	else:
+		_ability_lbl.text = "— none yet —"
+		_ability_lbl.modulate = Color(0.42, 0.42, 0.48)
 
 	_panel.visible = true
 	_update_position()

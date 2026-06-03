@@ -78,9 +78,10 @@ func _make_card(elem: Dictionary) -> PanelContainer:
 	vbox.add_child(name_lbl)
 
 	# Stats line
-	var dps: float = (elem["damage"] as int) / (elem["cooldown"] as float)
+	var cooldown_seconds: float = float(elem["cooldown_deciseconds"] as int) / 10.0
+	var dps: float = (elem["damage"] as int) / cooldown_seconds
 	var stats_lbl := Label.new()
-	stats_lbl.text = "cd %.1f  dmg %d  %dg" % [elem["cooldown"] as float, elem["damage"] as int, elem["price"] as int]
+	stats_lbl.text = "cd %.1f  dmg %d  %dg" % [cooldown_seconds, elem["damage"] as int, elem["price"] as int]
 	stats_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	UIScale.apply(stats_lbl, UIScale.COMP_STATS)
 	stats_lbl.modulate = Color(0.7, 0.8, 0.9)

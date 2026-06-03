@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Element Art Concepts — Roguelite</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #0d0d14;
+    color: #e8e0d0;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    padding: 40px 32px;
+  }
+
+  h1 {
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #c8bfa8;
+    margin-bottom: 6px;
+  }
+
+  .subtitle {
+    font-size: 13px;
+    color: #666;
+    margin-bottom: 48px;
+    letter-spacing: 0.04em;
+  }
+
+  .element-section {
+    margin-bottom: 60px;
+  }
+
+  .element-title {
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 24px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #2a2a3a;
+  }
+
+  .fire-title { color: #ff7a2e; }
+  .water-title { color: #3ab8ff; }
+  .style-title { color: #a78bfa; }
+
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 20px;
+  }
+
+  .card {
+    background: #16161f;
+    border: 1px solid #2a2a3a;
+    border-radius: 12px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    transition: border-color 0.2s, transform 0.2s;
+    cursor: default;
+  }
+
+  .card:hover {
+    border-color: #44445a;
+    transform: translateY(-2px);
+  }
+
+  .card.recommended {
+    border-color: #44446a;
+    background: #18182a;
+  }
+
+  .card.recommended::after {
+    content: '★ Recommended';
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #a78bfa;
+    align-self: flex-end;
+  }
+
+  .icon-frame {
+    width: 120px;
+    height: 120px;
+    background: #0d0d14;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+
+  .card-name {
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    text-align: center;
+  }
+
+  .card-desc {
+    font-size: 12px;
+    color: #888;
+    text-align: center;
+    line-height: 1.6;
+  }
+
+  /* ── Style Comparison Row ── */
+  .style-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    margin-top: 8px;
+  }
+
+  .style-card {
+    background: #16161f;
+    border: 1px solid #2a2a3a;
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+  }
+
+  .style-card h3 {
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    color: #a78bfa;
+  }
+
+  .style-icons {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 12px;
+  }
+
+  .style-label {
+    font-size: 11px;
+    color: #666;
+    line-height: 1.5;
+  }
+
+  /* ── Glow helpers ── */
+  .glow-fire { filter: drop-shadow(0 0 8px rgba(255,100,20,0.7)); }
+  .glow-water { filter: drop-shadow(0 0 8px rgba(40,160,255,0.7)); }
+  .glow-purple { filter: drop-shadow(0 0 8px rgba(160,100,255,0.6)); }
+
+  /* ── Silhouette test section ── */
+  .silhouette-row {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+    padding: 24px;
+    background: #16161f;
+    border: 1px solid #2a2a3a;
+    border-radius: 12px;
+    align-items: center;
+  }
+
+  .sil-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .sil-label {
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #555;
+  }
+
+  .section-note {
+    font-size: 12px;
+    color: #555;
+    margin-bottom: 16px;
+    font-style: italic;
+  }
+</style>
+</head>
+<body>
+
+<h1>Element Art Concepts</h1>
+<p class="subtitle">WoW / Pokemon hybrid — painterly-graphic, bold silhouettes, slight surreal wrongness</p>
+
+<!-- ══════════════════════════════════ FIRE ══════════════════════════════════ -->
+<div class="element-section">
+  <div class="element-title fire-title">🔥 Fire — Burn</div>
+  <div class="cards">
+
+    <!-- Coiling Flame (recommended) -->
+    <div class="card recommended">
+      <div class="icon-frame">
+        <svg width="80" height="90" viewBox="0 0 80 90" class="glow-fire">
+          <defs>
+            <radialGradient id="fireCoreA" cx="50%" cy="70%" r="60%">
+              <stop offset="0%" stop-color="#fff5a0"/>
+              <stop offset="35%" stop-color="#ffb830"/>
+              <stop offset="100%" stop-color="#c83000" stop-opacity="0"/>
+            </radialGradient>
+            <radialGradient id="fireOuterA" cx="50%" cy="60%" r="70%">
+              <stop offset="0%" stop-color="#ff7a20"/>
+              <stop offset="100%" stop-color="#8b1500" stop-opacity="0"/>
+            </radialGradient>
+          </defs>
+          <!-- Outer flame body -->
+          <path d="M40 85 C15 75 8 55 14 38 C18 27 14 18 20 10 C20 22 26 26 28 22 C30 16 38 8 40 2 C44 14 38 24 44 30 C48 34 55 22 52 14 C60 24 64 38 60 52 C58 62 66 68 62 80 C55 88 25 92 40 85 Z" fill="url(#fireOuterA)" stroke="#220800" stroke-width="2.5" stroke-linejoin="round"/>
+          <!-- Inner hot core -->
+          <path d="M40 80 C28 72 24 58 28 46 C30 38 28 30 32 24 C32 32 36 36 38 32 C40 26 42 18 40 10 C44 20 40 30 46 36 C50 40 54 30 52 22 C56 32 58 46 54 56 C52 64 56 70 52 78 Z" fill="url(#fireCoreA)"/>
+          <!-- Left lobe accent -->
+          <path d="M24 52 C18 44 20 32 26 26 C24 36 28 40 26 46 Z" fill="#ffb830" opacity="0.6"/>
+        </svg>
+      </div>
+      <div class="card-name fire-title">Coiling Flame</div>
+      <div class="card-desc">Three-lobe upward curl. Dark orange core→yellow tip. Thick outer stroke (Pokemon), soft painted gradient (WoW). Asymmetric — left lobe bigger.</div>
+    </div>
+
+    <!-- Ember Burst -->
+    <div class="card">
+      <div class="icon-frame">
+        <svg width="80" height="80" viewBox="0 0 80 80" class="glow-fire">
+          <defs>
+            <radialGradient id="emberGlow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#fff7b0"/>
+              <stop offset="40%" stop-color="#ff8c20"/>
+              <stop offset="100%" stop-color="#7a1500" stop-opacity="0"/>
+            </radialGradient>
+          </defs>
+          <!-- Burst rays -->
+          <g stroke="#c84000" stroke-width="2" opacity="0.7">
+            <line x1="40" y1="18" x2="40" y2="4"/>
+            <line x1="57" y1="23" x2="66" y2="11"/>
+            <line x1="62" y1="40" x2="76" y2="40"/>
+            <line x1="57" y1="57" x2="66" y2="69"/>
+            <line x1="40" y1="62" x2="40" y2="76"/>
+            <line x1="23" y1="57" x2="14" y2="69"/>
+            <line x1="18" y1="40" x2="4" y2="40"/>
+            <line x1="23" y1="23" x2="14" y2="11"/>
+          </g>
+          <!-- Spark trails -->
+          <circle cx="40" cy="12" r="2" fill="#ffcc44"/>
+          <circle cx="62" cy="22" r="2" fill="#ffcc44"/>
+          <circle cx="68" cy="40" r="2" fill="#ffcc44"/>
+          <!-- Main orb -->
+          <circle cx="40" cy="40" r="22" fill="url(#emberGlow)" stroke="#881500" stroke-width="2.5"/>
+          <!-- Inner core -->
+          <circle cx="40" cy="40" r="10" fill="#fff4a0" opacity="0.9"/>
+          <circle cx="36" cy="36" r="4" fill="#ffffff" opacity="0.7"/>
+        </svg>
+      </div>
+      <div class="card-name fire-title">Ember Burst</div>
+      <div class="card-desc">Central glowing sphere with radial spark rays. Implies burst / explosion damage. More dynamic, reads as "instant" rather than "ongoing".</div>
+    </div>
+
+    <!-- Ancient Brand -->
+    <div class="card">
+      <div class="icon-frame">
+        <svg width="80" height="80" viewBox="0 0 80 80" class="glow-fire">
+          <defs>
+            <linearGradient id="brandGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#c83000"/>
+              <stop offset="60%" stop-color="#ff8020"/>
+              <stop offset="100%" stop-color="#ffe060"/>
+            </linearGradient>
+          </defs>
+          <!-- Rune outer ring segments -->
+          <circle cx="40" cy="40" r="32" fill="none" stroke="#c83000" stroke-width="3" stroke-dasharray="14 6"/>
+          <!-- Central flame-rune shape -->
+          <path d="M40 14 L46 28 L56 26 L48 36 L52 50 L40 44 L28 50 L32 36 L24 26 L34 28 Z"
+                fill="url(#brandGrad)" stroke="#440800" stroke-width="2" stroke-linejoin="round"/>
+          <!-- Inner mark -->
+          <path d="M40 26 L43 33 L40 42 L37 33 Z" fill="#fff5a0" opacity="0.9"/>
+          <!-- Corner sparks -->
+          <circle cx="40" cy="10" r="2.5" fill="#ffb830"/>
+          <circle cx="66" cy="24" r="2" fill="#ff8020" opacity="0.7"/>
+          <circle cx="66" cy="56" r="2" fill="#ff8020" opacity="0.7"/>
+          <circle cx="40" cy="70" r="2.5" fill="#ffb830"/>
+          <circle cx="14" cy="56" r="2" fill="#ff8020" opacity="0.7"/>
+          <circle cx="14" cy="24" r="2" fill="#ff8020" opacity="0.7"/>
+        </svg>
+      </div>
+      <div class="card-name fire-title">Ancient Brand</div>
+      <div class="card-desc">Flame-shaped sigil / rune with a dashed outer ring. Uncanny artifact energy — surreal rather than natural. Fits the "weird" soul note best.</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════ WATER ══════════════════════════════════ -->
+<div class="element-section">
+  <div class="element-title water-title">💧 Water — Cleanse</div>
+  <div class="cards">
+
+    <!-- Drop + Wave -->
+    <div class="card">
+      <div class="icon-frame">
+        <svg width="72" height="88" viewBox="0 0 72 88" class="glow-water">
+          <defs>
+            <linearGradient id="dropGrad" x1="30%" y1="0%" x2="70%" y2="100%">
+              <stop offset="0%" stop-color="#a8e8ff"/>
+              <stop offset="50%" stop-color="#1890d8"/>
+              <stop offset="100%" stop-color="#0055aa"/>
+            </linearGradient>
+          </defs>
+          <!-- Wave beneath -->
+          <path d="M8 72 C16 66 26 78 36 70 C46 62 56 74 64 68" fill="none" stroke="#1890d8" stroke-width="3" stroke-linecap="round"/>
+          <path d="M4 80 C14 74 24 86 36 78 C48 70 58 82 68 76" fill="none" stroke="#0066bb" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
+          <!-- Teardrop -->
+          <path d="M36 8 C36 8 12 36 12 52 C12 66 23 76 36 76 C49 76 60 66 60 52 C60 36 36 8 36 8 Z"
+                fill="url(#dropGrad)" stroke="#003a88" stroke-width="2.5"/>
+          <!-- Highlight -->
+          <ellipse cx="28" cy="42" rx="5" ry="9" fill="white" opacity="0.28" transform="rotate(-20 28 42)"/>
+          <circle cx="26" cy="38" r="2.5" fill="white" opacity="0.4"/>
+        </svg>
+      </div>
+      <div class="card-name water-title">Drop + Wave</div>
+      <div class="card-desc">Classic teardrop with wave crest. Universal read. Risk: generic. Best if the overall icon set needs a clear "safe" anchor for water.</div>
+    </div>
+
+    <!-- Spiral Whirlpool (recommended) -->
+    <div class="card recommended">
+      <div class="icon-frame">
+        <svg width="90" height="90" viewBox="0 0 90 90" class="glow-water">
+          <defs>
+            <radialGradient id="poolGrad" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#001f4d"/>
+              <stop offset="40%" stop-color="#0a5fa8"/>
+              <stop offset="75%" stop-color="#28aae0"/>
+              <stop offset="100%" stop-color="#7ad8ff" stop-opacity="0.2"/>
+            </radialGradient>
+          </defs>
+          <!-- Outer ring -->
+          <circle cx="45" cy="45" r="38" fill="url(#poolGrad)" stroke="#005599" stroke-width="2.5"/>
+          <!-- Spiral arms -->
+          <path d="M45 45 C52 38 64 38 68 45 C72 55 64 66 52 68 C38 70 26 60 24 46 C22 30 34 18 48 16 C64 14 76 26 78 42"
+                fill="none" stroke="#50c8ff" stroke-width="3" stroke-linecap="round" opacity="0.9"/>
+          <path d="M45 45 C40 38 40 28 45 22 C52 16 62 20 64 28 C66 36 60 44 52 46"
+                fill="none" stroke="#a8e8ff" stroke-width="2" stroke-linecap="round" opacity="0.7"/>
+          <path d="M45 45 C50 50 50 58 45 62 C38 66 30 62 30 55 C30 50 36 46 42 46"
+                fill="none" stroke="#28a8e0" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
+          <!-- Dark center void -->
+          <circle cx="45" cy="45" r="7" fill="#000d1f" stroke="#003366" stroke-width="1.5"/>
+          <circle cx="45" cy="45" r="3" fill="#001633"/>
+          <!-- Foam flecks on outer ring -->
+          <circle cx="45" cy="9" r="2.5" fill="#a8e8ff" opacity="0.7"/>
+          <circle cx="76" cy="22" r="2" fill="#7ad8ff" opacity="0.6"/>
+          <circle cx="76" cy="68" r="2" fill="#7ad8ff" opacity="0.6"/>
+          <circle cx="45" cy="81" r="2.5" fill="#a8e8ff" opacity="0.7"/>
+          <circle cx="14" cy="68" r="2" fill="#7ad8ff" opacity="0.6"/>
+          <circle cx="14" cy="22" r="2" fill="#7ad8ff" opacity="0.6"/>
+        </svg>
+      </div>
+      <div class="card-name water-title">Spiral Whirlpool</div>
+      <div class="card-desc">Top-down vortex, dark eye at center. Unique silhouette. Implies pulling something out — matches the Cleanse mechanic. Stands opposite to Fire's vertical form.</div>
+    </div>
+
+    <!-- Flowing Ribbon -->
+    <div class="card">
+      <div class="icon-frame">
+        <svg width="88" height="80" viewBox="0 0 88 80" class="glow-water">
+          <defs>
+            <linearGradient id="ribbonGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#a8e8ff" stop-opacity="0.9"/>
+              <stop offset="50%" stop-color="#1890d8"/>
+              <stop offset="100%" stop-color="#0044aa" stop-opacity="0.8"/>
+            </linearGradient>
+          </defs>
+          <!-- Ribbon body (thick) -->
+          <path d="M10 60 C20 50 30 20 44 24 C58 28 58 56 72 44 C78 38 80 28 76 20"
+                fill="none" stroke="url(#ribbonGrad)" stroke-width="14" stroke-linecap="round" opacity="0.85"/>
+          <!-- Ribbon edge highlight -->
+          <path d="M10 58 C20 48 30 18 44 22 C58 26 58 54 72 42 C78 36 80 26 76 18"
+                fill="none" stroke="#c8f0ff" stroke-width="3" stroke-linecap="round" opacity="0.5"/>
+          <!-- Foam flecks -->
+          <circle cx="20" cy="52" r="2.5" fill="white" opacity="0.45"/>
+          <circle cx="44" cy="24" r="2" fill="white" opacity="0.55"/>
+          <circle cx="66" cy="46" r="2.5" fill="white" opacity="0.4"/>
+          <circle cx="36" cy="34" r="1.5" fill="#c8f0ff" opacity="0.5"/>
+          <!-- End droplets -->
+          <circle cx="10" cy="60" r="4" fill="#1890d8" stroke="#003888" stroke-width="1.5"/>
+          <circle cx="76" cy="20" r="4" fill="#1890d8" stroke="#003888" stroke-width="1.5"/>
+        </svg>
+      </div>
+      <div class="card-name water-title">Flowing Ribbon</div>
+      <div class="card-desc">S-curve of flowing water, translucent layered with foam. More painterly, elegant. Better as a larger piece of art — harder to read at small tile sizes.</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════ STYLE COMPARE ══════════════════════════════════ -->
+<div class="element-section">
+  <div class="element-title style-title">Style Spectrum — Same Icon, Three Treatments</div>
+  <p class="section-note">Fire coiling flame at three points on the WoW ↔ Pokemon axis. The middle column is the target zone.</p>
+  <div class="style-row">
+
+    <!-- Pokemon end -->
+    <div class="style-card">
+      <h3>Flat / Pokemon</h3>
+      <div class="style-icons">
+        <svg width="56" height="64" viewBox="0 0 56 64">
+          <path d="M28 60 C10 52 6 38 10 26 C13 18 10 10 15 4 C15 14 20 17 22 14 C24 10 28 4 28 0 C32 10 26 18 32 22 C36 26 41 16 38 8 C44 16 46 28 42 38 C40 46 46 50 43 58 Z"
+                fill="#ff6010" stroke="#1a0800" stroke-width="3" stroke-linejoin="round"/>
+          <path d="M28 56 C20 50 18 40 21 31 C23 25 21 18 25 13 C25 20 28 23 30 20 C32 16 34 10 28 4 C32 14 28 22 33 26 C36 29 39 21 37 14 C40 22 41 32 37 40 C35 47 39 51 36 58 Z"
+                fill="#ffcc20" stroke="#1a0800" stroke-width="1.5" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="style-label">Flat fill, bold outline, 2 colors only. High contrast. Reads at any size. Feels like a Pokémon type badge.</div>
+    </div>
+
+    <!-- Sweet spot (target) -->
+    <div class="style-card" style="border-color: #44446a; background: #18182a;">
+      <h3 style="color: #ffd700;">★ Target Zone</h3>
+      <div class="style-icons">
+        <svg width="56" height="64" viewBox="0 0 56 64" filter="url(#f1)">
+          <defs>
+            <filter id="f1" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="1.5" result="blur"/>
+              <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+            <radialGradient id="tgtGrad" cx="50%" cy="70%" r="60%">
+              <stop offset="0%" stop-color="#fff090"/>
+              <stop offset="40%" stop-color="#ff9020"/>
+              <stop offset="100%" stop-color="#aa2000" stop-opacity="0.1"/>
+            </radialGradient>
+          </defs>
+          <path d="M28 60 C10 52 6 38 10 26 C13 18 10 10 15 4 C15 14 20 17 22 14 C24 10 28 4 28 0 C32 10 26 18 32 22 C36 26 41 16 38 8 C44 16 46 28 42 38 C40 46 46 50 43 58 Z"
+                fill="#d04000" stroke="#1a0800" stroke-width="2.5" stroke-linejoin="round"/>
+          <path d="M28 56 C20 50 18 40 21 31 C23 25 21 18 25 13 C25 20 28 23 30 20 C32 16 34 10 28 4 C32 14 28 22 33 26 C36 29 39 21 37 14 C40 22 41 32 37 40 C35 47 39 51 36 58 Z"
+                fill="url(#tgtGrad)"/>
+          <path d="M20 42 C16 36 17 26 21 20 C20 28 22 32 21 37 Z" fill="#ffdd60" opacity="0.5"/>
+        </svg>
+      </div>
+      <div class="style-label">Thick outline + inner painted gradient. Slight glow. 3-color palette. Bold silhouette but with depth. <strong>This is the target.</strong></div>
+    </div>
+
+    <!-- WoW end -->
+    <div class="style-card">
+      <h3>Painterly / WoW</h3>
+      <div class="style-icons">
+        <svg width="56" height="64" viewBox="0 0 56 64">
+          <defs>
+            <radialGradient id="wowGrad" cx="45%" cy="65%" r="70%">
+              <stop offset="0%" stop-color="#fffaaa"/>
+              <stop offset="25%" stop-color="#ffaa30"/>
+              <stop offset="55%" stop-color="#cc4400"/>
+              <stop offset="80%" stop-color="#6b1500"/>
+              <stop offset="100%" stop-color="#2a0500"/>
+            </radialGradient>
+            <filter id="wowBlur">
+              <feGaussianBlur stdDeviation="0.8"/>
+            </filter>
+          </defs>
+          <!-- Soft outer haze -->
+          <path d="M28 62 C8 54 3 37 8 24 C12 14 8 6 14 0 C14 12 20 16 22 12 C24 8 28 2 28 -2 C32 8 26 16 33 21 C37 25 43 14 39 5 C46 14 49 28 44 40 C42 50 49 54 45 63 Z"
+                fill="#aa2800" opacity="0.4" filter="url(#wowBlur)"/>
+          <!-- Main body -->
+          <path d="M28 60 C10 52 6 38 10 26 C13 18 10 10 15 4 C15 14 20 17 22 14 C24 10 28 4 28 0 C32 10 26 18 32 22 C36 26 41 16 38 8 C44 16 46 28 42 38 C40 46 46 50 43 58 Z"
+                fill="url(#wowGrad)" stroke="#300800" stroke-width="1"/>
+        </svg>
+      </div>
+      <div class="style-label">Thin or no outline, multi-stop gradient, soft outer glow. Very painted. Beautiful large, hard to read at 32px tile size.</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════ SILHOUETTE TEST ══════════════════════════════════ -->
+<div class="element-section">
+  <div class="element-title" style="color: #888;">Silhouette Test — All icons as filled black</div>
+  <p class="section-note">Every icon must be distinguishable as a filled silhouette. If two look the same here, one needs a redesign.</p>
+  <div class="silhouette-row">
+
+    <!-- Fire coiling -->
+    <div class="sil-item">
+      <svg width="48" height="54" viewBox="0 0 80 90">
+        <path d="M40 85 C15 75 8 55 14 38 C18 27 14 18 20 10 C20 22 26 26 28 22 C30 16 38 8 40 2 C44 14 38 24 44 30 C48 34 55 22 52 14 C60 24 64 38 60 52 C58 62 66 68 62 80 C55 88 25 92 40 85 Z" fill="#111"/>
+      </svg>
+      <span class="sil-label">Fire</span>
+    </div>
+
+    <!-- Water whirlpool -->
+    <div class="sil-item">
+      <svg width="54" height="54" viewBox="0 0 90 90">
+        <circle cx="45" cy="45" r="38" fill="#111"/>
+        <circle cx="45" cy="45" r="12" fill="#0d0d14"/>
+      </svg>
+      <span class="sil-label">Water</span>
+    </div>
+
+    <!-- Placeholder silhouettes for other 10 elements -->
+    <!-- Air: upward curved arc -->
+    <div class="sil-item">
+      <svg width="54" height="54" viewBox="0 0 80 80">
+        <path d="M10 50 C20 20 60 20 70 50 C65 60 55 64 44 60 C54 56 60 46 50 40 C40 34 30 40 32 50 C24 44 14 44 10 50 Z" fill="#111"/>
+      </svg>
+      <span class="sil-label">Air</span>
+    </div>
+
+    <!-- Earth: rough hexagon/mountain -->
+    <div class="sil-item">
+      <svg width="54" height="54" viewBox="0 0 80 80">
+        <path d="M40 6 L68 24 L72 56 L56 72 L24 72 L8 56 L12 24 Z" fill="#111"/>
+      </svg>
+      <span class="sil-label">Earth</span>
+    </div>
+
+    <!-- Lightning: zigzag bolt -->
+    <div class="sil-item">
+      <svg width="54" height="54" viewBox="0 0 80 80">
+        <path d="M50 4 L28 40 L44 40 L30 76 L60 34 L42 34 Z" fill="#111"/>
+      </svg>
+      <span class="sil-label">Lightning</span>
+    </div>
+
+    <!-- Nature: leaf -->
+    <div class="sil-item">
+      <svg width="54" height="54" viewBox="0 0 80 80">
+        <path d="M40 72 C40 72 10 56 10 30 C10 12 26 6 40 8 C54 6 70 12 70 30 C70 56 40 72 40 72 Z" fill="#111"/>
+        <path d="M40 72 L40 20" stroke="#0d0d14" stroke-width="3"/>
+      </svg>
+      <span class="sil-label">Nature</span>
+    </div>
+
+    <!-- Light: starburst -->
+    <div class="sil-item">
+      <svg width="54" height="54" viewBox="0 0 80 80">
+        <polygon points="40,4 46,30 72,30 52,46 60,72 40,56 20,72 28,46 8,30 34,30" fill="#111"/>
+      </svg>
+      <span class="sil-label">Light</span>
+    </div>
+
+    <!-- Dark: crescent moon -->
+    <div class="sil-item">
+      <svg width="54" height="54" viewBox="0 0 80 80">
+        <path d="M48 8 C28 8 12 24 12 44 C12 64 28 76 48 76 C34 70 24 58 24 44 C24 30 34 18 48 12 C52 10 56 8 60 8 Z" fill="#111"/>
+      </svg>
+      <span class="sil-label">Dark</span>
+    </div>
+
+    <!-- Metal: gear/cog -->
+    <div class="sil-item">
+      <svg width="54" height="54" viewBox="0 0 80 80">
+        <path d="M34 4 L46 4 L50 16 C54 17 58 20 61 23 L74 20 L80 30 L72 40 L80 50 L74 60 L61 57 C58 60 54 63 50 64 L46 76 L34 76 L30 64 C26 63 22 60 19 57 L6 60 L0 50 L8 40 L0 30 L6 20 L19 23 C22 20 26 17 30 16 Z" fill="#111"/>
+        <circle cx="40" cy="40" r="10" fill="#0d0d14"/>
+      </svg>
+      <span class="sil-label">Metal</span>
+    </div>
+
+    <!-- Fungus: mushroom -->
+    <div class="sil-item">
+      <svg width="54" height="54" viewBox="0 0 80 80">
+        <path d="M40 8 C18 8 6 26 6 38 C6 48 14 54 24 54 L28 72 L52 72 L56 54 C66 54 74 48 74 38 C74 26 62 8 40 8 Z" fill="#111"/>
+      </svg>
+      <span class="sil-label">Fungus</span>
+    </div>
+
+    <!-- Blood: drop with drip -->
+    <div class="sil-item">
+      <svg width="54" height="54" viewBox="0 0 80 80">
+        <path d="M40 4 C40 4 16 32 16 48 C16 62 27 74 40 74 C53 74 64 62 64 48 C64 32 40 4 40 4 Z" fill="#111"/>
+        <rect x="36" y="72" width="8" height="12" rx="4" fill="#111" transform="translate(0 -4)"/>
+      </svg>
+      <span class="sil-label">Blood</span>
+    </div>
+
+    <!-- Frost: snowflake -->
+    <div class="sil-item">
+      <svg width="54" height="54" viewBox="0 0 80 80">
+        <g fill="#111">
+          <rect x="37" y="4" width="6" height="72" rx="3"/>
+          <rect x="4" y="37" width="72" height="6" rx="3" transform="rotate(0 40 40)"/>
+          <rect x="4" y="37" width="72" height="6" rx="3" transform="rotate(60 40 40)"/>
+          <rect x="4" y="37" width="72" height="6" rx="3" transform="rotate(120 40 40)"/>
+          <circle cx="40" cy="40" r="7"/>
+        </g>
+      </svg>
+      <span class="sil-label">Frost</span>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>

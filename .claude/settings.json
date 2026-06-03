@@ -6,6 +6,8 @@
       "Bash(git diff*)",
       "Bash(git log*)",
       "Bash(godot --headless *)",
+      "PowerShell(godot --headless *)",
+      "PowerShell(godot *)",
       "Bash(mkdir *)",
       "Edit(.claude/ai-helper/*)",
       "Edit(data/*.gd)",

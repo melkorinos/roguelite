@@ -74,14 +74,14 @@ func test_compute_opponent_hp_sums_damage_across_all_elements() -> void:
 
 func test_tick_battle_player_damages_opponent_at_cooldown() -> void:
 	var state := PhaseSystem.to_battle(_state_with_player_element("fire"), _fixture())
-	var cooldown: float = ElementData.find("fire")["cooldown"]
+	var cooldown: float = float(ElementData.find("fire")["cooldown_deciseconds"] as int) / 10.0
 	var s := BattleSystem.tick_battle(state, cooldown)
 	assert_lt(s["opponent_hp"] as int, state["opponent_hp"] as int)
 
 
 func test_tick_battle_does_not_fire_before_cooldown() -> void:
 	var state := PhaseSystem.to_battle(_state_with_player_element("fire"), _fixture())
-	var cooldown: float = ElementData.find("fire")["cooldown"]
+	var cooldown: float = float(ElementData.find("fire")["cooldown_deciseconds"] as int) / 10.0
 	var s := BattleSystem.tick_battle(state, cooldown - 0.1)
 	assert_eq(s["opponent_hp"] as int, state["opponent_hp"] as int)
 
@@ -96,7 +96,7 @@ func test_tick_battle_opponent_damages_player() -> void:
 func test_tick_battle_sets_result_when_opponent_hp_zero() -> void:
 	var state := PhaseSystem.to_battle(_state_with_player_element("fire"), _fixture())
 	state["opponent_hp"] = 1
-	var cooldown: float = ElementData.find("fire")["cooldown"]
+	var cooldown: float = float(ElementData.find("fire")["cooldown_deciseconds"] as int) / 10.0
 	var s := BattleSystem.tick_battle(state, cooldown)
 	assert_eq(s["phase"], "result")
 
@@ -126,14 +126,14 @@ func test_tick_battle_returns_state_unchanged_when_already_result() -> void:
 func test_tick_battle_does_not_mutate_original() -> void:
 	var state := PhaseSystem.to_battle(_state_with_player_element("fire"), _fixture())
 	var original_hp: int = state["opponent_hp"]
-	var cooldown: float = ElementData.find("fire")["cooldown"]
+	var cooldown: float = float(ElementData.find("fire")["cooldown_deciseconds"] as int) / 10.0
 	BattleSystem.tick_battle(state, cooldown)
 	assert_eq(state["opponent_hp"] as int, original_hp)
 
 
 func test_tick_battle_accumulates_fires_in_battle_stats() -> void:
 	var state := PhaseSystem.to_battle(_state_with_player_element("fire"), _fixture())
-	var cooldown: float = ElementData.find("fire")["cooldown"]
+	var cooldown: float = float(ElementData.find("fire")["cooldown_deciseconds"] as int) / 10.0
 	var s := BattleSystem.tick_battle(state, cooldown)
 	var pstats: Array = (s["battle_stats"] as Dictionary)["player"] as Array
 	assert_eq((pstats[0] as Dictionary)["fires"], 1)
@@ -141,7 +141,7 @@ func test_tick_battle_accumulates_fires_in_battle_stats() -> void:
 
 func test_tick_battle_accumulates_damage_in_battle_stats() -> void:
 	var state := PhaseSystem.to_battle(_state_with_player_element("fire"), _fixture())
-	var cooldown: float = ElementData.find("fire")["cooldown"]
+	var cooldown: float = float(ElementData.find("fire")["cooldown_deciseconds"] as int) / 10.0
 	var s := BattleSystem.tick_battle(state, cooldown)
 	var pstats: Array = (s["battle_stats"] as Dictionary)["player"] as Array
 	assert_gt((pstats[0] as Dictionary)["damage"] as int, 0)
@@ -151,6 +151,54 @@ func test_tick_battle_advances_battle_timer() -> void:
 	var state := PhaseSystem.to_battle(_make_state(), _fixture())
 	var s := BattleSystem.tick_battle(state, 1.5)
 	assert_eq(s["battle_timer"] as float, 1.5)
+
+
+# ── select_freeze_target — anti-permalock ─────────────────────────────────────
+
+func _grid4(occupied: Array) -> Array:
+	var grid: Array = [null, null, null, null]
+	for i: int in occupied:
+		var elem: Dictionary = ElementData.find("fire").duplicate()
+		elem["element_id"] = "fire"
+		elem["level"] = 1
+		grid[i] = elem
+	return grid
+
+
+func test_select_freeze_target_picks_first_occupied() -> void:
+	assert_eq(BattleSystem.select_freeze_target(_grid4([0, 1, 2, 3]), -1), 0)
+
+
+func test_select_freeze_target_skips_last_frozen_slot() -> void:
+	assert_eq(BattleSystem.select_freeze_target(_grid4([0, 1, 2, 3]), 0), 1)
+
+
+func test_select_freeze_target_refreezes_when_no_alternative() -> void:
+	assert_eq(BattleSystem.select_freeze_target(_grid4([2]), 2), 2)
+
+
+func test_select_freeze_target_returns_minus_one_when_empty() -> void:
+	assert_eq(BattleSystem.select_freeze_target(_grid4([]), -1), -1)
+
+
+# ── freeze in combat — skip fire + countdown ──────────────────────────────────
+
+func test_frozen_player_element_does_not_fire() -> void:
+	var state := PhaseSystem.to_battle(_state_with_player_element("fire"), _fixture())
+	(state["player_frozen_seconds"] as Array)[0] = 5.0
+	var cooldown: float = float(ElementData.find("fire")["cooldown_deciseconds"] as int) / 10.0
+	var s := BattleSystem.tick_battle(state, cooldown)
+	assert_eq(s["opponent_hp"] as int, state["opponent_hp"] as int)
+
+
+func test_freeze_releases_element_after_it_expires() -> void:
+	var state := PhaseSystem.to_battle(_state_with_player_element("fire"), _fixture())
+	(state["player_frozen_seconds"] as Array)[0] = 1.0
+	var blocked := BattleSystem.tick_battle(state, 1.0)  # freeze drains to 0, no fire this tick
+	assert_eq(blocked["opponent_hp"] as int, state["opponent_hp"] as int)
+	var cooldown: float = float(ElementData.find("fire")["cooldown_deciseconds"] as int) / 10.0
+	var released := BattleSystem.tick_battle(blocked, cooldown)  # now unfrozen → fires
+	assert_lt(released["opponent_hp"] as int, blocked["opponent_hp"] as int)
 
 
 # ── compute_result ────────────────────────────────────────────────────────────

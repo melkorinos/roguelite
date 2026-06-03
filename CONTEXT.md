@@ -103,6 +103,26 @@ Early examples:
 | Bonus damage for each fire element on Board | Passive scaling modifier |
 | Decrease cooldown for earth-related elements | Setup passive modifier |
 
+**Trigger**:
+The condition that activates an Ability: `combat_start` (once at battle begin), `periodic` (every N deciseconds), `passive` (always-on modifier queried at the relevant calculation site), or a reactive `on_*` event (e.g. `on_burn_applied`, `on_leech`).
+_Avoid_: hook, event handler, condition
+
+**Reactive Trigger**:
+A Trigger that fires in response to an in-combat event emitted by another piece. Bound by the **depth-1 rule**: a reactively-activated Ability may deal damage and apply Statuses, but its own output emits no further reactive events, and it never Multicasts. Caps every synergy chain at one hop.
+_Avoid_: chain trigger, cascade
+
+**Multicast**:
+An Ability property that repeats a piece's full cooldown fire (damage + on-fire effects) N times in one cooldown — capped 2× at Tier 2/3, 3× at Tier 4. Each repeat is an independent Reactive Trigger.
+_Avoid_: double-cast, repeat, echo (Echo is a distinct, deferred concept)
+
+**Freeze**:
+A per-slot combat state (not a side-wide Status) that makes one element's slot skip its fire for a duration. Tracked separately from StatusSystem, cleansable, and target selection avoids re-freezing the most-recently-frozen occupied slot.
+_Avoid_: stun, stop, disable
+
+**Decisecond**:
+The integer time unit for all combat design values — one tenth of a second. A 2.5-second cooldown is stored as 25 deciseconds. No combat design value is a decimal. Effective cooldown is floored at 10 deciseconds (one fire per second).
+_Avoid_: tick (reserved for the 1-second Status tick), ms, frame
+
 **Ability Chain** *(planned, not yet implemented)*:
 The future combat model where Ability activations resolve in a meaningful sequence, with interactions between pieces producing emergent outcomes. Currently deferred — the live model uses individual element cooldown timers.
 _Avoid_: combat sequence, turn order, resolution
@@ -118,7 +138,7 @@ _Avoid_: undo, time rewind
 ### UI zones
 
 **Battlegrid**:
-The arrangement zone inside the Shop UI where the player positions their elements before clicking Fight. Elements placed here fight in the combat phase. *(Grid size is still under consideration.)*
+The arrangement zone inside the Shop UI where the player positions their elements before clicking Fight. Elements placed here fight in the combat phase. *(Grid size — 2×2 / 2×3 / 3×3 — is undecided; the combat backend is grid-size-agnostic, deriving size from the slot array and using an orthogonal-neighbor helper for adjacency.)*
 _Avoid_: board, bench, lineup
 
 **Battle Summary**:

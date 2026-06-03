@@ -89,7 +89,7 @@ func _update_progress_bars(s: Dictionary) -> void:
 		if pgrid[i] == null:
 			continue
 		var elem: Dictionary = pgrid[i] as Dictionary
-		var ratio: float = (ptimers[i] as float) / (elem["cooldown"] as float)
+		var ratio: float = (ptimers[i] as float) / (float(elem["cooldown_deciseconds"] as int) / 10.0)
 		_player_slots[i].set_cooldown_progress(ratio)
 
 	var ogrid: Array = s["opponent_grid"]
@@ -98,7 +98,7 @@ func _update_progress_bars(s: Dictionary) -> void:
 		if ogrid[i] == null:
 			continue
 		var elem: Dictionary = ogrid[i] as Dictionary
-		var ratio: float = (otimers[i] as float) / (elem["cooldown"] as float)
+		var ratio: float = (otimers[i] as float) / (float(elem["cooldown_deciseconds"] as int) / 10.0)
 		_opp_slots[i].set_cooldown_progress(ratio)
 
 

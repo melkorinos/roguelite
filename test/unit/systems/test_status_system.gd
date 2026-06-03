@@ -32,14 +32,15 @@ func test_empty_statuses_all_numeric_fields_are_zero() -> void:
 	assert_eq((s["burn"] as Dictionary)["stacks"] as int, 0)
 	assert_eq((s["poison"] as Dictionary)["stacks"] as int, 0)
 	assert_eq((s["armor"] as Dictionary)["value"] as int, 0)
-	assert_almost_eq((s["plating"] as Dictionary)["value"] as float, 0.0, 0.001)
-	assert_almost_eq((s["blind"] as Dictionary)["pct"] as float, 0.0, 0.001)
+	assert_eq((s["plating"] as Dictionary)["value"] as int, 0)
+	assert_eq((s["blind"] as Dictionary)["percent"] as int, 0)
 	assert_eq((s["shock"] as Dictionary)["n"] as int, 0)
 	assert_eq((s["slow"] as Dictionary)["n"] as int, 0)
-	assert_almost_eq((s["haste"] as Dictionary)["reduction"] as float, 0.0, 0.001)
+	assert_eq((s["haste"] as Dictionary)["reduction"] as int, 0)
 	assert_eq((s["weaken"] as Dictionary)["stacks"] as int, 0)
 	assert_eq((s["weaken"] as Dictionary)["ticks"] as int, 0)
-	assert_eq((s["curse"] as Dictionary)["ticks"] as int, 0)
+	assert_eq((s["curse"] as Dictionary)["ticks_remaining"] as int, 0)
+	assert_eq(s["cooldown_modifier_deciseconds"] as int, 0)
 
 
 # ── apply_effect — stacking effects ──────────────────────────────────────────
@@ -71,19 +72,19 @@ func test_apply_armor_increments_value() -> void:
 
 func test_apply_plating_increments_value() -> void:
 	var s: Dictionary = _apply(_s(), "plating")
-	assert_almost_eq((s["plating"] as Dictionary)["value"] as float, 0.1, 0.001)
+	assert_eq((s["plating"] as Dictionary)["value"] as int, 1)
 
 
-func test_apply_blind_increments_pct() -> void:
+func test_apply_blind_increments_percent() -> void:
 	var s: Dictionary = _apply(_s(), "blind")
-	assert_almost_eq((s["blind"] as Dictionary)["pct"] as float, 0.15, 0.001)
+	assert_eq((s["blind"] as Dictionary)["percent"] as int, 15)
 
 
-func test_apply_blind_caps_at_50_pct() -> void:
+func test_apply_blind_caps_at_50_percent() -> void:
 	var s: Dictionary = _s()
 	for _i: int in 5:
 		s = _apply(s, "blind")
-	assert_almost_eq((s["blind"] as Dictionary)["pct"] as float, 0.50, 0.001)
+	assert_eq((s["blind"] as Dictionary)["percent"] as int, 50)
 
 
 func test_apply_shock_increments_n() -> void:
@@ -93,7 +94,7 @@ func test_apply_shock_increments_n() -> void:
 
 func test_apply_haste_increments_reduction() -> void:
 	var s: Dictionary = _apply(_s(), "haste")
-	assert_almost_eq((s["haste"] as Dictionary)["reduction"] as float, 0.3, 0.001)
+	assert_eq((s["haste"] as Dictionary)["reduction"] as int, 3)  # deciseconds
 
 
 func test_apply_weaken_increments_stacks_and_sets_ticks() -> void:
@@ -110,14 +111,14 @@ func test_apply_weaken_twice_stacks_accumulate_ticks_refresh() -> void:
 
 func test_apply_curse_sets_ticks() -> void:
 	var s: Dictionary = _apply(_s(), "curse")
-	assert_eq((s["curse"] as Dictionary)["ticks"] as int, 3)
+	assert_eq((s["curse"] as Dictionary)["ticks_remaining"] as int, 3)
 
 
 func test_apply_curse_reapply_refreshes_ticks() -> void:
 	var s: Dictionary = _apply(_s(), "curse")
-	s = _tick_s(s)  # ticks → 2
+	s = _tick_s(s)  # ticks_remaining → 2
 	s = _apply(s, "curse")
-	assert_eq((s["curse"] as Dictionary)["ticks"] as int, 3)
+	assert_eq((s["curse"] as Dictionary)["ticks_remaining"] as int, 3)
 
 
 # ── apply_effect — instant effects ───────────────────────────────────────────
@@ -155,13 +156,13 @@ func test_apply_cleanse_removes_1_from_each_debuff() -> void:
 	assert_eq((s["poison"] as Dictionary)["stacks"] as int, 0)
 	assert_eq((s["shock"] as Dictionary)["n"] as int, 0)
 	assert_eq((s["weaken"] as Dictionary)["stacks"] as int, 0)
-	assert_almost_eq((s["blind"] as Dictionary)["pct"] as float, 0.0, 0.001)
+	assert_eq((s["blind"] as Dictionary)["percent"] as int, 0)
 
 
 func test_apply_cleanse_floors_at_zero() -> void:
 	var s: Dictionary = _apply(_s(), "cleanse")
 	assert_eq((s["burn"] as Dictionary)["stacks"] as int, 0)
-	assert_almost_eq((s["blind"] as Dictionary)["pct"] as float, 0.0, 0.001)
+	assert_eq((s["blind"] as Dictionary)["percent"] as int, 0)
 
 
 # ── apply_effect — immutability ───────────────────────────────────────────────
@@ -188,6 +189,24 @@ func test_slow_pct_10_is_33() -> void:
 
 func test_slow_pct_never_reaches_50() -> void:
 	assert_lt(StatusSystem.slow_pct(1000), 50.0)
+
+
+# ── effective_cooldown_deciseconds ────────────────────────────────────────────
+
+func test_effective_cooldown_no_statuses_returns_base() -> void:
+	assert_eq(StatusSystem.effective_cooldown_deciseconds(25, _s()), 25)
+
+
+func test_effective_cooldown_floors_at_10_deciseconds() -> void:
+	assert_eq(StatusSystem.effective_cooldown_deciseconds(5, _s()), 10)
+
+
+func test_effective_cooldown_shock_slows_fire() -> void:
+	# shock n=5 → slow_pct=25% → 25 * 1.25 = 31.25 → round 31
+	var s: Dictionary = _s()
+	for _i: int in 5:
+		s = _apply(s, "shock")
+	assert_eq(StatusSystem.effective_cooldown_deciseconds(25, s), 31)
 
 
 # ── tick ─────────────────────────────────────────────────────────────────────
@@ -274,14 +293,14 @@ func test_tick_weaken_expires_after_3_ticks() -> void:
 func test_tick_curse_decrements_ticks() -> void:
 	var s: Dictionary = _apply(_s(), "curse")
 	s = _tick_s(s)
-	assert_eq((s["curse"] as Dictionary)["ticks"] as int, 2)
+	assert_eq((s["curse"] as Dictionary)["ticks_remaining"] as int, 2)
 
 
 func test_tick_curse_expires_after_3_ticks() -> void:
 	var s: Dictionary = _apply(_s(), "curse")
 	for _i: int in 3:
 		s = _tick_s(s)
-	assert_eq((s["curse"] as Dictionary)["ticks"] as int, 0)
+	assert_eq((s["curse"] as Dictionary)["ticks_remaining"] as int, 0)
 
 
 func test_tick_no_damage_on_empty_statuses() -> void:
@@ -292,6 +311,73 @@ func test_tick_does_not_mutate_input() -> void:
 	var s: Dictionary = _apply(_s(), "burn")
 	StatusSystem.tick(s)
 	assert_eq((s["burn"] as Dictionary)["stacks"] as int, 1)
+
+
+# ── curse expansion: permanence + damage amplifier ────────────────────────────
+
+func test_curse_permanent_does_not_tick_down() -> void:
+	var s: Dictionary = _apply(_s(), "curse")
+	(s["curse"] as Dictionary)["is_permanent"] = true
+	for _i: int in 5:
+		s = _tick_s(s)
+	assert_eq((s["curse"] as Dictionary)["ticks_remaining"] as int, 3)
+
+
+func test_curse_damage_amplifier_increases_incoming_while_active() -> void:
+	var def: Dictionary = _apply(_s(), "curse")
+	(def["curse"] as Dictionary)["damage_amplifier"] = 1
+	var r: Dictionary = StatusSystem.compute_incoming_damage(3, _s(), def)
+	assert_eq(r["damage"] as int, 4)
+
+
+func test_curse_damage_amplifier_ignored_when_curse_inactive() -> void:
+	var def: Dictionary = _s()
+	(def["curse"] as Dictionary)["damage_amplifier"] = 2
+	var r: Dictionary = StatusSystem.compute_incoming_damage(3, _s(), def)
+	assert_eq(r["damage"] as int, 3)
+
+
+# ── tick damage bonuses (Blaze / Underrot patterns) ───────────────────────────
+
+func test_burn_tick_damage_bonus_adds_to_each_tick() -> void:
+	var s: Dictionary = _apply(_s(), "burn")  # 1 stack
+	(s["burn"] as Dictionary)["tick_damage_bonus"] = 1
+	assert_eq(_tick_dmg(s), 2)  # 1 stack + 1 bonus
+
+
+func test_poison_tick_damage_bonus_adds_to_each_tick() -> void:
+	var s: Dictionary = _apply(_s(), "poison")  # 1 stack
+	(s["poison"] as Dictionary)["tick_damage_bonus"] = 2
+	assert_eq(_tick_dmg(s), 3)  # 1 stack + 2 bonus
+
+
+# ── shock effective_stack_bonus (Plasma pattern) ──────────────────────────────
+
+func test_shock_effective_stack_bonus_increases_slow() -> void:
+	# bonus 5 with no real shock → slow computed as if n=5 → 25% → 25 * 1.25 = 31
+	var s: Dictionary = _s()
+	(s["shock"] as Dictionary)["effective_stack_bonus"] = 5
+	assert_eq(StatusSystem.effective_cooldown_deciseconds(25, s), 31)
+
+
+# ── signed cooldown_modifier_deciseconds (Mud / Lodestone patterns) ───────────
+
+func test_cooldown_modifier_penalty_increases_effective_cooldown() -> void:
+	var s: Dictionary = _s()
+	s["cooldown_modifier_deciseconds"] = 8
+	assert_eq(StatusSystem.effective_cooldown_deciseconds(25, s), 33)
+
+
+func test_cooldown_modifier_reduction_decreases_effective_cooldown() -> void:
+	var s: Dictionary = _s()
+	s["cooldown_modifier_deciseconds"] = -5
+	assert_eq(StatusSystem.effective_cooldown_deciseconds(25, s), 20)
+
+
+func test_cooldown_modifier_reduction_respects_floor() -> void:
+	var s: Dictionary = _s()
+	s["cooldown_modifier_deciseconds"] = -50
+	assert_eq(StatusSystem.effective_cooldown_deciseconds(25, s), 10)
 
 
 # ── compute_incoming_damage ───────────────────────────────────────────────────
@@ -317,7 +403,7 @@ func test_compute_weaken_expired_ticks_no_reduction() -> void:
 
 func test_compute_plating_reduces_all_incoming() -> void:
 	var def: Dictionary = _s()
-	(def["plating"] as Dictionary)["value"] = 2.0
+	(def["plating"] as Dictionary)["value"] = 2
 	var r: Dictionary = StatusSystem.compute_incoming_damage(5, _s(), def)
 	assert_eq(r["damage"] as int, 3)
 

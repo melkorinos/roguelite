@@ -9,8 +9,15 @@ func test_all_elements_all_have_required_keys() -> void:
 		assert_true(elem.has("name"),     elem.get("id", "?") + " missing 'name'")
 		assert_true(elem.has("tier"),     elem.get("id", "?") + " missing 'tier'")
 		assert_true(elem.has("price"),    elem.get("id", "?") + " missing 'price'")
-		assert_true(elem.has("cooldown"), elem.get("id", "?") + " missing 'cooldown'")
+		assert_true(elem.has("cooldown_deciseconds"), elem.get("id", "?") + " missing 'cooldown_deciseconds'")
 		assert_true(elem.has("damage"),   elem.get("id", "?") + " missing 'damage'")
+
+
+func test_all_cooldowns_are_integer_deciseconds() -> void:
+	for elem: Dictionary in ElementData.all_elements():
+		var value: Variant = elem["cooldown_deciseconds"]
+		assert_true(value is int, elem["id"] + " cooldown_deciseconds must be an int (no decimals)")
+		assert_true((value as int) >= 10, elem["id"] + " cooldown_deciseconds below the 10-decisecond floor")
 
 
 func test_all_elements_tiers_are_in_range_1_to_4() -> void:
