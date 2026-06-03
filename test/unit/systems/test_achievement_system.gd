@@ -30,9 +30,41 @@ func _state_with_battle_damage(dmg: int) -> Dictionary:
 	return s
 
 
-# ── does not mutate input profile ─────────────────────────────────────────────
+# ── check() — pure, no I/O ────────────────────────────────────────────────────
+
+func test_check_returns_unlocked_list_for_new_achievement() -> void:
+	var result := AchievementSystem.check(GameState.create(), _empty_profile(), "round_win")
+	assert_true("ACH_FIRST_WIN" in (result["unlocked"] as Array))
+
+
+func test_check_does_not_include_already_unlocked_in_unlocked_list() -> void:
+	var p := _empty_profile()
+	p["achievements_unlocked"] = ["ACH_FIRST_WIN"]
+	var result := AchievementSystem.check(GameState.create(), p, "round_win")
+	assert_false("ACH_FIRST_WIN" in (result["unlocked"] as Array))
+
+
+func test_check_returns_updated_profile_with_new_achievement() -> void:
+	var result := AchievementSystem.check(GameState.create(), _empty_profile(), "round_win")
+	assert_true("ACH_FIRST_WIN" in ((result["profile"] as Dictionary)["achievements_unlocked"] as Array))
+
 
 func test_check_does_not_mutate_input_profile() -> void:
+	var p := _empty_profile()
+	AchievementSystem.check(GameState.create(), p, "round_win")
+	assert_eq(p["achievements_unlocked"], [])
+
+
+func test_check_unlocked_empty_when_nothing_new() -> void:
+	var p := _empty_profile()
+	p["achievements_unlocked"] = ["ACH_FIRST_WIN", "ACH_FIRST_FORGE", "ACH_CLUTCH", "ACH_SURVIVOR", "ACH_DAMAGE_20K"]
+	var result := AchievementSystem.check(GameState.create(), p, "round_win")
+	assert_eq((result["unlocked"] as Array).size(), 0)
+
+
+# ── evaluate() does not mutate input profile ──────────────────────────────────
+
+func test_evaluate_does_not_mutate_input_profile() -> void:
 	var p := _empty_profile()
 	AchievementSystem.evaluate(GameState.create(), p, "round_win")
 	assert_eq(p["achievements_unlocked"], [])

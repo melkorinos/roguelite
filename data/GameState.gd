@@ -23,7 +23,7 @@ static func create(seed_recipes: Array[String] = []) -> Dictionary:
 			"player": [{"fires": 0, "damage": 0}, {"fires": 0, "damage": 0}, {"fires": 0, "damage": 0}, {"fires": 0, "damage": 0}],
 			"opponent": [{"fires": 0, "damage": 0}, {"fires": 0, "damage": 0}, {"fires": 0, "damage": 0}, {"fires": 0, "damage": 0}],
 		},
-		"lives": 10,
+		"lives": 100,
 		"wins": 0,
 		"opponent_starting_hp": 0,
 		"opponent_snapshot": {},

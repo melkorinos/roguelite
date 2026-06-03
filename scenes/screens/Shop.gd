@@ -113,7 +113,7 @@ func _render() -> void:
 	$VBox/TopBar/RoundLabel.text = "Round %d" % s["round"]
 	$VBox/TopBar/GoldLabel.text = ""
 	$VBox/TopBar/HPLabel.text = "❤ %d/30   💰 %dg" % [s["player_hp"], s["gold"]]
-	$VBox/TopBar/LivesLabel.text = "Lives: %d  Wins: %d/10" % [s["lives"], s["wins"]]
+	$VBox/TopBar/LivesLabel.text = "Life: %d  Wins: %d/10" % [s["lives"], s["wins"]]
 	$VBox/DebugRow/TierLabel.text = "Shop T%d" % s["shop_tier"]
 	$VBox/TopBar/UndoButton.disabled = GameManager.undo_state == null
 	_rebuild_shop_grid(s)
@@ -298,6 +298,7 @@ func _on_inv_drag_ended() -> void:
 # ── Sell zone ─────────────────────────────────────────────────────────────────
 
 func _on_sell_zone_sold(from_type: String, from_index: int) -> void:
+	AudioManager.play("sell")
 	GameManager.save_undo()
 	if from_type == "inventory":
 		GameManager.state = ShopSystem.sell_item(GameManager.state, from_index)
@@ -309,12 +310,14 @@ func _on_sell_zone_sold(from_type: String, from_index: int) -> void:
 # ── Buy ───────────────────────────────────────────────────────────────────────
 
 func _on_buy_pressed(_element_id: String, shop_slot: int) -> void:
+	AudioManager.play("buy")
 	GameManager.save_undo()
 	GameManager.state = ShopSystem.transfer(GameManager.state, {"zone": "shop", "slot": shop_slot}, {"zone": "inventory", "slot": -1})
 	_render()
 
 
 func _on_reroll_pressed() -> void:
+	AudioManager.play("click")
 	GameManager.save_undo()
 	GameManager.state = ShopSystem.reroll_shop(GameManager.state)
 	_render()
@@ -323,6 +326,7 @@ func _on_reroll_pressed() -> void:
 # ── Buy → empty inventory slot (no dialog) ───────────────────────────────────
 
 func _on_shop_buy_to_slot_requested(_element_id: String, to_inv_index: int, shop_slot: int) -> void:
+	AudioManager.play("buy")
 	GameManager.save_undo()
 	GameManager.state = ShopSystem.transfer(GameManager.state, {"zone": "shop", "slot": shop_slot}, {"zone": "inventory", "slot": to_inv_index})
 	_render()
@@ -331,6 +335,7 @@ func _on_shop_buy_to_slot_requested(_element_id: String, to_inv_index: int, shop
 # ── Buy + level-up combo (no confirmation — undo covers it) ──────────────────
 
 func _on_shop_buy_upgrade_requested(_element_id: String, to_inv_index: int, shop_slot: int) -> void:
+	AudioManager.play("buy")
 	GameManager.save_undo()
 	GameManager.state = ShopSystem.transfer(
 		GameManager.state,
@@ -370,6 +375,7 @@ func _execute_forge() -> void:
 	var level_mismatch: bool = result["level_mismatch"] as bool
 
 	if outcome == "ok":
+		AudioManager.play("forge")
 		var post_count: int = (GameManager.state["discovered_recipes"] as Array).size()
 		if post_count > pre_recipe_count:
 			_fire_achievement("forge_discovered")
@@ -391,7 +397,10 @@ func _execute_forge() -> void:
 
 
 func _fire_achievement(event: String) -> void:
-	AchievementSystem.check(GameManager.state, event)
+	var ach: Dictionary = AchievementSystem.check(GameManager.state, PlayerProfile.to_dict(), event)
+	PlayerProfile.from_dict(ach["profile"] as Dictionary)
+	if not (ach["unlocked"] as Array).is_empty():
+		PlayerProfile.save_profile()
 
 
 # ── Inventory → inventory: level-up ──────────────────────────────────────────
@@ -440,6 +449,7 @@ func _on_forge_quick_slot_grid(grid_slot: int) -> void:
 # ── Undo ──────────────────────────────────────────────────────────────────────
 
 func _on_undo_pressed() -> void:
+	AudioManager.play("click")
 	_do_undo()
 
 
@@ -467,6 +477,7 @@ func _on_tier_up_pressed() -> void:
 
 
 func _on_fight_pressed() -> void:
+	AudioManager.play("click")
 	var s: Dictionary = GameManager.state
 	var date := Time.get_date_dict_from_system()
 	var day_key: int = (date["year"] as int) * 10000 + (date["month"] as int) * 100 + (date["day"] as int)

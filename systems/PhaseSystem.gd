@@ -43,11 +43,11 @@ static func advance_round(state: Dictionary) -> Dictionary:
 			return s
 	else:
 		var ratio: float = float(opp_hp) / float(maxi(opp_start, 1))
-		var lives_lost: int = 1
+		var lives_lost: int = 10
 		if ratio >= 0.70:
-			lives_lost = 3
+			lives_lost = 30
 		elif ratio >= 0.30:
-			lives_lost = 2
+			lives_lost = 20
 		s["lives"] = (s["lives"] as int) - lives_lost
 		if (s["lives"] as int) <= 0:
 			s["phase"] = "eliminated"
@@ -69,11 +69,11 @@ static func describe_result(state: Dictionary) -> Dictionary:
 		wins_after = wins + 1
 	else:
 		var ratio: float = float(opp_hp) / float(maxi(opp_start, 1))
-		lives_lost = 1
+		lives_lost = 10
 		if ratio >= 0.70:
-			lives_lost = 3
+			lives_lost = 30
 		elif ratio >= 0.30:
-			lives_lost = 2
+			lives_lost = 20
 	var lives_after: int = lives - lives_lost
 	return {
 		"outcome": outcome,

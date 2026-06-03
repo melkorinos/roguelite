@@ -175,41 +175,41 @@ func test_advance_round_does_not_increment_wins_on_loss() -> void:
 
 # ── advance_round: Lives deduction ───────────────────────────────────────────
 
-func test_advance_round_deducts_3_lives_on_hard_loss() -> void:
+func test_advance_round_deducts_30_life_on_hard_loss() -> void:
 	# opponent has 70% of starting HP remaining → hard loss
 	var state := _make_state()
 	state["player_hp"] = 0
 	state["opponent_hp"] = 14
 	state["opponent_starting_hp"] = 20
 	var s := PhaseSystem.advance_round(state)
-	assert_eq(s["lives"], 7)
+	assert_eq(s["lives"], 70)
 
 
-func test_advance_round_deducts_2_lives_on_medium_loss() -> void:
+func test_advance_round_deducts_20_life_on_medium_loss() -> void:
 	# opponent has exactly 50% remaining → medium loss
 	var state := _make_state()
 	state["player_hp"] = 0
 	state["opponent_hp"] = 10
 	state["opponent_starting_hp"] = 20
 	var s := PhaseSystem.advance_round(state)
-	assert_eq(s["lives"], 8)
+	assert_eq(s["lives"], 80)
 
 
-func test_advance_round_deducts_1_life_on_close_loss() -> void:
+func test_advance_round_deducts_10_life_on_close_loss() -> void:
 	# opponent has 25% remaining → close loss
 	var state := _make_state()
 	state["player_hp"] = 0
 	state["opponent_hp"] = 5
 	state["opponent_starting_hp"] = 20
 	var s := PhaseSystem.advance_round(state)
-	assert_eq(s["lives"], 9)
+	assert_eq(s["lives"], 90)
 
 
-func test_advance_round_sets_eliminated_when_lives_reach_0() -> void:
+func test_advance_round_sets_eliminated_when_life_reaches_0() -> void:
 	var state := _make_state()
-	state["lives"] = 3
+	state["lives"] = 30
 	state["player_hp"] = 0
-	state["opponent_hp"] = 14   # hard loss → –3
+	state["opponent_hp"] = 14   # hard loss → –30
 	state["opponent_starting_hp"] = 20
 	var s := PhaseSystem.advance_round(state)
 	assert_eq(s["lives"], 0)
@@ -273,7 +273,7 @@ func test_to_battle_reads_grid_from_snapshot() -> void:
 
 # ── describe_result ───────────────────────────────────────────────────────────
 
-func _result_state(player_hp: int, opp_hp: int, opp_start: int, wins: int = 0, lives: int = 10) -> Dictionary:
+func _result_state(player_hp: int, opp_hp: int, opp_start: int, wins: int = 0, lives: int = 100) -> Dictionary:
 	var s := _make_state()
 	s["phase"] = "result"
 	s["player_hp"] = player_hp
@@ -299,27 +299,27 @@ func test_describe_result_draw_increments_wins_after() -> void:
 	assert_eq(dr["wins_after"] as int, 1)
 
 
-func test_describe_result_hard_loss_lives_lost_3() -> void:
+func test_describe_result_hard_loss_life_lost_30() -> void:
 	# opp has 70% remaining → hard loss
 	var s := _result_state(0, 14, 20)
 	var dr := PhaseSystem.describe_result(s)
 	assert_eq(dr["outcome"], "opponent_wins")
-	assert_eq(dr["lives_lost"] as int, 3)
-	assert_eq(dr["lives_after"] as int, 7)
+	assert_eq(dr["lives_lost"] as int, 30)
+	assert_eq(dr["lives_after"] as int, 70)
 
 
-func test_describe_result_medium_loss_lives_lost_2() -> void:
+func test_describe_result_medium_loss_life_lost_20() -> void:
 	# opp has 50% remaining → medium loss
 	var s := _result_state(0, 10, 20)
 	var dr := PhaseSystem.describe_result(s)
-	assert_eq(dr["lives_lost"] as int, 2)
+	assert_eq(dr["lives_lost"] as int, 20)
 
 
-func test_describe_result_close_loss_lives_lost_1() -> void:
+func test_describe_result_close_loss_life_lost_10() -> void:
 	# opp has 25% remaining → close loss
 	var s := _result_state(0, 5, 20)
 	var dr := PhaseSystem.describe_result(s)
-	assert_eq(dr["lives_lost"] as int, 1)
+	assert_eq(dr["lives_lost"] as int, 10)
 
 
 func test_describe_result_is_victory_at_9_wins_player_win() -> void:
@@ -335,8 +335,8 @@ func test_describe_result_is_not_victory_below_10() -> void:
 	assert_false(dr["is_victory"] as bool)
 
 
-func test_describe_result_is_eliminated_when_lives_reach_0() -> void:
-	var s := _result_state(0, 14, 20, 0, 3)
+func test_describe_result_is_eliminated_when_life_reaches_0() -> void:
+	var s := _result_state(0, 14, 20, 0, 30)
 	var dr := PhaseSystem.describe_result(s)
 	assert_true(dr["is_eliminated"] as bool)
 	assert_eq(dr["lives_after"] as int, 0)
@@ -351,7 +351,7 @@ func test_describe_result_is_not_eliminated_on_win() -> void:
 func test_describe_result_does_not_mutate_state() -> void:
 	var s := _result_state(0, 14, 20)
 	PhaseSystem.describe_result(s)
-	assert_eq(s["lives"] as int, 10)
+	assert_eq(s["lives"] as int, 100)
 
 
 # ── forfeit ───────────────────────────────────────────────────────────────────

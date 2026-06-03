@@ -20,6 +20,7 @@ config/run/main_scene="res://scenes/screens/Boot.tscn"
 SettingsManager="*res://autoloads/SettingsManager.gd"
 PlayerProfile="*res://autoloads/PlayerProfile.gd"
 GameManager="*res://autoloads/GameManager.gd"
+AudioManager="*res://autoloads/AudioManager.gd"
 
 [display]
 

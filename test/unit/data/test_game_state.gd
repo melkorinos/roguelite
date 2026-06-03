@@ -29,9 +29,9 @@ func test_create_inventory_has_six_empty_slots() -> void:
 		assert_null(slot)
 
 
-func test_create_has_10_lives() -> void:
+func test_create_has_100_life() -> void:
 	var state := GameState.create()
-	assert_eq(state["lives"], 10)
+	assert_eq(state["lives"], 100)
 
 
 func test_create_has_0_wins() -> void:

@@ -113,6 +113,11 @@ func _process_fire_events(s: Dictionary) -> void:
 			slot = _opp_slots[idx]
 		if not (e.get("is_miss", false) as bool):
 			slot.play_fire_animation()
+			match slot.get_tier():
+				1: AudioManager.play("fire_t1")
+				2: AudioManager.play("fire_t2")
+				3: AudioManager.play("fire_t3")
+				_: AudioManager.play("fire_t1")
 		_spawn_float_labels(slot, e)
 
 
@@ -164,7 +169,7 @@ func _render() -> void:
 	var s: Dictionary = GameManager.state
 	var is_result: bool = s["phase"] == "result"
 
-	$VBox/Header.text = "BATTLE — Round %d  |  Lives: %d  Wins: %d/10" % [s["round"], s["lives"], s["wins"]]
+	$VBox/Header.text = "BATTLE — Round %d  |  Life: %d  Wins: %d/10" % [s["round"], s["lives"], s["wins"]]
 	$VBox/HpRow/PlayerHPLabel.text = "❤️ YOUR HP: %d" % s["player_hp"]
 	$VBox/HpRow/OppHPLabel.text = "☠️ OPP HP: %d" % s["opponent_hp"]
 	var remaining: float = maxf(0.0, BattleSystem.BATTLE_TIME_LIMIT - (s["battle_timer"] as float))
@@ -204,7 +209,7 @@ func _render() -> void:
 					result_text = "💀 ELIMINATED — %d wins in %d rounds" % [wins, s["round"] as int]
 					next_label = "▶ End"
 				else:
-					result_text = "💀 YOU LOSE  (Lives: %d→%d)" % [lives, dr["lives_after"] as int]
+					result_text = "💀 YOU LOSE  (Life: %d→%d)" % [lives, dr["lives_after"] as int]
 		$VBox/ResultLabel.text = result_text
 		$VBox/ResultLabel.visible = true
 		$VBox/ButtonRow.visible = true
@@ -212,6 +217,7 @@ func _render() -> void:
 
 
 func _on_summary_pressed() -> void:
+	AudioManager.play("click")
 	_summary_visible = not _summary_visible
 	$VBox/SummarySeparator.visible = _summary_visible
 	$VBox/SummaryPanel.visible = _summary_visible
@@ -309,21 +315,25 @@ func _on_tooltip_hide() -> void:
 # ── Speed / Pause ─────────────────────────────────────────────────────────────
 
 func _on_pause_pressed() -> void:
+	AudioManager.play("click")
 	_paused = not _paused
 	_render()
 
 
 func _on_speed_1x_pressed() -> void:
+	AudioManager.play("click")
 	_speed_mult = 1.0
 	_render()
 
 
 func _on_speed_15x_pressed() -> void:
+	AudioManager.play("click")
 	_speed_mult = 1.5
 	_render()
 
 
 func _on_speed_2x_pressed() -> void:
+	AudioManager.play("click")
 	_speed_mult = 2.0
 	_render()
 
@@ -353,6 +363,7 @@ func _on_pause_menu() -> void:
 
 
 func _on_next_round_pressed() -> void:
+	AudioManager.play("click")
 	var pre: Dictionary = GameManager.state
 	GameManager.state = PhaseSystem.advance_round(pre)
 	var phase: String = GameManager.state["phase"] as String
@@ -366,7 +377,10 @@ func _on_next_round_pressed() -> void:
 		_:
 			event = "round_win" if (pre["opponent_hp"] as int) <= 0 else "round_loss"
 
-	AchievementSystem.check(pre, event)
+	var ach: Dictionary = AchievementSystem.check(pre, PlayerProfile.to_dict(), event)
+	PlayerProfile.from_dict(ach["profile"] as Dictionary)
+	if not (ach["unlocked"] as Array).is_empty() or event in ["match_win", "match_eliminated"]:
+		PlayerProfile.save_profile()
 
 	match phase:
 		"victory":

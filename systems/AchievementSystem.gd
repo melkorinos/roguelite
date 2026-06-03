@@ -7,10 +7,9 @@ const ACH_SURVIVOR    := "ACH_SURVIVOR"
 const ACH_DAMAGE_20K  := "ACH_DAMAGE_20K"
 
 
-# Public entry point — reads/writes PlayerProfile, returns {state, unlocked}.
-# Scenes call this; tests call evaluate() directly.
-static func check(state: Dictionary, event: String) -> Dictionary:
-	var profile: Dictionary = PlayerProfile.to_dict()
+# Pure entry point — takes a profile snapshot, returns {profile, unlocked}.
+# No I/O; callers (Battle.gd, Shop.gd) own the PlayerProfile read/write/save.
+static func check(state: Dictionary, profile: Dictionary, event: String) -> Dictionary:
 	var updated: Dictionary = evaluate(state, profile, event)
 	var prev_achs: Array = profile.get("achievements_unlocked", []) as Array
 	var new_achs: Array = updated.get("achievements_unlocked", []) as Array
@@ -18,10 +17,7 @@ static func check(state: Dictionary, event: String) -> Dictionary:
 	for ach: Variant in new_achs:
 		if not ach in prev_achs:
 			unlocked.append(ach as String)
-	PlayerProfile.from_dict(updated)
-	if not unlocked.is_empty() or event == "match_win" or event == "match_eliminated":
-		PlayerProfile.save_profile()
-	return {"state": state, "unlocked": unlocked}
+	return {"profile": updated, "unlocked": unlocked}
 
 
 # Pure function — takes a profile dict, returns an updated profile dict. No I/O.

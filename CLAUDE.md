@@ -16,6 +16,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Update [.claude/ai-helper/memory.md](.claude/ai-helper/memory.md) when a decision crystallises. Update [.claude/ai-helper/log.md](.claude/ai-helper/log.md) when significant work lands.
 
+**Hard limit: both files must stay under 120 lines.** When adding to either file would exceed 120 lines, first condense or drop the oldest / least useful entries to make room. Log: collapse old entries into one-line bullets and drop routine housekeeping. Memory: merge duplicate sections and cut anything already obvious from the code.
+
 ## Project
 
 An auto-battler game built with **Godot 4 / GDScript**. Design is in early flux — ability-chain combat, synergy-driven builds, async PvP.
@@ -75,11 +77,11 @@ godot --headless --quit     # boot check — exit 0 means scripts load and autol
 Requires `godot` on PATH. On Windows: add the Godot editor directory to system PATH.
 CI runs the same two commands on every push (see [.github/workflows/ci.yml](.github/workflows/ci.yml)).
 
-**Run GUT tests** (9 suites across `test/unit/data/`, `test/unit/systems/`, `test/unit/autoloads/`):
+**Run GUT tests** (10 suites across `test/unit/data/`, `test/unit/systems/`, `test/unit/autoloads/`):
 ```
-godot --headless -s addons/gut/gut_cmdln.gd -gdir=res://test/unit/ -gprefix=test_ -gexit
+godot --headless -s addons/gut/gut_cmdln.gd -gdir=res://test/unit/data/ -gdir=res://test/unit/systems/ -gdir=res://test/unit/autoloads/ -gprefix=test_ -gexit
 ```
-Note: `-gsuffix` is not supported by this GUT version — omit it. `-gdir` must use `res://` prefix. GUT recurses into subdirectories.
+Note: `-gsuffix` is not supported by this GUT version — omit it. `-gdir` must use `res://` prefix. **Do not pass a single parent dir** (`res://test/unit/`) — this GUT version does not recurse and will silently run nothing. Pass all three leaf dirs explicitly with separate `-gdir` flags.
 
 ## Assistant behavior
 

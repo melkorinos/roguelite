@@ -109,6 +109,10 @@ func _apply_empty() -> void:
 		_style.bg_color = ThemeData.BATTLE_SLOT_BG_EMPTY
 
 
+func get_tier() -> int:
+	return _item_dict.get("tier", 1) as int if has_item else 1
+
+
 func set_cooldown_progress(ratio: float) -> void:
 	_progress.value = clampf(ratio, 0.0, 1.0)
 
