@@ -23,6 +23,7 @@ const COMP_NAME         := 15
 const COMP_STATS        := 13
 const COMP_RECIPE_EMOJI := 22  # ingredient emojis in recipe row
 const COMP_RECIPE       := 11  # ingredient names below emojis
+const COMP_ABILITY      := 11  # ability description text on a card
 
 # ── Battle summary ────────────────────────────────────────────────────────────
 const SUMMARY_HEADER := 16

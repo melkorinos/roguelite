@@ -16,6 +16,11 @@ static func to_battle(state: Dictionary, opponent_snapshot: Dictionary) -> Dicti
 	s["opponent_last_frozen_slot"] = -1
 	s["player_ability_timers"] = [0.0, 0.0, 0.0, 0.0]
 	s["opponent_ability_timers"] = [0.0, 0.0, 0.0, 0.0]
+	# Seed the combat RNG deterministically per round so Replay and async Ghost
+	# playback reproduce the exact fight.
+	var combat_rng := RandomNumberGenerator.new()
+	combat_rng.seed = hash("combat:%d" % (s["round"] as int))
+	s["combat_rng_state"] = combat_rng.state
 	s["battle_events"] = []
 	var opp_hp: int = BattleSystem.compute_opponent_hp(s["opponent_grid"])
 	s["opponent_hp"] = opp_hp

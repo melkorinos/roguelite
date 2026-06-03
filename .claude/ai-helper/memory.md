@@ -7,7 +7,7 @@ Auto-battler. Build synergies, break the system, lose to your exact counter, mas
 Plain data objects + standalone static fns. No class inheritance. Systems take `GameState` dict, return new dict — no mutation. `GameManager.state` global. `GameState.create()` in `data/GameState.gd`.
 
 ## Feature flags (`data/FeatureFlags.gd`)
-Static class, `static var` (not `const`) so flags flip at runtime. All false by default.
+Static class, `static var` (not `const`) so flags flip at runtime. **All default true since 2026-06-04** (early-state policy: ship everything on; flags are kill-switches, not gates). Only `status_effects` is actually read by code (`BattleSystem._tick_side`) — it gates the Status pipeline that Abilities apply through; the other four are inert placeholders.
 - `status_effects`, `hidden_recipes`, `efficiency_scoring`, `ability_chain`, `innate_ability`
 
 ## Match structure

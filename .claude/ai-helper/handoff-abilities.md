@@ -7,6 +7,63 @@ grilling, then (2) implement the full system. Read top-to-bottom before doing an
 
 ---
 
+## IMPLEMENTATION STATUS — updated 2026-06-04 (post architecture deepenings)
+
+The grilling and the core build are **done**, plus architecture candidates 1–3 from
+`.claude/ai-helper/reviews/architecture-review-20260604.html`. The sections below are the original
+design notes; where they conflict with what shipped, the shipped behaviour (and ADR 0003/0004) wins.
+
+**Shipped & tested (351/351 green, boot exit 0):**
+- Integer **decisecond** time model (ADR 0003): `cooldown_deciseconds`, floor-10, shock-slow round.
+- `StatusSystem`: integer blind %, curse `{ticks_remaining,is_permanent,damage_amplifier}`,
+  burn/poison `tick_damage_bonus`, shock `effective_stack_bonus`, signed `cooldown_modifier_deciseconds`.
+- `systems/GridSystem.gd` (grid-agnostic `dimensions` + orthogonal `neighbors`).
+- Freeze: per-side `*_frozen_seconds` + `*_last_frozen_slot`, anti-permalock, paused-CD.
+- `systems/AbilitySystem.gd` (ADR 0004): combat_start / periodic / reactive(depth-1) /
+  multicast(1 cast = 2 triggers) / passive-on-hit, wired into `to_battle` + `tick_battle`.
+- `data/AbilityData.gd`: ~87 T2+T3 abilities. **T4 stubbed**.
+- Tooltip **and** Compendium show ability descriptions. All `FeatureFlags` default **true**.
+- **C1 — conditional effects:** effects take an optional `when:[…]` guard
+  (`target_has_status at_least`). surge/blight/sporeflow/cryptbloom/arcbeam/wildrot conditionals restored.
+- **C2 — adjacency:** reactive resolution reads the event source slot; `adjacency_upgrade` abilities
+  gated by `FeatureFlags.combat_adjacency` + `GridSystem.neighbors`.
+- **C3 — seeded RNG:** `combat_rng_state` seeded per round in `to_battle`, threaded through combat;
+  blind + on-hit passives draw from it → reproducible Replay/Ghost. `passive_on_hit` now actually fires.
+
+**Pending — from my point of view, roughly prioritised:**
+
+1. **~21 skipped abilities needing engine hooks the build still lacks.** `get_ability` returns `{}` for
+   them. Each needs a NEW capability, not just data:
+   - *on-tick reactive events* (emit when a Status ticks): miasma, rootrot, moldsteel, rot, underrot-style.
+   - *plating-vs-DOT* modifier: steel.
+   - *leech modifiers* (heal amount/×): pulse, ichor-double, gore (+dmg vs weakened).
+   - *passive stat modifiers*: gust (haste strength), mountain (armor floor), tempest (shock no-decay),
+     blackice (weaken duration), razorwind (weaken-as-shock), ash (blind→dmg), acid (armor no-regen),
+     shrapnel (plating bypass), magnet (shock→plating), rainbow (random status), plant (heal+1),
+     ancientgrove (conditional dmg), aurora (haste→blind), voidrift (cleanse efficiency).
+   - This is **architecture candidate 2's second half** (typed `on_tick`/`on_armor_stripped` events) plus
+     a small **passive-modifier query layer** (like `on_hit_status_chances`, but for stat modifiers read
+     at the relevant calc site). Build those two seams, then most of the list becomes data.
+
+2. **Tooltip keyword hover-glossary + shift-to-pin (§10).** NOT built. `[burn]`/`[shock]` tags render
+   literally. Needs `StatusGlossary` map + bracket-detecting renderer + shift-to-pin. Main UI task.
+
+3. **Grid growth to 2×3 / 3×3.** Backend is grid-agnostic (loops `grid.size()`, `GridSystem`), but the
+   live grid is still 4 slots. Growing means widening `battle_grid`/`opponent_grid`/timers/frozen/
+   ability_timers/battle_stats arrays + `create_opponent_grid` + the Battle/Shop slot UI. Adjacency only
+   becomes interesting at 3×3.
+
+4. **Innate Ability + Replay** (architecture candidate 5). `tick_battle` has no injection seam for a
+   player-timed action. Add a timed-command queue in state; Replay re-times one command and re-runs with
+   the now-seeded RNG (C3 already makes this reproducible).
+
+5. **Architecture candidate 4** — collapse the duplicated side-key maps (`_make_side_ctx` / `_side_keys`)
+   into one `CombatSide` accessor. Do before grid growth or innate state (both add per-slot arrays).
+
+6. **T4 data fill** (10 elements) — pure data, no engine work.
+
+---
+
 ## Game context
 
 Auto-battler (Godot 4 / GDScript). 132 elements across 4 tiers. Combat is real-time deterministic:

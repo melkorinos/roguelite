@@ -50,8 +50,12 @@ static func tick_battle(state: Dictionary, delta: float) -> Dictionary:
 			s["player_hp"] = maxi(0, (s["player_hp"] as int) - (pl_tick["damage"] as int))
 		s["status_tick_timer"] = tick_acc
 
-	_tick_side(s, _make_side_ctx(true), delta, events, use_effects, bstats)
-	_tick_side(s, _make_side_ctx(false), delta, events, use_effects, bstats)
+	# Reconstruct the seeded combat RNG, advance it through both sides, persist it.
+	var combat_rng := RandomNumberGenerator.new()
+	combat_rng.state = s["combat_rng_state"] as int
+	_tick_side(s, _make_side_ctx(true), delta, events, use_effects, bstats, combat_rng)
+	_tick_side(s, _make_side_ctx(false), delta, events, use_effects, bstats, combat_rng)
+	s["combat_rng_state"] = combat_rng.state
 
 	# Depth-1 reactive abilities respond to this tick's fire events; periodic
 	# abilities advance their own timers.
@@ -94,7 +98,7 @@ static func _make_side_ctx(is_player: bool) -> Dictionary:
 	}
 
 
-static func _tick_side(s: Dictionary, ctx: Dictionary, delta: float, events: Array, use_effects: bool, bstats: Dictionary) -> void:
+static func _tick_side(s: Dictionary, ctx: Dictionary, delta: float, events: Array, use_effects: bool, bstats: Dictionary, combat_rng: RandomNumberGenerator) -> void:
 	var own_statuses_key: String = ctx["own_statuses_key"] as String
 	var grid: Array = s[ctx["grid_key"] as String] as Array
 	var timers: Array = s[ctx["timers_key"] as String] as Array
@@ -122,14 +126,14 @@ static func _tick_side(s: Dictionary, ctx: Dictionary, delta: float, events: Arr
 			var fire: bool = true
 			if use_effects:
 				var blind_percent: int = ((s[own_statuses_key] as Dictionary)["blind"] as Dictionary)["percent"] as int
-				if blind_percent > 0 and randf() * 100.0 < float(blind_percent):
+				if blind_percent > 0 and combat_rng.randf() * 100.0 < float(blind_percent):
 					fire = false
 			if fire:
 				# Multicast repeats the full fire block; each repeat is an
 				# independent event so synergies trigger once per repeat.
 				var repeats: int = 1 + AbilitySystem.multicast_count(elem)
 				for _repeat: int in repeats:
-					_fire_element_once(s, ctx, elem, i, stats, events, timers, use_effects)
+					_fire_element_once(s, ctx, elem, i, stats, events, timers, use_effects, combat_rng)
 			else:
 				events.append({"side": ctx["side"] as String, "slot": i, "damage": 0, "effect": "", "is_miss": true})
 		timers[i] = t
@@ -137,7 +141,7 @@ static func _tick_side(s: Dictionary, ctx: Dictionary, delta: float, events: Arr
 
 # Resolves a single fire of one element: damage hit, event, stats, and on-fire
 # effect. Called once per multicast repeat.
-static func _fire_element_once(s: Dictionary, ctx: Dictionary, elem: Dictionary, slot_index: int, stats: Array, events: Array, timers: Array, use_effects: bool) -> void:
+static func _fire_element_once(s: Dictionary, ctx: Dictionary, elem: Dictionary, slot_index: int, stats: Array, events: Array, timers: Array, use_effects: bool, combat_rng: RandomNumberGenerator) -> void:
 	var own_statuses_key: String = ctx["own_statuses_key"] as String
 	var opp_statuses_key: String = ctx["opp_statuses_key"] as String
 	var own_hp_key: String = ctx["own_hp_key"] as String
@@ -156,6 +160,16 @@ static func _fire_element_once(s: Dictionary, ctx: Dictionary, elem: Dictionary,
 	slot_stats["damage"] = (slot_stats["damage"] as int) + dmg
 	if use_effects and elem.has("effect"):
 		_apply_element_effect(s, effect_str, own_statuses_key, opp_statuses_key, own_hp_key, timers, dmg)
+	# Probabilistic on-hit passives (Dust, Static, Pollen, Flint, Sand), rolled
+	# from the seeded RNG in slot order so replays reproduce exactly.
+	if use_effects:
+		var own_grid: Array = s[ctx["grid_key"] as String] as Array
+		for chance_entry: Variant in AbilitySystem.on_hit_status_chances(own_grid):
+			var entry: Dictionary = chance_entry as Dictionary
+			if combat_rng.randf() * 100.0 < float(entry["chance"] as int):
+				var statuses_key: String = own_statuses_key if (entry.get("target", "opponent") as String) == "own" else opp_statuses_key
+				var res: Dictionary = StatusSystem.apply_effect(s[statuses_key] as Dictionary, entry["status"] as String)
+				s[statuses_key] = res["statuses"] as Dictionary
 
 
 # dmg_dealt: actual damage that landed (used for leech heal).

@@ -201,6 +201,53 @@ func test_freeze_releases_element_after_it_expires() -> void:
 	assert_lt(released["opponent_hp"] as int, blocked["opponent_hp"] as int)
 
 
+# ── seeded RNG + on-hit passives ──────────────────────────────────────────────
+
+func _battle_with_player_ability(element_id: String, ability: Dictionary) -> Dictionary:
+	var st := _make_state()
+	var elem: Dictionary = ElementData.find(element_id).duplicate()
+	elem["element_id"] = element_id
+	elem["level"] = 1
+	elem["ability"] = ability
+	st["battle_grid"][0] = elem
+	return PhaseSystem.to_battle(st, _fixture())
+
+
+func test_on_hit_passive_applies_status_at_full_chance() -> void:
+	var ability: Dictionary = { "trigger": "passive_on_hit",
+		"effects": [{ "status": "weaken", "chance": 100, "target": "opponent" }] }
+	var st := _battle_with_player_ability("fire", ability)
+	var cooldown: float = float(ElementData.find("fire")["cooldown_deciseconds"] as int) / 10.0
+	var s := BattleSystem.tick_battle(st, cooldown)
+	assert_gt(((s["opponent_statuses"] as Dictionary)["weaken"] as Dictionary)["stacks"] as int, 0)
+
+
+func test_on_hit_passive_never_applies_at_zero_chance() -> void:
+	var ability: Dictionary = { "trigger": "passive_on_hit",
+		"effects": [{ "status": "weaken", "chance": 0, "target": "opponent" }] }
+	var st := _battle_with_player_ability("fire", ability)
+	var cooldown: float = float(ElementData.find("fire")["cooldown_deciseconds"] as int) / 10.0
+	var s := BattleSystem.tick_battle(st, cooldown)
+	assert_eq(((s["opponent_statuses"] as Dictionary)["weaken"] as Dictionary)["stacks"] as int, 0)
+
+
+func test_combat_is_deterministic_given_seed() -> void:
+	# Two runs from the same combat-start state must produce identical results,
+	# even with a probabilistic on-hit passive in play.
+	var ability: Dictionary = { "trigger": "passive_on_hit",
+		"effects": [{ "status": "weaken", "chance": 50, "target": "opponent" }] }
+	var st := _battle_with_player_ability("blaze", ability)
+	var run_a: Dictionary = st.duplicate(true)
+	var run_b: Dictionary = st.duplicate(true)
+	for _i: int in 20:
+		run_a = BattleSystem.tick_battle(run_a, 0.5)
+	for _i: int in 20:
+		run_b = BattleSystem.tick_battle(run_b, 0.5)
+	assert_eq(run_a["opponent_hp"] as int, run_b["opponent_hp"] as int)
+	assert_eq(((run_a["opponent_statuses"] as Dictionary)["weaken"] as Dictionary)["stacks"] as int,
+		((run_b["opponent_statuses"] as Dictionary)["weaken"] as Dictionary)["stacks"] as int)
+
+
 # ── compute_result ────────────────────────────────────────────────────────────
 
 func test_compute_result_player_wins_when_opponent_hp_lower() -> void:

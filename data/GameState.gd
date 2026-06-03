@@ -19,6 +19,7 @@ static func create(seed_recipes: Array[String] = []) -> Dictionary:
 		"opponent_last_frozen_slot": -1,
 		"player_ability_timers": [0.0, 0.0, 0.0, 0.0],
 		"opponent_ability_timers": [0.0, 0.0, 0.0, 0.0],
+		"combat_rng_state": 0,
 		"battle_events": [],
 		"shop_items": [null, null, null, null, null],
 		"shop_tier": 1,

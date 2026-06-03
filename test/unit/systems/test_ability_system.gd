@@ -32,6 +32,43 @@ func test_multicast_count_defaults_to_zero() -> void:
 	assert_eq(AbilitySystem.multicast_count(elem), 0)
 
 
+# ── conditional effects (when-guards) ─────────────────────────────────────────
+
+func test_conditional_effect_skipped_when_condition_unmet() -> void:
+	# deal 2 only if opponent has >= 3 shock — opponent has 0, so skip.
+	var ability: Dictionary = { "trigger": "combat_start", "effects": [
+		{ "kind": "deal_damage", "amount": 2, "target": "opponent",
+			"when": [{ "kind": "target_has_status", "target": "opponent", "status": "shock", "at_least": 3 }] }] }
+	var st: Dictionary = _with_ability("player", 0, ability)
+	var before: int = st["opponent_hp"] as int
+	var s: Dictionary = AbilitySystem.resolve_combat_start(st)
+	assert_eq(s["opponent_hp"] as int, before)
+
+
+func test_conditional_effect_applied_when_condition_met() -> void:
+	var ability: Dictionary = { "trigger": "combat_start", "effects": [
+		{ "kind": "deal_damage", "amount": 2, "target": "opponent",
+			"when": [{ "kind": "target_has_status", "target": "opponent", "status": "shock", "at_least": 3 }] }] }
+	var st: Dictionary = _with_ability("player", 0, ability)
+	((st["opponent_statuses"] as Dictionary)["shock"] as Dictionary)["n"] = 3
+	var before: int = st["opponent_hp"] as int
+	var s: Dictionary = AbilitySystem.resolve_combat_start(st)
+	assert_eq(s["opponent_hp"] as int, before - 2)
+
+
+func test_conditional_requires_all_conditions() -> void:
+	# needs BOTH poison>=1 AND weaken>=1; only poison present → skip.
+	var ability: Dictionary = { "trigger": "combat_start", "effects": [
+		{ "kind": "deal_damage", "amount": 2, "target": "opponent", "when": [
+			{ "kind": "target_has_status", "target": "opponent", "status": "poison", "at_least": 1 },
+			{ "kind": "target_has_status", "target": "opponent", "status": "weaken", "at_least": 1 }] }] }
+	var st: Dictionary = _with_ability("player", 0, ability)
+	((st["opponent_statuses"] as Dictionary)["poison"] as Dictionary)["stacks"] = 2
+	var before: int = st["opponent_hp"] as int
+	var s: Dictionary = AbilitySystem.resolve_combat_start(st)
+	assert_eq(s["opponent_hp"] as int, before)
+
+
 # ── resolve_combat_start ──────────────────────────────────────────────────────
 
 func test_combat_start_applies_armor_to_own_side() -> void:
@@ -136,6 +173,52 @@ func test_reactive_on_damage_dealt_applies_status() -> void:
 	var events: Array = [{ "side": "player", "slot": 1, "damage": 3, "effect": "", "is_miss": false }]
 	var s: Dictionary = AbilitySystem.resolve_reactive(st, events)
 	assert_eq(((s["opponent_statuses"] as Dictionary)["shock"] as Dictionary)["n"] as int, 1)
+
+
+# ── adjacency-gated reactives (combat_adjacency) ──────────────────────────────
+
+func _ember_like(slot: int) -> Dictionary:
+	# adjacency_upgrade reactive: when heal fires nearby, apply burn to opponent.
+	var ability: Dictionary = { "trigger": "on_heal_applied", "adjacency_upgrade": true,
+		"effects": [{ "kind": "apply_status", "status": "burn", "amount": 1, "target": "opponent" }] }
+	return _with_ability("player", slot, ability)
+
+
+func test_adjacency_reactive_fires_when_source_adjacent() -> void:
+	FeatureFlags.combat_adjacency = true
+	var st: Dictionary = _ember_like(0)  # 2x2 grid: slot 0 neighbors are 1 and 2
+	var events: Array = [{ "side": "player", "slot": 1, "damage": 0, "effect": "heal", "is_miss": false }]
+	var s: Dictionary = AbilitySystem.resolve_reactive(st, events)
+	assert_eq(((s["opponent_statuses"] as Dictionary)["burn"] as Dictionary)["stacks"] as int, 1)
+
+
+func test_adjacency_reactive_blocked_when_source_not_adjacent() -> void:
+	FeatureFlags.combat_adjacency = true
+	var st: Dictionary = _ember_like(0)  # slot 3 is diagonal to slot 0 — not adjacent
+	var events: Array = [{ "side": "player", "slot": 3, "damage": 0, "effect": "heal", "is_miss": false }]
+	var s: Dictionary = AbilitySystem.resolve_reactive(st, events)
+	assert_eq(((s["opponent_statuses"] as Dictionary)["burn"] as Dictionary)["stacks"] as int, 0)
+
+
+func test_adjacency_ignored_when_flag_off() -> void:
+	FeatureFlags.combat_adjacency = false
+	var st: Dictionary = _ember_like(0)
+	var events: Array = [{ "side": "player", "slot": 3, "damage": 0, "effect": "heal", "is_miss": false }]
+	var s: Dictionary = AbilitySystem.resolve_reactive(st, events)
+	assert_eq(((s["opponent_statuses"] as Dictionary)["burn"] as Dictionary)["stacks"] as int, 1)
+	FeatureFlags.combat_adjacency = true  # restore default
+
+
+func test_global_reactive_ignores_slot_distance() -> void:
+	# A non-adjacency reactive fires regardless of where the source is.
+	FeatureFlags.combat_adjacency = true
+	var ability: Dictionary = { "trigger": "on_burn_applied",
+		"effects": [{ "kind": "deal_damage", "amount": 1, "target": "opponent" }] }
+	var st: Dictionary = _with_ability("player", 0, ability)
+	var before: int = st["opponent_hp"] as int
+	var events: Array = [{ "side": "player", "slot": 3, "damage": 2, "effect": "burn", "is_miss": false }]
+	var s: Dictionary = AbilitySystem.resolve_reactive(st, events)
+	assert_eq(s["opponent_hp"] as int, before - 1)
 
 
 # ── resolve_periodic ──────────────────────────────────────────────────────────

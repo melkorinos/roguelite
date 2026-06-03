@@ -1,5 +1,15 @@
 # Development Log
 
+## 2026-06-04 — Abilities live: flags default-on + tooltip/Compendium wiring
+- `FeatureFlags` all default **true** (early-state: ship everything on; only `status_effects` is code-read). Abilities now apply in combat. 341/341 still green.
+- TooltipCard + Compendium card now render `AbilityData.get_ability(id).description`. Handoff doc updated with impl status + remaining work (glossary hover, ~23 skipped abilities, adjacency, T4).
+
+## 2026-06-04 — Architecture review + deepenings 1/2/3 (review in `.claude/ai-helper/reviews/`)
+- **C1 condition layer:** effects take an optional `when: [conditions]` guard (`target_has_status at_least`). Conditional clauses restored on surge/blight/sporeflow/cryptbloom/arcbeam/wildrot.
+- **C2 typed events + adjacency:** reactive resolution reads the event's source slot; `adjacency_upgrade` abilities (Ember, Photosynthesis) gated by `FeatureFlags.combat_adjacency` (default true) via `GridSystem.neighbors`.
+- **C3 seeded CombatRng:** `combat_rng_state` int in GameState, seeded per-round in `to_battle`, threaded through `tick_battle`→`_tick_side`→`_fire_element_once`. Blind + on-hit passives now draw from it → reproducible Replay/Ghost playback. **Wired `passive_on_hit`** (Dust/Static/Pollen/Flint/Sand) which previously did nothing in combat.
+- **351/351 passing.** Boot exit 0.
+
 ## 2026-06-03 — Ability system: decisecond refactor + AbilitySystem engine + T2/T3 data
 - Grilled full ability design (5 rounds); decisions in ADR 0003/0004 + memory.md. Built test-first in 6 slices.
 - **Decisecond time model:** `cooldown`→`cooldown_deciseconds` (int ×10) across ElementData/BattleSystem/scenes; `StatusSystem.effective_cooldown_deciseconds` floors at 10 (1 fire/sec) + shock-slow round. Tooltip shows `2.5s`.

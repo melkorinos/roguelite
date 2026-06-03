@@ -95,6 +95,18 @@ func _make_card(elem: Dictionary) -> PanelContainer:
 	dps_lbl.modulate = Color(1.0, 0.75, 0.35)
 	vbox.add_child(dps_lbl)
 
+	# Ability description (elements with a defined Ability only)
+	var ability: Dictionary = AbilityData.get_ability(elem["id"] as String)
+	var ability_text: String = ability.get("description", "") as String
+	if ability_text != "":
+		var ability_lbl := Label.new()
+		ability_lbl.text = ability_text
+		ability_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		ability_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD
+		UIScale.apply(ability_lbl, UIScale.COMP_ABILITY)
+		ability_lbl.modulate = Color(0.78, 0.82, 0.95)
+		vbox.add_child(ability_lbl)
+
 	# Recipes — emoji row + name row per ingredient pair
 	var recipes: Array[Dictionary] = _recipes_for(elem["id"] as String)
 	if recipes.size() > 0:

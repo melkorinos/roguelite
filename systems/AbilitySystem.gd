@@ -106,7 +106,40 @@ static func _apply_atom(state: Dictionary, effect: Dictionary, source_side: Stri
 
 static func _apply_effects(state: Dictionary, effects: Array, source_side: String) -> void:
 	for effect: Variant in effects:
-		_apply_atom(state, effect as Dictionary, source_side)
+		var e: Dictionary = effect as Dictionary
+		if _conditions_met(state, e.get("when", []) as Array, source_side):
+			_apply_atom(state, e, source_side)
+
+
+# ── conditions (the "when" guard on any effect) ───────────────────────────────
+
+# True when every condition in the list holds. An empty list is always true.
+static func _conditions_met(state: Dictionary, conditions: Array, source_side: String) -> bool:
+	for condition: Variant in conditions:
+		if not _condition_met(state, condition as Dictionary, source_side):
+			return false
+	return true
+
+
+static func _condition_met(state: Dictionary, condition: Dictionary, source_side: String) -> bool:
+	match condition.get("kind", "") as String:
+		"target_has_status":
+			var target_side: String = _resolve_target(condition.get("target", "opponent") as String, source_side)
+			var statuses: Dictionary = state[_side_keys(target_side)["statuses"]] as Dictionary
+			return _status_count(statuses, condition["status"] as String) >= (condition.get("at_least", 1) as int)
+	return true
+
+
+# The headline integer for a status — used by conditions to test thresholds.
+static func _status_count(statuses: Dictionary, status: String) -> int:
+	var dict: Dictionary = statuses[status] as Dictionary
+	match status:
+		"burn", "poison", "weaken": return dict["stacks"] as int
+		"shock": return dict["n"] as int
+		"armor", "plating": return dict["value"] as int
+		"blind": return dict["percent"] as int
+		"curse": return dict["ticks_remaining"] as int
+	return 0
 
 
 # ── resolvers (return a new state, immutable to caller) ───────────────────────
@@ -164,12 +197,19 @@ static func resolve_reactive(state: Dictionary, events: Array) -> Dictionary:
 		if triggers.is_empty():
 			continue
 		var grid: Array = s[_side_keys(side)["grid"]] as Array
+		var source_slot: int = e["slot"] as int
+		var dimensions: Vector2i = GridSystem.dimensions(grid.size())
 		for i: int in grid.size():
 			if grid[i] == null:
 				continue
 			var ability: Dictionary = ability_for(grid[i] as Dictionary)
-			if _reactive_matches(ability, triggers):
-				_apply_effects(s, ability.get("effects", []) as Array, side)
+			if not _reactive_matches(ability, triggers):
+				continue
+			# adjacency_upgrade abilities only react to an orthogonally-adjacent source.
+			if (ability.get("adjacency_upgrade", false) as bool) and FeatureFlags.combat_adjacency:
+				if not GridSystem.neighbors(i, dimensions.x, dimensions.y).has(source_slot):
+					continue
+			_apply_effects(s, ability.get("effects", []) as Array, side)
 	return s
 
 
