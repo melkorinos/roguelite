@@ -1,6 +1,6 @@
 extends Control
 
-const CARD_SIZE := Vector2(160, 200)
+const CARD_WIDTH: float = 160.0
 const TIER_NAMES: Dictionary = {
 	1: "Tier 1 — Basics",
 	2: "Tier 2 — Combinations",
@@ -44,7 +44,7 @@ func _build_content() -> void:
 
 func _make_card(elem: Dictionary) -> PanelContainer:
 	var card := PanelContainer.new()
-	card.custom_minimum_size = CARD_SIZE
+	card.custom_minimum_size = Vector2(CARD_WIDTH, 0)
 
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0.11, 0.11, 0.16, 0.97)
@@ -91,28 +91,41 @@ func _make_card(elem: Dictionary) -> PanelContainer:
 	dps_lbl.modulate = Color(1.0, 0.75, 0.35)
 	vbox.add_child(dps_lbl)
 
-	# Recipes (compact)
-	var recipes: Array[String] = _recipes_for(elem["id"] as String)
+	# Recipes — emoji row + name row per ingredient pair
+	var recipes: Array[Dictionary] = _recipes_for(elem["id"] as String)
 	if recipes.size() > 0:
 		var sep := HSeparator.new()
+		sep.add_theme_constant_override("separation", 4)
 		vbox.add_child(sep)
-		for recipe_str: String in recipes:
-			var r_lbl := Label.new()
-			r_lbl.text = recipe_str
-			r_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-			UIScale.apply(r_lbl, UIScale.COMP_RECIPE)
-			r_lbl.modulate = Color(0.6, 0.9, 0.6)
-			r_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-			vbox.add_child(r_lbl)
+		for recipe: Dictionary in recipes:
+			var emoji_lbl := Label.new()
+			emoji_lbl.text = "%s  +  %s" % [recipe["a_emoji"] as String, recipe["b_emoji"] as String]
+			emoji_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			UIScale.apply(emoji_lbl, UIScale.COMP_RECIPE_EMOJI)
+			emoji_lbl.modulate = Color(0.65, 0.95, 0.65)
+			vbox.add_child(emoji_lbl)
+
+			var names_lbl := Label.new()
+			names_lbl.text = "%s + %s" % [recipe["a_name"] as String, recipe["b_name"] as String]
+			names_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			UIScale.apply(names_lbl, UIScale.COMP_RECIPE)
+			names_lbl.modulate = Color(0.5, 0.75, 0.5)
+			names_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			vbox.add_child(names_lbl)
 
 	return card
 
 
-func _recipes_for(element_id: String) -> Array[String]:
-	var results: Array[String] = []
+func _recipes_for(element_id: String) -> Array[Dictionary]:
+	var results: Array[Dictionary] = []
 	for recipe: Dictionary in RecipeData.all_recipes():
 		if (recipe["result"] as String) == element_id:
 			var a: Dictionary = ElementData.find(recipe["a"] as String)
 			var b: Dictionary = ElementData.find(recipe["b"] as String)
-			results.append("%s+%s" % [a["emoji"] as String, b["emoji"] as String])
+			results.append({
+				"a_emoji": a["emoji"] as String,
+				"a_name":  a["name"]  as String,
+				"b_emoji": b["emoji"] as String,
+				"b_name":  b["name"]  as String,
+			})
 	return results

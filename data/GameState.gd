@@ -27,4 +27,7 @@ static func create(seed_recipes: Array[String] = []) -> Dictionary:
 		"wins": 0,
 		"opponent_starting_hp": 0,
 		"opponent_snapshot": {},
+		"player_statuses": StatusSystem.empty_statuses(),
+		"opponent_statuses": StatusSystem.empty_statuses(),
+		"status_tick_timer": 0.0,
 	}

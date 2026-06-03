@@ -5,7 +5,17 @@
       "Bash(git status)",
       "Bash(git diff*)",
       "Bash(git log*)",
-      "Edit(.claude/ai-helper/*)"
+      "Bash(godot --headless *)",
+      "Bash(mkdir *)",
+      "Edit(.claude/ai-helper/*)",
+      "Edit(data/*.gd)",
+      "Edit(systems/*.gd)",
+      "Edit(scenes/**/*.gd)",
+      "Edit(test/**/*.gd)",
+      "Edit(CONTEXT.md)",
+      "Edit(docs/**/*.md)",
+      "Write(docs/**/*.md)",
+      "Write(.claude/ai-helper/*)"
     ]
   }
 }

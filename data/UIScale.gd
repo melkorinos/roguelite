@@ -18,10 +18,11 @@ const DRAG_SHOP   := 48
 const DRAG_SLOT   := 44
 
 # ── Compendium ────────────────────────────────────────────────────────────────
-const COMP_HEADER := 25
-const COMP_NAME   := 15
-const COMP_STATS  := 13
-const COMP_RECIPE := 12
+const COMP_HEADER       := 25
+const COMP_NAME         := 15
+const COMP_STATS        := 13
+const COMP_RECIPE_EMOJI := 22  # ingredient emojis in recipe row
+const COMP_RECIPE       := 11  # ingredient names below emojis
 
 # ── Battle summary ────────────────────────────────────────────────────────────
 const SUMMARY_HEADER := 16

@@ -1,5 +1,76 @@
 # Development Log
 
+## 2026-06-03 — Status Effects system + T1 expansion to 12 elements
+
+### Design session (grill-with-docs)
+Resolved all open questions via grilling passes:
+- Unified model: each element IS its damage type (no separate damage-type layer)
+- All statuses apply to player-side total (not per-element)
+- Poison permanent; all other timed effects use ticks_remaining; Burn ramps down; Weaken active only while ticks > 0
+- Shock: hyperbolic CD slow `50n/(n+5)`, asymptotes at 50%
+- CONTEXT.md updated with Effect + Status vocabulary
+
+### T1 roster changes (10 → 12)
+- Sound 🔊 retired → replaced by Fungus 🍄 (Poison)
+- Added Blood 🩸 (Leech) + Frost 🌨️ (Weaken)
+- All 12 T1 elements now carry `"effect"` field
+- RecipeData: 5 sound-based recipes switched to fungus ingredient
+
+### New files
+- `systems/StatusSystem.gd` — `empty_statuses`, `apply_effect`, `tick`, `compute_incoming_damage`, `slow_pct`
+- `test/unit/systems/test_status_system.gd` — 43 tests
+
+### Modified files
+- `data/ElementData.gd` — effect fields, Sound→Fungus, Blood+Frost
+- `data/RecipeData.gd` — sound→fungus in 5 recipes
+- `data/GameState.gd` — player_statuses, opponent_statuses, status_tick_timer
+- `systems/PhaseSystem.gd` — resets statuses in to_battle()
+- `systems/BattleSystem.gd` — full effect pipeline behind FeatureFlags.status_effects; shock CD scaling, blind miss roll, _apply_element_effect() helper
+- `test/unit/data/test_element_data.gd` — T1 count 10→12
+
+### Test result
+279/279 passing (83 new tests added).
+
+## 2026-06-03 — T2 cross-combo expansion (Lightning/Nature/Light/Dark/Metal/Sound × original 4)
+
+### Design decisions (grill-with-docs)
+- 24 new T2 cross-combos added: each of the 6 new T1s × {Water, Fire, Air, Earth}
+- 15 new-to-new pairs (e.g. Lightning+Sound) explicitly deferred — see ADR 0001
+- Full name list: Surge, Arc, Static, Lodestone, Bloom, Ember, Pollen, Root, Prism, Solar, Aurora, Crystal, Abyss, Blight, Miasma, Shade, Rust, Molten, Shrapnel, Ore, Sonar, Resonance, Howl, Tremor
+
+### Files changed
+- `data/ElementData.gd` — 24 new T2 elements added (all tier:2, price:8)
+- `data/RecipeData.gd` — 24 new cross-combo recipes; header count updated to 55
+- `test/unit/data/test_element_data.gd` — count assertion updated 41→65
+- `.claude/ai-helper/memory.md` — element system section updated
+- `.claude/ai-helper/elements-reference.html` — ELEMENTS + RECIPES arrays + recipe group slices updated
+- `docs/adr/0001-t2-cross-combo-scope.md` — NEW: records 24-of-39 scope decision
+
+### Test result
+223/223 passing.
+
+## 2026-06-03 — Housekeeping, brainstorm tooling, feature flags
+
+### Internal docs review + consistency pass
+- `memory.md` — merged duplicate element system sections (stale count 29→41 elements, 25→31 recipes); merged duplicate OpponentProvider + PlayerProfile sections; added pointer to ideas.md for full backlog
+- `goals.md` + `handoff.md` — removed stale links to deleted architecture review HTML; updated handoff build plan with ✅/⬜ status
+- `domain.md` — corrected wrong file paths (`docs/soul.md` → `.claude/ai-helper/soul.md`)
+- `CONTEXT.md` — split Merge (future 3-copy mechanic) from Level Up (current 2-copy, live in code); added Element as current prototype term; clarified Rarity vs Tier 1/2/3
+
+### New files
+- `.claude/ai-helper/ideas.md` — consolidated future feature backlog from all scattered locations (memory.md deferred, goals.md deferred, soul.md optional, CONTEXT.md optional)
+- `.claude/ai-helper/elements-reference.html` — interactive brainstorm board: element cards with DPS bars, forge recipe reference, design note cards with open questions
+- `data/FeatureFlags.gd` — playtest toggle class; one `static var` per design experiment (all false by default)
+
+### Test reorganisation
+- Moved 9 test files from flat `test/unit/` into subfolders mirroring the source tree: `test/unit/data/`, `test/unit/systems/`, `test/unit/autoloads/`
+- Updated `.gutconfig.json` `dirs` array to list all three subdirs
+- Updated CLAUDE.md GUT run command; CI unchanged (uses `-gdir=test/` which recurses)
+
+### Elements reference updates
+- Added 2 battle-system note cards to elements-reference.html: **Ability Chain Combat** (indigo) + **Innate Ability & Replay** (violet)
+- Added feature flag toggles to all 5 note cards — state persisted in localStorage, "Flags active" counter in header
+
 ## 2026-06-02 — Steam + async PvP infrastructure (OpponentProvider, AchievementSystem, PlayerProfile)
 
 ### Files created

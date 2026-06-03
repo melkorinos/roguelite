@@ -40,7 +40,7 @@ godot --headless --quit            # headless smoke-test
 | `scenes/slots/` | Reusable tile/slot nodes: BattleSlot, ForgeSlot, InventorySlot, ShopItemTile, SellZone |
 | `scenes/shared/` | Cross-scene UI: TooltipCard |
 | `systems/` | Pure logic — static GDScript classes, take state Dictionary, return new Dictionary |
-| `data/` | `GameState.gd` factory, item/piece data definitions, `UIScale.gd` font-size constants |
+| `data/` | `GameState.gd` factory, item/piece data definitions, `UIScale.gd` font-size constants, `FeatureFlags.gd` playtest toggles |
 | `autoloads/` | `GameManager.gd` — global state holder, registered as Autoload |
 
 **GameState** is a plain `Dictionary` created by `GameState.create()` in [data/GameState.gd](data/GameState.gd). All scenes read and write it via `GameManager.state`. Systems must not mutate state in-place — return a new Dictionary.

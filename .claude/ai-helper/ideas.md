@@ -2,16 +2,15 @@
 
 Consolidated brainstorm space. Items here are **not committed** unless noted otherwise — they're seeds for future design sessions. When an item gets a dedicated session and a decision lands, move it to `memory.md`.
 
-For element/combat-specific brainstorm notes (damage types, open-ended forging, efficiency function), also see `.claude/ai-helper/elements-reference.html`.
+Element/combat reference lives in the in-game Compendium scene, not a separate HTML file.
 
 ---
 
 ## Elements & Combat
 
-### Damage types and status effects *(planned, design TBD)*
-Each element gets a passive effect that fires on hit or cooldown tick. Effect identity should feel native to the element.
-- Candidates: Burn 🔥, Poison ☠️, Heal 💚, Slow 🐢, Blind 🌑, Freeze ❄️, Shock ⚡, Shield 🛡️
-- Open questions: does an effect replace or layer on top of raw damage? Do T3 results inherit effects from both ingredients? Can the same effect stack from two sources?
+### Damage types and status effects *(T1 implemented 2026-06-03)*
+All 12 T1 elements have effects. Gated by `FeatureFlags.status_effects`. See `memory.md` for full spec.
+- **Open for future sessions:** Do T3 results inherit effects from both ingredients? T2 element effects? Effect display in Compendium and Tooltip (Abilities Panel placeholder).
 
 ### Open-ended forging *(exploring)*
 Forge recipes as a discovery mechanic rather than a visible lookup table. Players experiment; the Compendium unlocks as they discover. `discovered_recipes[]` already exists in PlayerProfile as the seam.
@@ -22,7 +21,7 @@ Developer-only scoring: `efficiency = w_dps × (eff_dmg / cooldown) + w_effect �
 - Open questions: single score or multi-axis (offence / utility / support)? Target bands per tier (e.g. T1: 3–5, T2: 6–9, T3: 10–14)? Dev Compendium view or CI lint check only?
 
 ### T2 cross-recipe expansion
-Lightning ⚡, Nature 🌿, Light ☀️, Dark 🌑, Metal ⚙️, Sound 🔊 currently have **no cross-combo recipes** — only self-combos. These 6 are the most obvious design gap for the next recipe pass.
+Lightning ⚡, Nature 🌿, Light ☀️, Dark 🌑, Metal ⚙️, Fungus 🍄 have cross-combo recipes with the original 4. Blood 🩸 and Frost 🌨️ have **no T2 combos yet** — most obvious gap for the next recipe pass.
 
 ### T4 / T5 element tiers
 Pyramid target (early idea, not committed): 10 / 20 / 30 / 20 / 10 = 90 elements across T1–T5. T4/T5 design fully deferred.

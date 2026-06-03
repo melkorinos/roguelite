@@ -6,6 +6,15 @@ Auto-battler. Build synergies, break the system, lose to your exact counter, mas
 ## Entity + state model
 Plain data objects + standalone static fns. No class inheritance. Systems take `GameState` dict, return new dict — no mutation. `GameManager.state` global. `GameState.create()` in `data/GameState.gd`.
 
+## Feature flags (`data/FeatureFlags.gd`)
+Static class with one `static var` per design experiment, all `false` by default. Use `static var` (not `const`) so flags can be flipped at runtime from a debug console or dev menu without reloading.
+Check at any code boundary before activating deferred behaviour: `if FeatureFlags.status_effects: ...`
+- `status_effects` — Burn/Poison/Heal/Slow/Blind etc. on elements
+- `hidden_recipes` — forge recipes hidden until discovered (Compendium unlock)
+- `efficiency_scoring` — dev-only balance score printed to output panel
+- `ability_chain` — real Ability Chain combat (replaces placeholder tick loop)
+- `innate_ability` — player Innate Ability + Replay token mechanic
+
 ## Match structure
 8 players, last standing wins. Each round: Shop phase → combat phase. Mixed PvP + PvE (fixed schedule).
 - **Player HP**: in-battle only. Resets to 30 in `to_battle()`. Not a match resource.
@@ -20,10 +29,18 @@ Real-time deterministic. Elements fire on individual cooldown timers → deal `e
 ## Ability Chain + Innate + Replay
 Abilities activate in sequence; no positional targeting — whole Composition vs opponent. Player fires one Innate Ability once per combat. After loss: spend Replay token, retrigger with Innate at different moment; new result replaces original. Tokens: finite per-match resource. *(Combat is still placeholder; real Ability Chain is deferred.)*
 
-## Element system (41 elements, 31 recipes, 3 tiers)
-- **T1 (10, 5g):** Water 💧, Fire 🔥, Air 🌬️, Earth 🌍, Lightning ⚡, Nature 🌿, Light ☀️, Dark 🌑, Metal ⚙️, Sound 🔊
-- **T2 cross (6, 8g):** Steam, Rain, Mud, Smoke, Lava, Dust — only the original 4 T1s (Water/Fire/Air/Earth) have cross-combos; Lightning/Nature/Light/Dark/Metal/Sound cross-combos deferred
-- **T2 self (10, 8g):** Ice, Blaze, Gale, Boulder, Plasma, Forest, Radiance, Void, Steel, Echo — all 10 T1s have a self-combo
+## Element system (67 elements, 55 recipes, 3 tiers)
+- **T1 (12, 5g):** Water 💧 Cleanse, Fire 🔥 Burn, Air 🌬️ Haste, Earth 🌍 Armor, Lightning ⚡ Shock, Nature 🌿 Heal, Light ☀️ Blind, Dark 🌑 Curse, Metal ⚙️ Plating, Fungus 🍄 Poison, Blood 🩸 Leech, Frost 🌨️ Weaken. **Sound retired** → replaced by Fungus.
+- **T2 cross original (6, 8g):** Steam, Rain, Mud, Smoke, Lava, Dust — Water/Fire/Air/Earth pairs only
+- **T2 cross extended (24, 8g):** Lightning/Nature/Light/Dark/Metal/Fungus × {Water, Fire, Air, Earth}
+  - Lightning: Surge 💫, Arc 🌠, Static 💠, Lodestone 🧲
+  - Nature: Bloom 🌸, Ember 🪵, Pollen 🌼, Root 🌱
+  - Light: Prism 💎, Solar 🌞, Aurora 🌌, Crystal 🔮
+  - Dark: Abyss 🌊, Blight 🥀, Miasma ☣️, Shade 🌘
+  - Metal: Rust 🟤, Molten 🔶, Shrapnel 💥, Ore ⛏️
+  - Fungus: Sonar 📡, Resonance 〰️, Howl 🐺, Tremor 🫨 *(names pending rename)*
+- **T2 self (10, 8g):** Ice, Blaze, Gale, Boulder, Plasma, Forest, Radiance, Void, Steel, Echo. Blood+Frost self-combos deferred.
+- **No T2 combos yet for Blood 🩸 or Frost 🌨️**
 - **T3 (15, 12g):** Cloud, Geyser, Fog, Rainbow, Storm, Plant, Swamp, Brick, Ash, Acid, Obsidian, Volcano, Sand, Sandstorm, Clay
 - **Level up**: same element ×2 same level → level+1. Drag-drop. No recipe needed.
 - **Forge**: 2 elements at bench → recipe → new element at level 1. Self-combos valid.
@@ -116,12 +133,53 @@ Grid shape TBD (Battlegrid described as 2×2 in CONTEXT.md). Adjacency bonuses a
 ### Opponent Snapshot in GameState (identified, not yet built)
 - Collapse flat opponent fields → `state["opponent_snapshot"] = {player_id, player_name, round, grid, source, acquired_day}`.
 
+## Status Effects system (implemented 2026-06-03, gated by FeatureFlags.status_effects)
+
+### Vocabulary
+- **Effect**: the passive string field on an element dict (`"effect": "burn"`). Fires on cooldown expiry.
+- **Status**: ongoing condition tracked in `player_statuses`/`opponent_statuses` on GameState. Flat dict, one pool per side (not per-element).
+
+### State shape (in GameState)
+`player_statuses` and `opponent_statuses` — both initialised via `StatusSystem.empty_statuses()`. Reset in `PhaseSystem.to_battle()`. Also `status_tick_timer: float` for 1-second tick clock.
+
+### T1 effect mechanics
+| Effect | Mechanic |
+|---|---|
+| burn | stacks += 1; tick: deal stacks dmg (decrements), armor absorbs at half rate (floor(stacks/2)) |
+| poison | stacks += 1; tick: deal stacks dmg; **stacks never decrease, no expiry** |
+| armor | value += 1; absorbs physical dmg fully before HP; depletes on hit |
+| plating | value += 0.1; flat reduction to ALL incoming dmg (floor); never depletes |
+| blind | pct += 0.15; cap 0.50; on fire: roll — if miss, deal 0 dmg and skip effect |
+| shock | n += 1; opponent CDs × (1 + slow_pct(n)/100); formula: 50n/(n+5), asymptotes at 50% |
+| heal | instant +1 HP to own side |
+| cleanse | instant: remove 1 stack from each debuff on own side (burn/poison/shock/slow/weaken/blind) |
+| curse | ticks = 3 (refresh on reapply); while active: burn+poison deal +1 per tick |
+| plating | see above |
+| leech | instant: heal own HP equal to dmg dealt |
+| weaken | stacks += 1, ticks = 3 (refresh); tick: ticks−=1, expire at 0; stacks stay; reduces attacker dmg by stacks (only while ticks > 0) |
+
+### StatusSystem API (`systems/StatusSystem.gd`)
+- `empty_statuses() -> Dictionary`
+- `apply_effect(statuses, effect) -> { statuses, hp_delta }` — hp_delta non-zero for heal/leech
+- `tick(statuses) -> { statuses, damage }` — 1s tick, returns HP damage
+- `compute_incoming_damage(raw, attacker_statuses, defender_statuses) -> { damage, defender_statuses }` — weaken→plating→armor pipeline
+- `slow_pct(n) -> float` — `50n/(n+5)`, shared by shock and slow
+
+### BattleSystem integration
+Effects fire via `_apply_element_effect(s, effect, is_player_side, timers, dmg_dealt)`. Haste immediately reduces own timers by 0.3s per application. Blind uses `randf()` for miss roll. Status tick uses `while tick_acc >= 1.0` loop.
+
+### Design decisions
+- Unified model: damage type = effect identity (no separate base damage type layer)
+- All statuses apply to the player side total, not per-element
+- Poison is permanent (never expires); all other timed effects use ticks_remaining
+- Feature flag `FeatureFlags.status_effects` gates all paths; existing behavior unchanged when false
+
 ## Deferred / TBD
 Full brainstorm backlog lives in `.claude/ai-helper/ideas.md`. Key items with near-term implementation implications:
 
-- T2 cross-recipe expansion for Lightning, Nature, Light, Dark, Metal, Sound (6 T1s with no cross-combos yet)
-- Damage types and status effects as element passives — see `.claude/ai-helper/elements-reference.html`
-- Open-ended forging as discovery mechanic — see `.claude/ai-helper/elements-reference.html`
+- T2 cross-recipe expansion for Blood + Frost (no T2 combos yet); Fungus T2 names need rename
+- Damage types and status effects — T1 implemented; T2 effects + T3 inheritance TBD
+- Open-ended forging as discovery mechanic (see ideas.md)
 - Level 2 Reward implementation (design settled above)
 - Ability Chain combat (real, not placeholder — major chunk)
 - Innate Ability + Replay token economy

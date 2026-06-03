@@ -76,6 +76,20 @@ _Avoid_: health, hearts
 The match-level resource that tracks how close a player is to elimination. Starts at 10 per match. Lost 1–3 per defeat depending on severity (hard loss ≥70% opponent HP remaining = –3; medium 30–70% = –2; close <30% = –1). A draw counts as a player win (opponent is async). Reaching 0 Lives eliminates the player. The match goal is 10 wins before Lives run out.
 _Avoid_: health, HP, hearts
 
+### Effects and statuses
+
+**Effect**:
+The passive property on an Element that fires automatically each time its cooldown expires. Every T1 Element has exactly one Effect. Effects either deal a Status on the opponent side, modify the player's own side, or trigger instantly (Heal, Cleanse, Leech).
+_Avoid_: ability (reserved for the full Ability Chain system), passive, on-hit
+
+**Status**:
+An ongoing condition tracked as a flat dictionary on one player's side, not per-element. A Status has numeric state (stacks, ticks_remaining, value) that is read and written by StatusSystem. All Elements on one side contribute to and are affected by the same shared Status pool.
+_Avoid_: buff/debuff (too generic), effect (that's the element property that applies it)
+
+**T1 Elements and their Effects (12 total, all 5g)**:
+Water 💧 Cleanse — Air 🌬️ Haste — Fire 🔥 Burn — Earth 🌍 Armor — Lightning ⚡ Shock — Nature 🌿 Heal — Light ☀️ Blind — Dark 🌑 Curse — Metal ⚙️ Plating — Fungus 🍄 Poison — Blood 🩸 Leech — Frost 🌨️ Weaken.
+Sound 🔊 is retired; replaced by Fungus.
+
 ### Abilities and combat
 
 **Ability**:

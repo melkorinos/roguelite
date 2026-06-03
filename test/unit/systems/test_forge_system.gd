@@ -299,3 +299,23 @@ func test_remove_from_forge_slot_does_not_mutate_original() -> void:
 	state["forge_slots"][0] = elem
 	ForgeSystem.remove_from_forge_slot(state, 0)
 	assert_not_null(state["forge_slots"][0])
+
+
+# ── extended cross-combo recipes ───────────────────────────────────────────────
+
+func test_all_recipes_produce_findable_elements() -> void:
+	for recipe: Dictionary in RecipeData.all_recipes():
+		var result_id: String = recipe["result"] as String
+		var elem := ElementData.find(result_id)
+		assert_false(elem.is_empty(), "recipe result '" + result_id + "' not found in ElementData")
+
+
+func test_all_recipes_order_independent() -> void:
+	for recipe: Dictionary in RecipeData.all_recipes():
+		var a: String = recipe["a"] as String
+		var b: String = recipe["b"] as String
+		assert_eq(
+			RecipeData.find_result(a, b),
+			RecipeData.find_result(b, a),
+			a + "+" + b + " should be order-independent"
+		)
