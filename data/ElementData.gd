@@ -5,9 +5,15 @@ static func all_elements() -> Array[Dictionary]:
 	return [
 		# ── Tier 1 ──────────────────────────────────────────────────────────────
 		{ "id": "water",      "name": "Water",      "emoji": "💧", "tier": 1, "price": 5,  "cooldown": 3.0, "damage": 1 },
-		{ "id": "fire",       "name": "Fire",        "emoji": "🔥", "tier": 1, "price": 5,  "cooldown": 2.5, "damage": 2 },
-		{ "id": "air",        "name": "Air",         "emoji": "🌬️", "tier": 1, "price": 5,  "cooldown": 2.0, "damage": 1 },
-		{ "id": "earth",      "name": "Earth",       "emoji": "🌍", "tier": 1, "price": 5,  "cooldown": 4.0, "damage": 1 },
+		{ "id": "fire",       "name": "Fire",       "emoji": "🔥", "tier": 1, "price": 5,  "cooldown": 2.5, "damage": 2 },
+		{ "id": "air",        "name": "Air",        "emoji": "🌬️", "tier": 1, "price": 5,  "cooldown": 2.0, "damage": 1 },
+		{ "id": "earth",      "name": "Earth",      "emoji": "🌍", "tier": 1, "price": 5,  "cooldown": 4.0, "damage": 1 },
+		{ "id": "lightning",  "name": "Lightning",  "emoji": "⚡", "tier": 1, "price": 5,  "cooldown": 1.8, "damage": 2 },
+		{ "id": "nature",     "name": "Nature",     "emoji": "🌿", "tier": 1, "price": 5,  "cooldown": 3.5, "damage": 1 },
+		{ "id": "light",      "name": "Light",      "emoji": "☀️",  "tier": 1, "price": 5,  "cooldown": 2.5, "damage": 1 },
+		{ "id": "dark",       "name": "Dark",       "emoji": "🌑", "tier": 1, "price": 5,  "cooldown": 3.0, "damage": 2 },
+		{ "id": "metal",      "name": "Metal",      "emoji": "⚙️",  "tier": 1, "price": 5,  "cooldown": 5.0, "damage": 3 },
+		{ "id": "sound",      "name": "Sound",      "emoji": "🔊", "tier": 1, "price": 5,  "cooldown": 2.0, "damage": 1 },
 		# ── Tier 2 — cross-combos ────────────────────────────────────────────────
 		{ "id": "steam",      "name": "Steam",       "emoji": "♨️",  "tier": 2, "price": 8,  "cooldown": 3.5, "damage": 2 },
 		{ "id": "rain",       "name": "Rain",        "emoji": "🌧️", "tier": 2, "price": 8,  "cooldown": 3.0, "damage": 1 },
@@ -20,6 +26,12 @@ static func all_elements() -> Array[Dictionary]:
 		{ "id": "blaze",      "name": "Blaze",       "emoji": "🔆", "tier": 2, "price": 8,  "cooldown": 1.5, "damage": 3 },
 		{ "id": "gale",       "name": "Gale",        "emoji": "🌪️", "tier": 2, "price": 8,  "cooldown": 1.5, "damage": 2 },
 		{ "id": "boulder",    "name": "Boulder",     "emoji": "⛰️",  "tier": 2, "price": 8,  "cooldown": 6.0, "damage": 4 },
+		{ "id": "plasma",     "name": "Plasma",      "emoji": "🌩️", "tier": 2, "price": 8,  "cooldown": 1.2, "damage": 3 },
+		{ "id": "forest",     "name": "Forest",      "emoji": "🌳", "tier": 2, "price": 8,  "cooldown": 4.5, "damage": 2 },
+		{ "id": "radiance",   "name": "Radiance",    "emoji": "🌟", "tier": 2, "price": 8,  "cooldown": 2.0, "damage": 2 },
+		{ "id": "void",       "name": "Void",        "emoji": "🕳️", "tier": 2, "price": 8,  "cooldown": 4.0, "damage": 3 },
+		{ "id": "steel",      "name": "Steel",       "emoji": "🔩", "tier": 2, "price": 8,  "cooldown": 4.5, "damage": 4 },
+		{ "id": "echo",       "name": "Echo",        "emoji": "🔁", "tier": 2, "price": 8,  "cooldown": 1.5, "damage": 2 },
 		# ── Tier 3 ──────────────────────────────────────────────────────────────
 		{ "id": "cloud",      "name": "Cloud",       "emoji": "☁️",  "tier": 3, "price": 12, "cooldown": 3.0, "damage": 2 },
 		{ "id": "geyser",     "name": "Geyser",      "emoji": "💦", "tier": 3, "price": 12, "cooldown": 6.0, "damage": 4 },
@@ -48,4 +60,5 @@ static func find(element_id: String) -> Dictionary:
 
 # Effective damage = base_damage × level + tier. Applies universally (level-up and forge results).
 static func effective_damage(item: Dictionary) -> int:
-	return (item["damage"] as int) * (item["level"] as int) + (item["tier"] as int)
+	var level: int = item.get("level", 1) as int
+	return (item["damage"] as int) * level + (item["tier"] as int)

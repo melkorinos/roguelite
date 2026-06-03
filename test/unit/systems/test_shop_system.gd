@@ -293,3 +293,141 @@ func test_reroll_fills_exactly_5_slots() -> void:
 	assert_eq(s["shop_items"].size(), 5)
 	for item: Variant in s["shop_items"]:
 		assert_not_null(item)
+
+
+func test_reroll_t1_shop_never_returns_tier2() -> void:
+	# At shop_tier 1, every item must be tier 1 — run 20 rerolls to be sure.
+	var state := _make_state()
+	state["shop_tier"] = 1
+	for _i: int in 20:
+		var s := ShopSystem.reroll_shop(state, true)
+		for item: Variant in s["shop_items"]:
+			assert_eq((item as Dictionary)["tier"], 1)
+
+
+func test_reroll_t2_shop_can_return_tier2_items() -> void:
+	# At shop_tier 2, at least one tier-2 item must appear across 40 rerolls.
+	var state := _make_state()
+	state["shop_tier"] = 2
+	var found_t2: bool = false
+	for _i: int in 40:
+		var s := ShopSystem.reroll_shop(state, true)
+		for item: Variant in s["shop_items"]:
+			if (item as Dictionary)["tier"] == 2:
+				found_t2 = true
+	assert_true(found_t2)
+
+
+func test_reroll_t3_shop_can_return_tier3_items() -> void:
+	var state := _make_state()
+	state["shop_tier"] = 3
+	var found_t3: bool = false
+	for _i: int in 40:
+		var s := ShopSystem.reroll_shop(state, true)
+		for item: Variant in s["shop_items"]:
+			if (item as Dictionary)["tier"] == 3:
+				found_t3 = true
+	assert_true(found_t3)
+
+
+# ── can_transfer: shop → inventory ───────────────────────────────────────────
+
+func test_can_transfer_shop_to_inv_allowed_with_enough_gold() -> void:
+	var state := _state_with_shop_item(0, "water")
+	assert_true(ShopSystem.can_transfer(state, {"zone": "shop", "slot": 0}, {"zone": "inventory", "slot": 0}))
+
+
+func test_can_transfer_shop_to_inv_rejected_insufficient_gold() -> void:
+	var state := _state_with_shop_item(0, "water")
+	state["gold"] = 0
+	assert_false(ShopSystem.can_transfer(state, {"zone": "shop", "slot": 0}, {"zone": "inventory", "slot": 0}))
+
+
+func test_can_transfer_shop_to_inv_allowed_level_up_same_element_lv1() -> void:
+	var state := _state_with_shop_item(0, "water")
+	var water: Dictionary = ElementData.find("water").duplicate()
+	water["element_id"] = "water"; water["level"] = 1
+	state["inventory"][0] = water
+	assert_true(ShopSystem.can_transfer(state, {"zone": "shop", "slot": 0}, {"zone": "inventory", "slot": 0}))
+
+
+func test_can_transfer_shop_to_inv_rejected_different_element_in_slot() -> void:
+	var state := _state_with_shop_item(0, "water")
+	var fire: Dictionary = ElementData.find("fire").duplicate()
+	fire["element_id"] = "fire"; fire["level"] = 1
+	state["inventory"][0] = fire
+	assert_false(ShopSystem.can_transfer(state, {"zone": "shop", "slot": 0}, {"zone": "inventory", "slot": 0}))
+
+
+func test_can_transfer_shop_to_inv_rejected_target_lv2() -> void:
+	var state := _state_with_shop_item(0, "water")
+	var water: Dictionary = ElementData.find("water").duplicate()
+	water["element_id"] = "water"; water["level"] = 2
+	state["inventory"][0] = water
+	assert_false(ShopSystem.can_transfer(state, {"zone": "shop", "slot": 0}, {"zone": "inventory", "slot": 0}))
+
+
+# ── can_transfer: shop → grid ─────────────────────────────────────────────────
+
+func test_can_transfer_shop_to_grid_allowed_with_enough_gold() -> void:
+	var state := _state_with_shop_item(0, "water")
+	assert_true(ShopSystem.can_transfer(state, {"zone": "shop", "slot": 0}, {"zone": "grid", "slot": 0}))
+
+
+func test_can_transfer_shop_to_grid_rejected_insufficient_gold() -> void:
+	var state := _state_with_shop_item(0, "water")
+	state["gold"] = 0
+	assert_false(ShopSystem.can_transfer(state, {"zone": "shop", "slot": 0}, {"zone": "grid", "slot": 0}))
+
+
+# ── can_transfer: inventory → inventory ──────────────────────────────────────
+
+func test_can_transfer_inv_to_inv_allowed_same_element_same_level() -> void:
+	var state := _state_with_inv_item(0, "water")
+	var water: Dictionary = ElementData.find("water").duplicate()
+	water["element_id"] = "water"; water["level"] = 1
+	state["inventory"][1] = water
+	assert_true(ShopSystem.can_transfer(state, {"zone": "inventory", "slot": 0}, {"zone": "inventory", "slot": 1}))
+
+
+func test_can_transfer_inv_to_inv_rejected_different_element() -> void:
+	var state := _state_with_inv_item(0, "water")
+	var fire: Dictionary = ElementData.find("fire").duplicate()
+	fire["element_id"] = "fire"; fire["level"] = 1
+	state["inventory"][1] = fire
+	assert_false(ShopSystem.can_transfer(state, {"zone": "inventory", "slot": 0}, {"zone": "inventory", "slot": 1}))
+
+
+func test_can_transfer_inv_to_inv_rejected_same_slot() -> void:
+	var state := _state_with_inv_item(0, "water")
+	assert_false(ShopSystem.can_transfer(state, {"zone": "inventory", "slot": 0}, {"zone": "inventory", "slot": 0}))
+
+
+func test_can_transfer_inv_to_inv_rejected_target_empty() -> void:
+	var state := _state_with_inv_item(0, "water")
+	assert_false(ShopSystem.can_transfer(state, {"zone": "inventory", "slot": 0}, {"zone": "inventory", "slot": 1}))
+
+
+# ── can_transfer: across zones ────────────────────────────────────────────────
+
+func test_can_transfer_inv_to_grid_always_allowed() -> void:
+	var state := _state_with_inv_item(0, "water")
+	assert_true(ShopSystem.can_transfer(state, {"zone": "inventory", "slot": 0}, {"zone": "grid", "slot": 2}))
+
+
+func test_can_transfer_grid_to_inv_always_allowed() -> void:
+	var state := _make_state()
+	var elem: Dictionary = ElementData.find("fire").duplicate()
+	elem["element_id"] = "fire"; elem["level"] = 1
+	state["battle_grid"][0] = elem
+	assert_true(ShopSystem.can_transfer(state, {"zone": "grid", "slot": 0}, {"zone": "inventory", "slot": 0}))
+
+
+func test_can_transfer_grid_to_grid_different_slots_allowed() -> void:
+	var state := _make_state()
+	assert_true(ShopSystem.can_transfer(state, {"zone": "grid", "slot": 0}, {"zone": "grid", "slot": 1}))
+
+
+func test_can_transfer_grid_to_grid_same_slot_rejected() -> void:
+	var state := _make_state()
+	assert_false(ShopSystem.can_transfer(state, {"zone": "grid", "slot": 2}, {"zone": "grid", "slot": 2}))

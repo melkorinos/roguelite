@@ -6,17 +6,42 @@ var _summary_visible: bool = false
 var _paused: bool = false
 var _speed_mult: float = 1.0
 var _tooltip: TooltipCard
+var _pause_overlay: PauseOverlay
 
 
 func _ready() -> void:
 	_tooltip = TooltipCard.new()
 	add_child(_tooltip)
+
+	_pause_overlay = PauseOverlay.new()
+	add_child(_pause_overlay)
+	_pause_overlay.resumed.connect(_on_pause_resumed)
+	_pause_overlay.settings_requested.connect(_on_pause_settings)
+	_pause_overlay.forfeit_requested.connect(_on_pause_forfeit)
+	_pause_overlay.quit_to_menu_requested.connect(_on_pause_menu)
+	_pause_overlay.quit_to_desktop_requested.connect(func() -> void: get_tree().quit())
+
 	_build_grids()
 	_render()
 
 
+func _unhandled_key_input(event: InputEvent) -> void:
+	if event is InputEventKey:
+		var ke: InputEventKey = event as InputEventKey
+		if not ke.pressed or ke.echo:
+			return
+		if ke.keycode == KEY_ESCAPE:
+			get_viewport().set_input_as_handled()
+			if _pause_overlay.is_open():
+				_on_pause_resumed()
+			else:
+				_tooltip.hide_card()
+				_paused = true
+				_pause_overlay.show_overlay()
+
+
 func _process(delta: float) -> void:
-	if GameManager.state["phase"] == "result" or _paused:
+	if GameManager.state["phase"] == "result" or _paused or _pause_overlay.is_open():
 		return
 	GameManager.state = BattleSystem.tick_battle(GameManager.state, delta * _speed_mult)
 	_update_progress_bars(GameManager.state)
@@ -102,38 +127,31 @@ func _render() -> void:
 	($VBox/ControlsRow/Speed2xButton as Button).modulate = Color.WHITE if _speed_mult == 2.0 else Color(0.55, 0.55, 0.55)
 
 	if is_result:
-		var outcome: String = BattleSystem.compute_result(s)
-		var lives: int = s["lives"] as int
+		var dr: Dictionary = PhaseSystem.describe_result(s)
+		var outcome: String = dr["outcome"] as String
 		var wins: int = s["wins"] as int
-		var opp_hp: int = s["opponent_hp"] as int
-		var opp_start: int = s["opponent_starting_hp"] as int
+		var lives: int = s["lives"] as int
 		var result_text: String
 		var next_label: String = "▶ Next Round"
 		match outcome:
 			"player_wins":
-				if wins + 1 >= 10:
+				if dr["is_victory"] as bool:
 					result_text = "🏆 VICTORY — 10 wins!"
 					next_label = "▶ Finish"
 				else:
-					result_text = "✅ YOU WIN  (Wins: %d→%d)" % [wins, wins + 1]
+					result_text = "✅ YOU WIN  (Wins: %d→%d)" % [wins, dr["wins_after"] as int]
 			"draw":
-				if wins + 1 >= 10:
+				if dr["is_victory"] as bool:
 					result_text = "🏆 VICTORY — 10 wins!"
 					next_label = "▶ Finish"
 				else:
-					result_text = "🤝 DRAW — counts as a win  (Wins: %d→%d)" % [wins, wins + 1]
+					result_text = "🤝 DRAW — counts as a win  (Wins: %d→%d)" % [wins, dr["wins_after"] as int]
 			"opponent_wins":
-				var ratio: float = float(opp_hp) / float(maxi(opp_start, 1))
-				var lives_lost: int = 1
-				if ratio >= 0.70:
-					lives_lost = 3
-				elif ratio >= 0.30:
-					lives_lost = 2
-				if lives - lives_lost <= 0:
+				if dr["is_eliminated"] as bool:
 					result_text = "💀 ELIMINATED — %d wins in %d rounds" % [wins, s["round"] as int]
 					next_label = "▶ End"
 				else:
-					result_text = "💀 YOU LOSE  (Lives: %d→%d)" % [lives, lives - lives_lost]
+					result_text = "💀 YOU LOSE  (Lives: %d→%d)" % [lives, dr["lives_after"] as int]
 		$VBox/ResultLabel.text = result_text
 		$VBox/ResultLabel.visible = true
 		$VBox/ButtonRow.visible = true
@@ -257,9 +275,46 @@ func _on_speed_2x_pressed() -> void:
 	_render()
 
 
+# ── Pause overlay handlers ────────────────────────────────────────────────────
+
+func _on_pause_resumed() -> void:
+	_pause_overlay.hide_overlay()
+	_paused = false
+
+
+func _on_pause_settings() -> void:
+	_pause_overlay.hide_overlay()
+	_paused = false
+	get_tree().change_scene_to_file("res://scenes/screens/Settings.tscn")
+
+
+func _on_pause_forfeit() -> void:
+	_pause_overlay.hide_overlay()
+	GameManager.state = PhaseSystem.forfeit(GameManager.state)
+	get_tree().change_scene_to_file("res://scenes/screens/MainMenu.tscn")
+
+
+func _on_pause_menu() -> void:
+	_pause_overlay.hide_overlay()
+	get_tree().change_scene_to_file("res://scenes/screens/MainMenu.tscn")
+
+
 func _on_next_round_pressed() -> void:
-	GameManager.state = PhaseSystem.advance_round(GameManager.state)
+	var pre: Dictionary = GameManager.state
+	GameManager.state = PhaseSystem.advance_round(pre)
 	var phase: String = GameManager.state["phase"] as String
+
+	var event: String
+	match phase:
+		"victory":
+			event = "match_win"
+		"eliminated":
+			event = "match_eliminated"
+		_:
+			event = "round_win" if (pre["opponent_hp"] as int) <= 0 else "round_loss"
+
+	AchievementSystem.check(pre, event)
+
 	match phase:
 		"victory":
 			get_tree().change_scene_to_file("res://scenes/screens/MainMenu.tscn")
@@ -267,8 +322,3 @@ func _on_next_round_pressed() -> void:
 			get_tree().change_scene_to_file("res://scenes/screens/MainMenu.tscn")
 		_:
 			get_tree().change_scene_to_file("res://scenes/screens/Shop.tscn")
-
-
-func _on_menu_pressed() -> void:
-	GameManager.state = GameState.create()
-	get_tree().change_scene_to_file("res://scenes/screens/MainMenu.tscn")

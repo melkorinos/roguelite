@@ -1,5 +1,9 @@
 {
-    "dirs": ["res://test/unit/"],
+    "dirs": [
+        "res://test/unit/data/",
+        "res://test/unit/systems/",
+        "res://test/unit/autoloads/"
+    ],
     "prefix": "test_",
     "suffix": ".gd",
     "log_level": 1,

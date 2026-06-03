@@ -6,8 +6,8 @@ Single-context repo. One `CONTEXT.md` at the root; one `docs/adr/` for architect
 
 - **`CONTEXT.md`** at the repo root — canonical glossary for this project
 - **`docs/adr/`** — read ADRs that touch the area you're working in
-- **`docs/soul.md`** — core identity and player fantasy (read before structural suggestions)
-- **`docs/memory.md`** — settled design and architecture decisions
+- **`.claude/ai-helper/soul.md`** — core identity and player fantasy (read before structural suggestions)
+- **`.claude/ai-helper/memory.md`** — settled design and architecture decisions
 
 If any of these files don't exist, proceed silently.
 

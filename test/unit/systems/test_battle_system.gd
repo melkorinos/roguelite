@@ -5,6 +5,10 @@ func _make_state() -> Dictionary:
 	return GameState.create()
 
 
+func _fixture() -> Dictionary:
+	return GhostFixtures.get_fixture(1)
+
+
 func _state_with_player_element(element_id: String) -> Dictionary:
 	var state := _make_state()
 	var elem: Dictionary = ElementData.find(element_id).duplicate()
@@ -69,28 +73,28 @@ func test_compute_opponent_hp_sums_damage_across_all_elements() -> void:
 # ── tick_battle ───────────────────────────────────────────────────────────────
 
 func test_tick_battle_player_damages_opponent_at_cooldown() -> void:
-	var state := PhaseSystem.to_battle(_state_with_player_element("fire"))
+	var state := PhaseSystem.to_battle(_state_with_player_element("fire"), _fixture())
 	var cooldown: float = ElementData.find("fire")["cooldown"]
 	var s := BattleSystem.tick_battle(state, cooldown)
 	assert_lt(s["opponent_hp"] as int, state["opponent_hp"] as int)
 
 
 func test_tick_battle_does_not_fire_before_cooldown() -> void:
-	var state := PhaseSystem.to_battle(_state_with_player_element("fire"))
+	var state := PhaseSystem.to_battle(_state_with_player_element("fire"), _fixture())
 	var cooldown: float = ElementData.find("fire")["cooldown"]
 	var s := BattleSystem.tick_battle(state, cooldown - 0.1)
 	assert_eq(s["opponent_hp"] as int, state["opponent_hp"] as int)
 
 
 func test_tick_battle_opponent_damages_player() -> void:
-	# Round 1 opponent has fire (cooldown 2.5) — tick past it
-	var state := PhaseSystem.to_battle(_make_state())
+	# Tier-1 fixture has fire (cooldown 2.5) — tick past it
+	var state := PhaseSystem.to_battle(_make_state(), _fixture())
 	var s := BattleSystem.tick_battle(state, 3.0)
 	assert_lt(s["player_hp"] as int, state["player_hp"] as int)
 
 
 func test_tick_battle_sets_result_when_opponent_hp_zero() -> void:
-	var state := PhaseSystem.to_battle(_state_with_player_element("fire"))
+	var state := PhaseSystem.to_battle(_state_with_player_element("fire"), _fixture())
 	state["opponent_hp"] = 1
 	var cooldown: float = ElementData.find("fire")["cooldown"]
 	var s := BattleSystem.tick_battle(state, cooldown)
@@ -98,21 +102,21 @@ func test_tick_battle_sets_result_when_opponent_hp_zero() -> void:
 
 
 func test_tick_battle_sets_result_when_player_hp_zero() -> void:
-	var state := PhaseSystem.to_battle(_make_state())
+	var state := PhaseSystem.to_battle(_make_state(), _fixture())
 	state["player_hp"] = 1
-	# Round 1 opponent fire cooldown is 2.5 — one tick at 3.0 kills player
+	# Tier-1 fixture fire cooldown is 2.5 — one tick at 3.0 kills player
 	var s := BattleSystem.tick_battle(state, 3.0)
 	assert_eq(s["phase"], "result")
 
 
 func test_tick_battle_sets_result_at_time_limit() -> void:
-	var state := PhaseSystem.to_battle(_make_state())
+	var state := PhaseSystem.to_battle(_make_state(), _fixture())
 	var s := BattleSystem.tick_battle(state, BattleSystem.BATTLE_TIME_LIMIT + 0.1)
 	assert_eq(s["phase"], "result")
 
 
 func test_tick_battle_returns_state_unchanged_when_already_result() -> void:
-	var state := PhaseSystem.to_battle(_make_state())
+	var state := PhaseSystem.to_battle(_make_state(), _fixture())
 	state["phase"] = "result"
 	var s := BattleSystem.tick_battle(state, 1.0)
 	assert_eq(s["phase"], "result")
@@ -120,7 +124,7 @@ func test_tick_battle_returns_state_unchanged_when_already_result() -> void:
 
 
 func test_tick_battle_does_not_mutate_original() -> void:
-	var state := PhaseSystem.to_battle(_state_with_player_element("fire"))
+	var state := PhaseSystem.to_battle(_state_with_player_element("fire"), _fixture())
 	var original_hp: int = state["opponent_hp"]
 	var cooldown: float = ElementData.find("fire")["cooldown"]
 	BattleSystem.tick_battle(state, cooldown)
@@ -128,7 +132,7 @@ func test_tick_battle_does_not_mutate_original() -> void:
 
 
 func test_tick_battle_accumulates_fires_in_battle_stats() -> void:
-	var state := PhaseSystem.to_battle(_state_with_player_element("fire"))
+	var state := PhaseSystem.to_battle(_state_with_player_element("fire"), _fixture())
 	var cooldown: float = ElementData.find("fire")["cooldown"]
 	var s := BattleSystem.tick_battle(state, cooldown)
 	var pstats: Array = (s["battle_stats"] as Dictionary)["player"] as Array
@@ -136,7 +140,7 @@ func test_tick_battle_accumulates_fires_in_battle_stats() -> void:
 
 
 func test_tick_battle_accumulates_damage_in_battle_stats() -> void:
-	var state := PhaseSystem.to_battle(_state_with_player_element("fire"))
+	var state := PhaseSystem.to_battle(_state_with_player_element("fire"), _fixture())
 	var cooldown: float = ElementData.find("fire")["cooldown"]
 	var s := BattleSystem.tick_battle(state, cooldown)
 	var pstats: Array = (s["battle_stats"] as Dictionary)["player"] as Array
@@ -144,7 +148,7 @@ func test_tick_battle_accumulates_damage_in_battle_stats() -> void:
 
 
 func test_tick_battle_advances_battle_timer() -> void:
-	var state := PhaseSystem.to_battle(_make_state())
+	var state := PhaseSystem.to_battle(_make_state(), _fixture())
 	var s := BattleSystem.tick_battle(state, 1.5)
 	assert_eq(s["battle_timer"] as float, 1.5)
 

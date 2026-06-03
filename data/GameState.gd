@@ -1,7 +1,7 @@
 class_name GameState
 
 
-static func create() -> Dictionary:
+static func create(seed_recipes: Array[String] = []) -> Dictionary:
 	return {
 		"phase": "shop",
 		"round": 1,
@@ -16,7 +16,7 @@ static func create() -> Dictionary:
 		"battle_events": [],
 		"shop_items": [null, null, null, null, null],
 		"shop_tier": 1,
-		"discovered_recipes": [],
+		"discovered_recipes": seed_recipes.duplicate(),
 		"battle_timer": 0.0,
 		"forge_slots": [null, null],
 		"battle_stats": {
@@ -26,4 +26,5 @@ static func create() -> Dictionary:
 		"lives": 10,
 		"wins": 0,
 		"opponent_starting_hp": 0,
+		"opponent_snapshot": {},
 	}

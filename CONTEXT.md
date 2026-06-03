@@ -8,8 +8,12 @@ A game where players collect, Merge, and Forge pieces into synergistic compositi
 
 ### Core mechanics
 
-**Merge**:
-Combining three identical pieces to produce one upgraded version of the same piece. The primary upgrade loop.
+**Level Up** *(current implementation)*:
+Combining two identical elements at the same level to produce one element of level+1. This is the live mechanic in the codebase. Drag-drop; no recipe needed.
+_Avoid_: merge (reserved for the 3-copy mechanic below), fuse, evolve
+
+**Merge** *(future, not yet implemented)*:
+Combining three identical pieces to produce one upgraded version of the same piece. Distinct from Level Up — three copies, not two. Design is settled; implementation deferred.
 _Avoid_: combine, fuse, evolve, triple
 
 **Forge**:
@@ -18,8 +22,12 @@ _Avoid_: craft, fuse, combine (too generic — Forge is a specific action with a
 
 ### Pieces and equipment
 
-**Unit**:
-A piece that occupies a board slot and participates directly in combat. Acquired via the gold shop. Can have passive abilities.
+**Element** *(current prototype term)*:
+The core piece in the current codebase. Bought from the gold shop, placed on the Battlegrid, and fires damage during the combat phase. Defined in `ElementData.gd`. In the longer-term design, Elements will split into Units (fighters) and Items (passives on Units), but for the prototype they are unified.
+_Avoid_: card, item, unit (until the split is implemented)
+
+**Unit** *(future)*:
+A piece that occupies a board slot and participates directly in combat. Acquired via the gold shop. Can have passive abilities. Currently unified with Element in the prototype.
 _Avoid_: card, character, creature, minion
 
 **Item**:
@@ -107,8 +115,8 @@ The free selection of Items and Trinkets offered each round. Separate from the g
 _Avoid_: pick phase, card draw
 
 **Rarity**:
-A tier assigned to each piece that determines how frequently it appears in the shop. Working tiers: Common, Rare, Epic.
-_Avoid_: grade, quality, tier — until a canonical term is chosen
+A tier assigned to each piece that determines how frequently it appears in the shop. Working tiers: Common, Rare, Epic. *(Note: the codebase currently uses numeric Tier 1/2/3 — the named rarity vocabulary is aspirational and not yet reflected in code.)*
+_Avoid_: grade, quality — "tier" is acceptable shorthand until a canonical term is chosen
 
 ### UI overlays
 
@@ -119,6 +127,32 @@ _Avoid_: stat card, hover card, popup, preview
 **Abilities Panel**:
 The lower section of the Item Tooltip reserved for an element's active and passive ability descriptions. Currently a placeholder.
 _Avoid_: info section, details panel, ability card
+
+### Async PvP
+
+**Ghost**:
+A snapshot of a real player's Composition (grid + metadata) at a specific Round, stored and served as an async PvP opponent. The Ghost pool is the collection of Ghosts available for a given day or context. The local day-seeded adapter is a stub that generates a plausible Ghost without a backend; the real target is serving Ghosts from actual player sessions.
+_Avoid_: opponent board, replay board, AI board
+
+**Ghost Pool**:
+The set of Ghosts available to be drawn as opponents for a given match context (day, round, shop tier). In production, populated from real player sessions. Before backend exists, generated locally via a day-seeded deterministic algorithm.
+_Avoid_: opponent pool, enemy pool
+
+**Milestone**:
+An in-game achievement that surfaces inside the meta-progression layer (e.g. "dealt 20,000 total damage"). Milestones unlock Factions, Synergies, or run modifiers — they are internal rewards, not external recognition. Shares infrastructure with Steam Achievements but is distinct from them.
+_Avoid_: challenge, quest, trophy (until a canonical term is chosen)
+
+**Level 2 Reward**:
+A bonus granted when an element reaches level 2 through a merge. Provides a flat gold payout plus a player-chosen flat stat boost (e.g. +1 base damage or −0.5 s cooldown). Healing, armour, and status effects are deferred to a later design session.
+_Avoid_: merge bonus, upgrade reward
+
+**Purchasable Inventory Slot**:
+An additional inventory slot the player can buy with gold during the shop phase. Not yet in scope; reserved as a future strategic layer.
+_Avoid_: slot upgrade, bag upgrade
+
+**Pause Menu**:
+A modal overlay triggered by the ESC key in the shop or battle phase. Options: Resume, Settings, Forfeit Run (marks match as eliminated → Main Menu), Quit to Main Menu, Quit to Desktop.
+_Avoid_: options menu, escape menu
 
 ### Optional (not committed)
 

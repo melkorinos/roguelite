@@ -6,7 +6,7 @@ var undo_state: Variant = null
 
 
 func _ready() -> void:
-	state = GameState.create()
+	state = GameState.create(PlayerProfile.get_discovered_recipes())
 
 
 func save_undo() -> void:

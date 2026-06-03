@@ -75,11 +75,11 @@ godot --headless --quit     # boot check — exit 0 means scripts load and autol
 Requires `godot` on PATH. On Windows: add the Godot editor directory to system PATH.
 CI runs the same two commands on every push (see [.github/workflows/ci.yml](.github/workflows/ci.yml)).
 
-**Run GUT tests** (80 tests across 3 suites as of 2026-06-02):
+**Run GUT tests** (9 suites across `test/unit/data/`, `test/unit/systems/`, `test/unit/autoloads/`):
 ```
 godot --headless -s addons/gut/gut_cmdln.gd -gdir=res://test/unit/ -gprefix=test_ -gexit
 ```
-Note: `-gsuffix` is not supported by this GUT version — omit it. `-gdir` must use `res://` prefix.
+Note: `-gsuffix` is not supported by this GUT version — omit it. `-gdir` must use `res://` prefix. GUT recurses into subdirectories.
 
 ## Assistant behavior
 
@@ -89,18 +89,18 @@ Note: `-gsuffix` is not supported by this GUT version — omit it. `-gdir` must 
 
 ## Skill output — mandatory rule
 
-**`/improve-architecture` output always goes in `docs/reviews/`** — never in the OS temp directory. Filename: `architecture-review-YYYYMMDD.html`. Open with `start docs/reviews/<filename>` after writing.
+**`/improve-architecture` output always goes in `.claude/ai-helper/reviews/`** — never in the OS temp directory. Filename: `architecture-review-YYYYMMDD.html`. Open with `start .claude/ai-helper/reviews/<filename>` after writing.
 
 ## Agent skills
 
 ### Issue tracker
 
-Issues live in GitHub Issues at `https://github.com/melkorinos/roguelite`. See `docs/agents/issue-tracker.md`.
+Issues live in GitHub Issues at `https://github.com/melkorinos/roguelite`. See `.claude/ai-helper/issue-tracker/issue-tracker.md`.
 
 ### Triage labels
 
-Default label vocabulary (needs-triage, needs-info, ready-for-agent, ready-for-human, wontfix). See `docs/agents/triage-labels.md`.
+Default label vocabulary (needs-triage, needs-info, ready-for-agent, ready-for-human, wontfix). See `.claude/ai-helper/issue-tracker/triage-labels.md`.
 
 ### Domain docs
 
-Single-context repo — one `CONTEXT.md` at root, `docs/adr/` for ADRs. See `docs/agents/domain.md`.
+Single-context repo — one `CONTEXT.md` at root, `docs/adr/` for ADRs. See `.claude/ai-helper/issue-tracker/domain.md`.

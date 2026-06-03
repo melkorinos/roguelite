@@ -1,13 +1,14 @@
 class_name PhaseSystem
 
 
-static func to_battle(state: Dictionary) -> Dictionary:
+static func to_battle(state: Dictionary, opponent_snapshot: Dictionary) -> Dictionary:
 	var s: Dictionary = state.duplicate(true)
 	s["phase"] = "battle"
 	s["battle_timer"] = 0.0
 	s["player_hp"] = 30
 	s["element_timers"] = [0.0, 0.0, 0.0, 0.0]
-	s["opponent_grid"] = BattleSystem.create_opponent_grid(s["round"] as int)
+	s["opponent_snapshot"] = opponent_snapshot
+	s["opponent_grid"] = opponent_snapshot.get("grid", [null, null, null, null]) as Array
 	s["opponent_timers"] = [0.0, 0.0, 0.0, 0.0]
 	s["battle_events"] = []
 	var opp_hp: int = BattleSystem.compute_opponent_hp(s["opponent_grid"])
@@ -24,10 +25,10 @@ static func advance_round(state: Dictionary) -> Dictionary:
 	var s: Dictionary = state.duplicate(true)
 	s["round"] = (s["round"] as int) + 1
 	s["gold"] = (s["gold"] as int) + 5
+	s["player_hp"] = 30
 	s["battle_events"] = []
 	s["shop_items"] = [null, null, null, null, null]
 
-	var player_hp: int = s["player_hp"] as int
 	var opp_hp: int = s["opponent_hp"] as int
 	var opp_start: int = s["opponent_starting_hp"] as int
 
@@ -50,4 +51,38 @@ static func advance_round(state: Dictionary) -> Dictionary:
 			return s
 
 	s["phase"] = "shop"
+	return s
+
+
+static func describe_result(state: Dictionary) -> Dictionary:
+	var outcome: String = BattleSystem.compute_result(state)
+	var wins: int = state["wins"] as int
+	var lives: int = state["lives"] as int
+	var opp_hp: int = state["opponent_hp"] as int
+	var opp_start: int = state["opponent_starting_hp"] as int
+	var lives_lost: int = 0
+	var wins_after: int = wins
+	if outcome == "player_wins" or outcome == "draw":
+		wins_after = wins + 1
+	else:
+		var ratio: float = float(opp_hp) / float(maxi(opp_start, 1))
+		lives_lost = 1
+		if ratio >= 0.70:
+			lives_lost = 3
+		elif ratio >= 0.30:
+			lives_lost = 2
+	var lives_after: int = lives - lives_lost
+	return {
+		"outcome": outcome,
+		"wins_after": wins_after,
+		"lives_lost": lives_lost,
+		"lives_after": lives_after,
+		"is_victory": wins_after >= 10,
+		"is_eliminated": lives_after <= 0 and outcome == "opponent_wins",
+	}
+
+
+static func forfeit(state: Dictionary) -> Dictionary:
+	var s: Dictionary = state.duplicate(true)
+	s["phase"] = "eliminated"
 	return s

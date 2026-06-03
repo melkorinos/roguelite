@@ -83,30 +83,11 @@ func _can_drop_data(_at_position: Vector2, data: Variant) -> bool:
 		return false
 
 	if d["type"] == "inventory":
-		# Only level-up: same element, same level, different slot.
-		if not has_item:
-			return false
-		if (d["slot"] as int) == slot_index:
-			return false
-		var inv: Array = GameManager.state["inventory"]
-		var from_item: Variant = inv[d["slot"] as int]
-		if from_item == null:
-			return false
-		var from_elem: Dictionary = from_item as Dictionary
-		if from_elem["element_id"] != element_id:
-			return false
-		return (from_elem["level"] as int) == element_level
+		return ShopSystem.can_transfer(GameManager.state, {"zone": "inventory", "slot": d["slot"] as int}, {"zone": "inventory", "slot": slot_index})
 
 	if d["type"] == "shop":
-		if not has_item:
-			# Plain buy: just need enough gold.
-			return (GameManager.state["gold"] as int) >= (d["price"] as int)
-		# Buy + level-up: same element, slot must be level 1 (shop items are always level 1).
-		if (d["element_id"] as String) != element_id:
-			return false
-		if element_level != 1:
-			return false
-		return (GameManager.state["gold"] as int) >= (d["price"] as int)
+		var shop_slot: int = d.get("shop_slot", -1) as int
+		return ShopSystem.can_transfer(GameManager.state, {"zone": "shop", "slot": shop_slot}, {"zone": "inventory", "slot": slot_index})
 
 	if d["type"] == "grid":
 		return true

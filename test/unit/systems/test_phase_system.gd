@@ -5,28 +5,32 @@ func _make_state() -> Dictionary:
 	return GameState.create()
 
 
+func _fixture() -> Dictionary:
+	return GhostFixtures.get_fixture(1)
+
+
 func test_to_battle_sets_phase() -> void:
-	var s := PhaseSystem.to_battle(_make_state())
+	var s := PhaseSystem.to_battle(_make_state(), _fixture())
 	assert_eq(s["phase"], "battle")
 
 
 func test_to_battle_resets_timer() -> void:
 	var state := _make_state()
 	state["battle_timer"] = 7.5
-	var s := PhaseSystem.to_battle(state)
+	var s := PhaseSystem.to_battle(state, _fixture())
 	assert_eq(s["battle_timer"], 0.0)
 
 
 func test_to_battle_preserves_gold() -> void:
 	var state := _make_state()
 	state["gold"] = 7
-	var s := PhaseSystem.to_battle(state)
+	var s := PhaseSystem.to_battle(state, _fixture())
 	assert_eq(s["gold"], 7)
 
 
 func test_to_battle_does_not_mutate_original() -> void:
 	var state := _make_state()
-	PhaseSystem.to_battle(state)
+	PhaseSystem.to_battle(state, _fixture())
 	assert_eq(state["phase"], "shop")
 
 
@@ -37,11 +41,11 @@ func test_advance_round_increments_round() -> void:
 	assert_eq(s["round"], 4)
 
 
-func test_advance_round_does_not_reset_player_hp() -> void:
+func test_advance_round_resets_player_hp_to_30() -> void:
 	var state := _make_state()
 	state["player_hp"] = 12
 	var s := PhaseSystem.advance_round(state)
-	assert_eq(s["player_hp"], 12)
+	assert_eq(s["player_hp"], 30)
 
 
 func test_advance_round_sets_phase_to_shop() -> void:
@@ -61,7 +65,7 @@ func test_advance_round_does_not_mutate_original() -> void:
 # ── to_battle: battle state initialisation ───────────────────────────────────
 
 func test_to_battle_populates_opponent_grid() -> void:
-	var s := PhaseSystem.to_battle(_make_state())
+	var s := PhaseSystem.to_battle(_make_state(), _fixture())
 	var grid: Array = s["opponent_grid"]
 	var has_element: bool = false
 	for slot: Variant in grid:
@@ -72,25 +76,25 @@ func test_to_battle_populates_opponent_grid() -> void:
 
 
 func test_to_battle_sets_positive_opponent_hp() -> void:
-	var s := PhaseSystem.to_battle(_make_state())
+	var s := PhaseSystem.to_battle(_make_state(), _fixture())
 	assert_gt(s["opponent_hp"] as int, 0)
 
 
 func test_to_battle_initialises_battle_stats_with_player_and_opponent() -> void:
-	var s := PhaseSystem.to_battle(_make_state())
+	var s := PhaseSystem.to_battle(_make_state(), _fixture())
 	var bstats: Dictionary = s["battle_stats"] as Dictionary
 	assert_true(bstats.has("player"))
 	assert_true(bstats.has("opponent"))
 
 
 func test_to_battle_battle_stats_has_four_player_slots() -> void:
-	var s := PhaseSystem.to_battle(_make_state())
+	var s := PhaseSystem.to_battle(_make_state(), _fixture())
 	var pstats: Array = (s["battle_stats"] as Dictionary)["player"] as Array
 	assert_eq(pstats.size(), 4)
 
 
 func test_to_battle_battle_stats_has_four_opponent_slots() -> void:
-	var s := PhaseSystem.to_battle(_make_state())
+	var s := PhaseSystem.to_battle(_make_state(), _fixture())
 	var ostats: Array = (s["battle_stats"] as Dictionary)["opponent"] as Array
 	assert_eq(ostats.size(), 4)
 
@@ -98,14 +102,14 @@ func test_to_battle_battle_stats_has_four_opponent_slots() -> void:
 func test_to_battle_clears_battle_events() -> void:
 	var state := _make_state()
 	state["battle_events"] = [{"side": "player", "slot": 0}]
-	var s := PhaseSystem.to_battle(state)
+	var s := PhaseSystem.to_battle(state, _fixture())
 	assert_eq((s["battle_events"] as Array).size(), 0)
 
 
 func test_to_battle_resets_element_timers_to_zero() -> void:
 	var state := _make_state()
 	state["element_timers"] = [1.5, 2.0, 0.5, 3.0]
-	var s := PhaseSystem.to_battle(state)
+	var s := PhaseSystem.to_battle(state, _fixture())
 	for t: Variant in s["element_timers"]:
 		assert_eq(t as float, 0.0)
 
@@ -233,7 +237,7 @@ func test_advance_round_adds_5_gold() -> void:
 # ── to_battle: opponent_starting_hp + player_hp reset ────────────────────────
 
 func test_to_battle_stores_opponent_starting_hp() -> void:
-	var s := PhaseSystem.to_battle(_make_state())
+	var s := PhaseSystem.to_battle(_make_state(), _fixture())
 	assert_gt(s["opponent_starting_hp"] as int, 0)
 	assert_eq(s["opponent_starting_hp"] as int, s["opponent_hp"] as int)
 
@@ -241,5 +245,124 @@ func test_to_battle_stores_opponent_starting_hp() -> void:
 func test_to_battle_resets_player_hp_to_30() -> void:
 	var state := _make_state()
 	state["player_hp"] = 5
-	var s := PhaseSystem.to_battle(state)
+	var s := PhaseSystem.to_battle(state, _fixture())
 	assert_eq(s["player_hp"], 30)
+
+
+# ── to_battle: opponent_snapshot storage ─────────────────────────────────────
+
+func test_to_battle_stores_opponent_snapshot() -> void:
+	var snap := GhostFixtures.get_fixture(2)
+	var s := PhaseSystem.to_battle(_make_state(), snap)
+	assert_eq((s["opponent_snapshot"] as Dictionary)["player_id"], snap["player_id"])
+
+
+func test_to_battle_reads_grid_from_snapshot() -> void:
+	var snap := GhostFixtures.get_fixture(2)
+	var s := PhaseSystem.to_battle(_make_state(), snap)
+	var snap_grid: Array = snap["grid"] as Array
+	var state_grid: Array = s["opponent_grid"] as Array
+	assert_eq(state_grid.size(), 4)
+	for i: int in 4:
+		if snap_grid[i] == null:
+			assert_null(state_grid[i])
+		else:
+			assert_eq((state_grid[i] as Dictionary)["element_id"],
+					(snap_grid[i] as Dictionary)["element_id"])
+
+
+# ── describe_result ───────────────────────────────────────────────────────────
+
+func _result_state(player_hp: int, opp_hp: int, opp_start: int, wins: int = 0, lives: int = 10) -> Dictionary:
+	var s := _make_state()
+	s["phase"] = "result"
+	s["player_hp"] = player_hp
+	s["opponent_hp"] = opp_hp
+	s["opponent_starting_hp"] = opp_start
+	s["wins"] = wins
+	s["lives"] = lives
+	return s
+
+
+func test_describe_result_player_win_increments_wins_after() -> void:
+	var s := _result_state(10, 0, 20)
+	var dr := PhaseSystem.describe_result(s)
+	assert_eq(dr["outcome"], "player_wins")
+	assert_eq(dr["wins_after"] as int, 1)
+	assert_eq(dr["lives_lost"] as int, 0)
+
+
+func test_describe_result_draw_increments_wins_after() -> void:
+	var s := _result_state(0, 0, 20)
+	var dr := PhaseSystem.describe_result(s)
+	assert_eq(dr["outcome"], "draw")
+	assert_eq(dr["wins_after"] as int, 1)
+
+
+func test_describe_result_hard_loss_lives_lost_3() -> void:
+	# opp has 70% remaining → hard loss
+	var s := _result_state(0, 14, 20)
+	var dr := PhaseSystem.describe_result(s)
+	assert_eq(dr["outcome"], "opponent_wins")
+	assert_eq(dr["lives_lost"] as int, 3)
+	assert_eq(dr["lives_after"] as int, 7)
+
+
+func test_describe_result_medium_loss_lives_lost_2() -> void:
+	# opp has 50% remaining → medium loss
+	var s := _result_state(0, 10, 20)
+	var dr := PhaseSystem.describe_result(s)
+	assert_eq(dr["lives_lost"] as int, 2)
+
+
+func test_describe_result_close_loss_lives_lost_1() -> void:
+	# opp has 25% remaining → close loss
+	var s := _result_state(0, 5, 20)
+	var dr := PhaseSystem.describe_result(s)
+	assert_eq(dr["lives_lost"] as int, 1)
+
+
+func test_describe_result_is_victory_at_9_wins_player_win() -> void:
+	var s := _result_state(10, 0, 20, 9)
+	var dr := PhaseSystem.describe_result(s)
+	assert_true(dr["is_victory"] as bool)
+	assert_eq(dr["wins_after"] as int, 10)
+
+
+func test_describe_result_is_not_victory_below_10() -> void:
+	var s := _result_state(10, 0, 20, 7)
+	var dr := PhaseSystem.describe_result(s)
+	assert_false(dr["is_victory"] as bool)
+
+
+func test_describe_result_is_eliminated_when_lives_reach_0() -> void:
+	var s := _result_state(0, 14, 20, 0, 3)
+	var dr := PhaseSystem.describe_result(s)
+	assert_true(dr["is_eliminated"] as bool)
+	assert_eq(dr["lives_after"] as int, 0)
+
+
+func test_describe_result_is_not_eliminated_on_win() -> void:
+	var s := _result_state(10, 0, 20, 0, 1)
+	var dr := PhaseSystem.describe_result(s)
+	assert_false(dr["is_eliminated"] as bool)
+
+
+func test_describe_result_does_not_mutate_state() -> void:
+	var s := _result_state(0, 14, 20)
+	PhaseSystem.describe_result(s)
+	assert_eq(s["lives"] as int, 10)
+
+
+# ── forfeit ───────────────────────────────────────────────────────────────────
+
+func test_forfeit_sets_phase_to_eliminated() -> void:
+	var s := _make_state()
+	var out := PhaseSystem.forfeit(s)
+	assert_eq(out["phase"], "eliminated")
+
+
+func test_forfeit_does_not_mutate_original() -> void:
+	var s := _make_state()
+	PhaseSystem.forfeit(s)
+	assert_eq(s["phase"], "shop")

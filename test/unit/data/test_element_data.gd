@@ -3,8 +3,8 @@ extends GutTest
 
 # ── all_elements ──────────────────────────────────────────────────────────────
 
-func test_all_elements_returns_29_elements() -> void:
-	assert_eq(ElementData.all_elements().size(), 29)
+func test_all_elements_returns_41_elements() -> void:
+	assert_eq(ElementData.all_elements().size(), 41)
 
 
 func test_all_elements_all_have_required_keys() -> void:
@@ -23,12 +23,12 @@ func test_all_elements_tiers_are_in_range_1_to_3() -> void:
 		assert_true(t >= 1 and t <= 3, elem["id"] + " has tier " + str(t))
 
 
-func test_all_elements_has_4_tier1_elements() -> void:
+func test_all_elements_has_10_tier1_elements() -> void:
 	var count: int = 0
 	for elem: Dictionary in ElementData.all_elements():
 		if (elem["tier"] as int) == 1:
 			count += 1
-	assert_eq(count, 4)
+	assert_eq(count, 10)
 
 
 # ── find ──────────────────────────────────────────────────────────────────────

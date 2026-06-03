@@ -191,6 +191,51 @@ static func remove_from_forge_slot(state: Dictionary, forge_slot_idx: int) -> Di
 	return s
 
 
+static func level_up_grid(state: Dictionary, slot_a: int, slot_b: int) -> Dictionary:
+	var grid: Array = state["battle_grid"]
+	var ea: Variant = grid[slot_a]
+	var eb: Variant = grid[slot_b]
+	if ea == null or eb == null:
+		return state
+	var da: Dictionary = ea as Dictionary
+	var db: Dictionary = eb as Dictionary
+	if da.get("element_id", "") != db.get("element_id", ""):
+		return state
+	if (da["level"] as int) != (db["level"] as int):
+		return state
+	var result_slot: int = mini(slot_a, slot_b)
+	var clear_slot: int = maxi(slot_a, slot_b)
+	var s: Dictionary = state.duplicate(true)
+	var upgraded: Dictionary = (s["battle_grid"][result_slot] as Dictionary).duplicate()
+	upgraded["level"] = (da["level"] as int) + 1
+	s["battle_grid"][result_slot] = upgraded
+	s["battle_grid"][clear_slot] = null
+	return s
+
+
+static func forge_quick_slot_from_grid(state: Dictionary, grid_slot: int) -> Dictionary:
+	var grid: Array = state["battle_grid"]
+	if grid[grid_slot] == null:
+		return state
+	var forge_slots: Array = state["forge_slots"]
+	var target_forge: int
+	if forge_slots[0] == null:
+		target_forge = 0
+	elif forge_slots[1] == null:
+		target_forge = 1
+	else:
+		target_forge = 1
+	var s: Dictionary = state.duplicate(true)
+	var displaced: Variant = s["forge_slots"][target_forge]
+	if displaced != null:
+		var free: int = _first_empty_inv_slot(s["inventory"])
+		if free >= 0:
+			s["inventory"][free] = (displaced as Dictionary).duplicate()
+	s["forge_slots"][target_forge] = (s["battle_grid"][grid_slot] as Dictionary).duplicate()
+	s["battle_grid"][grid_slot] = null
+	return s
+
+
 static func _first_empty_inv_slot(inventory: Array) -> int:
 	for i: int in inventory.size():
 		if inventory[i] == null:

@@ -40,12 +40,12 @@ Goal: player lands in a shop, buys items, clicks Fight, sandstorm resolves, sees
 - PvE Bosses (optional)
 
 ## Steam + Backend — architecture settled 2026-06-02
-Five seams to build (all can be done without a backend — see docs/reviews/architecture-review-20260602.html):
-- [ ] OpponentProvider seam + LocalDaySeededAdapter
-- [ ] PlayerProfile autoload (user://profile.cfg)
-- [ ] AchievementSystem.check(state, profile) — called from PhaseSystem.advance_round()
+Five seams to build (all can be done without a backend):
+- [x] OpponentProvider seam + LocalDaySeededAdapter — DONE 2026-06-02
+- [x] PlayerProfile autoload (user://profile.cfg) — DONE 2026-06-02
+- [x] AchievementSystem.check(state, profile) — DONE 2026-06-02 (called from Battle.gd + Shop.gd)
 - [ ] PlatformLayer autoload (SteamAdapter + NoOpAdapter for web)
-- [ ] opponent_snapshot shape in GameState
+- [x] opponent_snapshot shape in GameState — DONE 2026-06-02
 
 Needs backend / custom engine build (future):
 - BackendHTTPAdapter for OpponentProvider

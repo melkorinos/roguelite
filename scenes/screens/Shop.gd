@@ -2,18 +2,21 @@ extends Control
 
 var _inv_slot_nodes: Array = []
 var _battle_slot_nodes: Array = []
-var _confirm_dialog: ConfirmationDialog
-var _pending_buy_upgrade: Dictionary = {}
 var _tooltip: TooltipCard
+var _pause_overlay: PauseOverlay
 
 
 func _ready() -> void:
 	_tooltip = TooltipCard.new()
 	add_child(_tooltip)
 
-	_confirm_dialog = ConfirmationDialog.new()
-	add_child(_confirm_dialog)
-	_confirm_dialog.confirmed.connect(_on_buy_upgrade_confirmed)
+	_pause_overlay = PauseOverlay.new()
+	add_child(_pause_overlay)
+	_pause_overlay.resumed.connect(func() -> void: _pause_overlay.hide_overlay())
+	_pause_overlay.settings_requested.connect(_on_pause_settings)
+	_pause_overlay.forfeit_requested.connect(_on_pause_forfeit)
+	_pause_overlay.quit_to_menu_requested.connect(_on_pause_menu)
+	_pause_overlay.quit_to_desktop_requested.connect(func() -> void: get_tree().quit())
 
 	var s: Dictionary = GameManager.state
 	var all_null: bool = (s["shop_items"] as Array).all(func(x: Variant) -> bool: return x == null)
@@ -25,18 +28,44 @@ func _ready() -> void:
 func _unhandled_key_input(event: InputEvent) -> void:
 	if event is InputEventKey:
 		var ke: InputEventKey = event as InputEventKey
-		if ke.pressed and not ke.echo and ke.keycode == KEY_Z:
-			if ke.ctrl_pressed:
-				get_viewport().set_input_as_handled()
-				_do_undo()
+		if not ke.pressed or ke.echo:
+			return
+		if ke.keycode == KEY_ESCAPE:
+			get_viewport().set_input_as_handled()
+			if _pause_overlay.is_open():
+				_pause_overlay.hide_overlay()
+			else:
+				_tooltip.hide_card()
+				_pause_overlay.show_overlay()
+		elif ke.keycode == KEY_Z and ke.ctrl_pressed:
+			get_viewport().set_input_as_handled()
+			_do_undo()
+
+
+# ── Pause overlay handlers ────────────────────────────────────────────────────
+
+func _on_pause_settings() -> void:
+	_pause_overlay.hide_overlay()
+	get_tree().change_scene_to_file("res://scenes/screens/Settings.tscn")
+
+
+func _on_pause_forfeit() -> void:
+	_pause_overlay.hide_overlay()
+	GameManager.state = PhaseSystem.forfeit(GameManager.state)
+	get_tree().change_scene_to_file("res://scenes/screens/MainMenu.tscn")
+
+
+func _on_pause_menu() -> void:
+	_pause_overlay.hide_overlay()
+	get_tree().change_scene_to_file("res://scenes/screens/MainMenu.tscn")
 
 
 func _render() -> void:
 	_tooltip.hide_card()
 	var s: Dictionary = GameManager.state
 	$VBox/TopBar/RoundLabel.text = "Round %d" % s["round"]
-	$VBox/TopBar/GoldLabel.text = "Gold: %dg" % s["gold"]
-	$VBox/TopBar/HPLabel.text = "HP: %d/30" % s["player_hp"]
+	$VBox/TopBar/GoldLabel.text = ""
+	$VBox/TopBar/HPLabel.text = "❤ %d/30   💰 %dg" % [s["player_hp"], s["gold"]]
 	$VBox/TopBar/LivesLabel.text = "Lives: %d  Wins: %d/10" % [s["lives"], s["wins"]]
 	$VBox/DebugRow/TierLabel.text = "Shop T%d" % s["shop_tier"]
 	$VBox/TopBar/UndoButton.disabled = GameManager.undo_state == null
@@ -134,6 +163,7 @@ func _rebuild_battle_grid(s: Dictionary) -> void:
 		slot.slot_dropped.connect(_on_grid_slot_received_drop)
 		slot.drag_started.connect(_on_grid_drag_started)
 		slot.drag_ended.connect(_on_inv_drag_ended)
+		slot.forge_quick_slot_grid.connect(_on_forge_quick_slot_grid)
 		slot.tooltip_requested.connect(_on_tooltip_requested)
 		slot.tooltip_hide_requested.connect(_on_tooltip_hide)
 		container.add_child(slot)
@@ -251,35 +281,15 @@ func _on_shop_buy_to_slot_requested(_element_id: String, to_inv_index: int, shop
 	_render()
 
 
-# ── Buy + level-up combo ──────────────────────────────────────────────────────
+# ── Buy + level-up combo (no confirmation — undo covers it) ──────────────────
 
 func _on_shop_buy_upgrade_requested(_element_id: String, to_inv_index: int, shop_slot: int) -> void:
-	var s: Dictionary = GameManager.state
-	var shop_item: Variant = (s["shop_items"] as Array)[shop_slot]
-	if shop_item == null:
-		return
-	var elem: Dictionary = shop_item as Dictionary
-	_pending_buy_upgrade = {
-		"from_loc": {"zone": "shop", "slot": shop_slot},
-		"to_loc": {"zone": "inventory", "slot": to_inv_index},
-	}
-	_confirm_dialog.title = "Buy + Level Up"
-	_confirm_dialog.dialog_text = "Buy %s %s for %dg and level up?\n(You have %dg)" % [
-		elem["emoji"], elem["name"],
-		elem["price"] as int,
-		s["gold"] as int,
-	]
-	_confirm_dialog.popup_centered()
-
-
-func _on_buy_upgrade_confirmed() -> void:
 	GameManager.save_undo()
 	GameManager.state = ShopSystem.transfer(
 		GameManager.state,
-		_pending_buy_upgrade["from_loc"] as Dictionary,
-		_pending_buy_upgrade["to_loc"] as Dictionary
+		{"zone": "shop", "slot": shop_slot},
+		{"zone": "inventory", "slot": to_inv_index}
 	)
-	_pending_buy_upgrade = {}
 	_render()
 
 
@@ -306,10 +316,17 @@ func _on_forge_button_pressed() -> void:
 
 func _execute_forge() -> void:
 	GameManager.save_undo()
+	var pre_recipe_count: int = (GameManager.state["discovered_recipes"] as Array).size()
 	var result: Dictionary = ForgeSystem.forge_from_bench(GameManager.state)
 	GameManager.state = result["state"] as Dictionary
 	var outcome: String = result["outcome"] as String
 	var level_mismatch: bool = result["level_mismatch"] as bool
+
+	if outcome == "ok":
+		var post_count: int = (GameManager.state["discovered_recipes"] as Array).size()
+		if post_count > pre_recipe_count:
+			_fire_achievement("forge_discovered")
+
 	_render()
 	var result_lbl: Label = $VBox/MainArea/RightPanel/ForgeResultLabel
 	match outcome:
@@ -326,6 +343,10 @@ func _execute_forge() -> void:
 			result_lbl.text = ""
 
 
+func _fire_achievement(event: String) -> void:
+	AchievementSystem.check(GameManager.state, event)
+
+
 # ── Inventory → inventory: level-up ──────────────────────────────────────────
 
 func _on_inv_slot_received_drop(from_type: String, from_index: int, to_inv_index: int) -> void:
@@ -340,10 +361,32 @@ func _on_inv_slot_received_drop(from_type: String, from_index: int, to_inv_index
 # ── Battle grid drag-and-drop ─────────────────────────────────────────────────
 
 func _on_grid_slot_received_drop(from_type: String, from_index: int, to_grid_index: int) -> void:
-	if from_type == "inventory":
+	if from_type == "shop":
+		GameManager.save_undo()
+		GameManager.state = ShopSystem.transfer(GameManager.state, {"zone": "shop", "slot": from_index}, {"zone": "grid", "slot": to_grid_index})
+	elif from_type == "inventory":
 		GameManager.state = ShopSystem.transfer(GameManager.state, {"zone": "inventory", "slot": from_index}, {"zone": "grid", "slot": to_grid_index})
 	elif from_type == "grid":
-		GameManager.state = ShopSystem.transfer(GameManager.state, {"zone": "grid", "slot": from_index}, {"zone": "grid", "slot": to_grid_index})
+		var grid: Array = GameManager.state["battle_grid"] as Array
+		var fa: Variant = grid[from_index]
+		var tb: Variant = grid[to_grid_index]
+		if fa != null and tb != null:
+			var da: Dictionary = fa as Dictionary
+			var db: Dictionary = tb as Dictionary
+			var same_elem: bool = da.get("element_id", "") == db.get("element_id", "")
+			var same_level: bool = (da["level"] as int) == (db["level"] as int)
+			if same_elem and same_level:
+				GameManager.save_undo()
+				GameManager.state = ForgeSystem.level_up_grid(GameManager.state, from_index, to_grid_index)
+			else:
+				GameManager.state = ShopSystem.transfer(GameManager.state, {"zone": "grid", "slot": from_index}, {"zone": "grid", "slot": to_grid_index})
+		else:
+			GameManager.state = ShopSystem.transfer(GameManager.state, {"zone": "grid", "slot": from_index}, {"zone": "grid", "slot": to_grid_index})
+	_render()
+
+
+func _on_forge_quick_slot_grid(grid_slot: int) -> void:
+	GameManager.state = ForgeSystem.forge_quick_slot_from_grid(GameManager.state, grid_slot)
 	_render()
 
 
@@ -377,5 +420,14 @@ func _on_tier_up_pressed() -> void:
 
 
 func _on_fight_pressed() -> void:
-	GameManager.state = PhaseSystem.to_battle(GameManager.state)
+	var s: Dictionary = GameManager.state
+	var date := Time.get_date_dict_from_system()
+	var day_key: int = (date["year"] as int) * 10000 + (date["month"] as int) * 100 + (date["day"] as int)
+	var context: Dictionary = {
+		"day": day_key,
+		"round": s["round"] as int,
+		"shop_tier": s["shop_tier"] as int,
+	}
+	var snapshot: Dictionary = OpponentProvider.get_opponent(context)
+	GameManager.state = PhaseSystem.to_battle(s, snapshot)
 	get_tree().change_scene_to_file("res://scenes/screens/Battle.tscn")

@@ -18,6 +18,7 @@ config/run/main_scene="res://scenes/screens/Boot.tscn"
 [autoload]
 
 SettingsManager="*res://autoloads/SettingsManager.gd"
+PlayerProfile="*res://autoloads/PlayerProfile.gd"
 GameManager="*res://autoloads/GameManager.gd"
 
 [display]

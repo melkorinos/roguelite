@@ -4,6 +4,7 @@ extends PanelContainer
 signal slot_dropped(from_type: String, from_index: int, to_index: int)
 signal drag_started(element_id: String, grid_slot: int, sell_price: int)
 signal drag_ended()
+signal forge_quick_slot_grid(grid_slot: int)
 signal tooltip_requested(element: Dictionary)
 signal tooltip_hide_requested()
 
@@ -15,6 +16,7 @@ var draggable: bool = true
 var element_id: String = ""
 
 var _item_dict: Dictionary = {}
+var _hovered: bool = false
 var _hover_timer: Timer
 var _progress: ProgressBar
 var _emoji_lbl: Label
@@ -98,13 +100,25 @@ func play_fire_animation() -> void:
 
 
 func _on_mouse_entered_hover() -> void:
+	_hovered = true
 	if has_item:
 		_hover_timer.start()
 
 
 func _on_mouse_exited_hover() -> void:
+	_hovered = false
 	_hover_timer.stop()
 	tooltip_hide_requested.emit()
+
+
+func _unhandled_key_input(event: InputEvent) -> void:
+	if not _hovered or not has_item or not draggable:
+		return
+	if event is InputEventKey:
+		var ke: InputEventKey = event as InputEventKey
+		if ke.pressed and not ke.echo and ke.keycode == KEY_F:
+			get_viewport().set_input_as_handled()
+			forge_quick_slot_grid.emit(slot_index)
 
 
 func _on_hover_timeout() -> void:
@@ -120,12 +134,8 @@ func _notification(what: int) -> void:
 func _get_drag_data(_at_position: Vector2) -> Variant:
 	if not draggable or not has_item:
 		return null
-	var grid: Array = GameManager.state["battle_grid"]
-	var elem: Variant = grid[slot_index]
-	var sell_price: int = 0
-	if elem != null:
-		@warning_ignore("integer_division")
-		sell_price = (elem as Dictionary).get("price", 0) as int / 2
+	@warning_ignore("integer_division")
+	var sell_price: int = _item_dict.get("price", 0) as int / 2
 	var preview := Label.new()
 	preview.text = _emoji_text
 	UIScale.apply(preview, UIScale.DRAG_SLOT)
@@ -140,7 +150,12 @@ func _can_drop_data(_at_position: Vector2, data: Variant) -> bool:
 	if not data is Dictionary:
 		return false
 	var d: Dictionary = data
-	if not d.has("slot") or not d.has("type"):
+	if not d.has("type"):
+		return false
+	if d["type"] == "shop":
+		var shop_slot: int = d.get("shop_slot", -1) as int
+		return ShopSystem.can_transfer(GameManager.state, {"zone": "shop", "slot": shop_slot}, {"zone": "grid", "slot": slot_index})
+	if not d.has("slot"):
 		return false
 	if d["type"] == "grid" and (d["slot"] as int) == slot_index:
 		return false
@@ -149,4 +164,6 @@ func _can_drop_data(_at_position: Vector2, data: Variant) -> bool:
 
 func _drop_data(_at_position: Vector2, data: Variant) -> void:
 	var d: Dictionary = data
-	slot_dropped.emit(d["type"] as String, d["slot"] as int, slot_index)
+	var from_type: String = d["type"] as String
+	var from_slot: int = d["shop_slot"] as int if from_type == "shop" else d["slot"] as int
+	slot_dropped.emit(from_type, from_slot, slot_index)

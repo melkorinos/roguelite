@@ -13,7 +13,7 @@ func _ready() -> void:
 
 func _build_ui() -> void:
 	_panel = PanelContainer.new()
-	_panel.custom_minimum_size = Vector2(210, 0)
+	_panel.custom_minimum_size = Vector2(230, 0)
 	_panel.visible = false
 
 	var style := StyleBoxFlat.new()
@@ -41,7 +41,7 @@ func _build_ui() -> void:
 	var stats_sep := HSeparator.new()
 	vbox.add_child(stats_sep)
 
-	var stat_keys: Array[String] = ["Tier", "Level", "Cooldown", "Base Dmg", "Eff. Dmg", "Price"]
+	var stat_keys: Array[String] = ["▲ Tier", "⬆ Level", "⏱ Cooldown", "⚔ Base Dmg", "💥 Eff. Dmg", "💰 Price"]
 	for key: String in stat_keys:
 		var row := HBoxContainer.new()
 		var k_lbl := Label.new()
@@ -86,12 +86,12 @@ func show_for(element: Dictionary) -> void:
 	var price: int = element.get("price", 0) as int
 
 	_name_lbl.text = "%s  %s" % [emoji, elem_name]
-	(_stat_vals["Tier"] as Label).text = "T%d" % tier
-	(_stat_vals["Level"] as Label).text = "Lv%d" % level
-	(_stat_vals["Cooldown"] as Label).text = "%.1fs" % cooldown
-	(_stat_vals["Base Dmg"] as Label).text = str(base_dmg)
-	(_stat_vals["Eff. Dmg"] as Label).text = str(eff_dmg)
-	(_stat_vals["Price"] as Label).text = "%dg" % price
+	(_stat_vals["▲ Tier"] as Label).text = "T%d" % tier
+	(_stat_vals["⬆ Level"] as Label).text = "Lv%d" % level
+	(_stat_vals["⏱ Cooldown"] as Label).text = "%.1fs" % cooldown
+	(_stat_vals["⚔ Base Dmg"] as Label).text = str(base_dmg)
+	(_stat_vals["💥 Eff. Dmg"] as Label).text = str(eff_dmg)
+	(_stat_vals["💰 Price"] as Label).text = "%dg" % price
 
 	_panel.visible = true
 	_update_position()

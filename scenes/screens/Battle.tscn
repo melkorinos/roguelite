@@ -163,11 +163,6 @@ layout_mode = 2
 text = "📊 Summary"
 theme_override_font_sizes/font_size = 22
 
-[node name="MenuButton" type="Button" parent="VBox/ButtonRow"]
-layout_mode = 2
-text = "Menu"
-theme_override_font_sizes/font_size = 22
-
 [node name="SummarySeparator" type="HSeparator" parent="VBox"]
 layout_mode = 2
 visible = false
@@ -188,4 +183,3 @@ theme_override_constants/separation = 4
 [connection signal="pressed" from="VBox/ControlsRow/Speed2xButton" to="." method="_on_speed_2x_pressed"]
 [connection signal="pressed" from="VBox/ButtonRow/NextRoundButton" to="." method="_on_next_round_pressed"]
 [connection signal="pressed" from="VBox/ButtonRow/SummaryButton" to="." method="_on_summary_pressed"]
-[connection signal="pressed" from="VBox/ButtonRow/MenuButton" to="." method="_on_menu_pressed"]
