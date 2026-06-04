@@ -286,6 +286,19 @@ func test_battle_stats_counts_ability_effects_at_combat_start() -> void:
 	assert_eq((pstats[0] as Dictionary)["effects"] as int, 4)
 
 
+func test_battle_stats_tracks_effects_by_status() -> void:
+	# Boulder: combat_start applies 4 [armor] → breakdown { armor: 4 }.
+	var st := _make_state()
+	var elem: Dictionary = ElementData.find("boulder").duplicate()
+	elem["element_id"] = "boulder"
+	elem["level"] = 1
+	st["battle_grid"][0] = elem
+	var s := PhaseSystem.to_battle(st, _fixture())
+	var pstats: Array = (s["battle_stats"] as Dictionary)["player"] as Array
+	var by_status: Dictionary = (pstats[0] as Dictionary)["effects_by_status"] as Dictionary
+	assert_eq(by_status["armor"] as int, 4)
+
+
 # ── timed commands (Innate Ability / Replay seam) ─────────────────────────────
 
 func _deal3_command() -> Dictionary:

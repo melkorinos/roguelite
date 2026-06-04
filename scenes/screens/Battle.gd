@@ -91,23 +91,23 @@ func _build_grids() -> void:
 
 
 func _update_progress_bars(s: Dictionary) -> void:
-	var pgrid: Array = s["battle_grid"]
-	var ptimers: Array = s["element_timers"]
-	for i: int in 4:
-		if pgrid[i] == null:
-			continue
-		var elem: Dictionary = pgrid[i] as Dictionary
-		var ratio: float = (ptimers[i] as float) / (float(elem["cooldown_deciseconds"] as int) / 10.0)
-		_player_slots[i].set_cooldown_progress(ratio)
+	_update_side_charge(s["battle_grid"] as Array, s["element_timers"] as Array, s["player_frozen_seconds"] as Array, _player_slots)
+	_update_side_charge(s["opponent_grid"] as Array, s["opponent_timers"] as Array, s["opponent_frozen_seconds"] as Array, _opp_slots)
 
-	var ogrid: Array = s["opponent_grid"]
-	var otimers: Array = s["opponent_timers"]
-	for i: int in 4:
-		if ogrid[i] == null:
+
+# Drives each Charge Bar. Combat advances in fixed 0.1 s steps, so the raw timer
+# jumps in chunks; we add the un-stepped accumulator to interpolate smoothly between
+# steps. Frozen elements aren't charging, so they don't get the smoothing.
+func _update_side_charge(grid: Array, timers: Array, frozen: Array, slots: Array) -> void:
+	for i: int in grid.size():
+		if grid[i] == null:
 			continue
-		var elem: Dictionary = ogrid[i] as Dictionary
-		var ratio: float = (otimers[i] as float) / (float(elem["cooldown_deciseconds"] as int) / 10.0)
-		_opp_slots[i].set_cooldown_progress(ratio)
+		var elem: Dictionary = grid[i] as Dictionary
+		var cooldown_seconds: float = float(elem["cooldown_deciseconds"] as int) / 10.0
+		var elapsed: float = timers[i] as float
+		if (frozen[i] as float) <= 0.0:
+			elapsed += _combat_accumulator
+		(slots[i] as BattleSlot).set_charge(elapsed / cooldown_seconds)
 
 
 func _process_fire_events(s: Dictionary) -> void:
@@ -280,7 +280,14 @@ func _add_summary_rows(parent: Node, grid: Array, stats: Array, battle_time: flo
 		var st: Dictionary = stats[i] as Dictionary
 		var fires: int = st["fires"] as int
 		var dmg: int = st["damage"] as int
-		var effects: int = st.get("effects", 0) as int
+		var fx_map: Dictionary = st.get("effects_by_status", {}) as Dictionary
+		var fx_text: String = ""
+		for status: Variant in fx_map:
+			if fx_text != "":
+				fx_text += ", "
+			fx_text += "%d %s" % [fx_map[status] as int, status as String]
+		if fx_text == "":
+			fx_text = "—"
 		var dps: float = dmg / battle_time
 
 		var row := HBoxContainer.new()
@@ -305,7 +312,7 @@ func _add_summary_rows(parent: Node, grid: Array, stats: Array, battle_time: flo
 		row.add_child(dmg_lbl)
 
 		var effects_lbl := Label.new()
-		effects_lbl.text = "%d fx" % effects
+		effects_lbl.text = fx_text
 		UIScale.apply(effects_lbl, UIScale.SUMMARY_ROW)
 		effects_lbl.modulate = Color(0.7, 0.95, 0.7)
 		row.add_child(effects_lbl)

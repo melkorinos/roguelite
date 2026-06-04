@@ -18,7 +18,7 @@ var element_id: String = ""
 var _item_dict: Dictionary = {}
 var _hovered: bool = false
 var _hover_timer: Timer
-var _progress: ProgressBar
+var _charge_bar: ProgressBar
 var _emoji_lbl: Label
 var _name_lbl: Label
 var _emoji_text: String = ""
@@ -47,19 +47,19 @@ func _ready() -> void:
 	vbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	vbox.add_theme_constant_override("separation", 2)
 
-	_progress = ProgressBar.new()
-	_progress.min_value = 0.0
-	_progress.max_value = 1.0
-	_progress.value = 0.0
-	_progress.show_percentage = false
-	_progress.custom_minimum_size = Vector2(0, 8)
+	_charge_bar = ProgressBar.new()
+	_charge_bar.min_value = 0.0
+	_charge_bar.max_value = 1.0
+	_charge_bar.value = 0.0
+	_charge_bar.show_percentage = false
+	_charge_bar.custom_minimum_size = Vector2(0, 8)
 	var pb_bg := StyleBoxFlat.new()
 	pb_bg.bg_color = ThemeData.BATTLE_PROGRESS_BG
-	_progress.add_theme_stylebox_override("background", pb_bg)
+	_charge_bar.add_theme_stylebox_override("background", pb_bg)
 	var pb_fill := StyleBoxFlat.new()
 	pb_fill.bg_color = ThemeData.BATTLE_PROGRESS_FILL
-	_progress.add_theme_stylebox_override("fill", pb_fill)
-	vbox.add_child(_progress)
+	_charge_bar.add_theme_stylebox_override("fill", pb_fill)
+	vbox.add_child(_charge_bar)
 
 	_emoji_lbl = Label.new()
 	_emoji_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -89,7 +89,7 @@ func set_element(item: Variant) -> void:
 	_emoji_text = elem["emoji"]
 	_emoji_lbl.text = elem["emoji"]
 	_name_lbl.text = "%s L%d" % [elem["name"], elem["level"] as int]
-	_progress.value = 0.0
+	_charge_bar.value = 0.0
 	modulate = Color.WHITE
 	var tier: int = elem.get("tier", 1) as int
 	_style.border_color = ThemeData.tier_border(tier)
@@ -102,7 +102,7 @@ func _apply_empty() -> void:
 	_emoji_text = ""
 	_emoji_lbl.text = "+"
 	_name_lbl.text = ""
-	_progress.value = 0.0
+	_charge_bar.value = 0.0
 	modulate = Color(0.6, 0.6, 0.6, 0.75)
 	if _style != null:
 		_style.border_color = ThemeData.BATTLE_SLOT_BORDER_EMPTY
@@ -113,8 +113,9 @@ func get_tier() -> int:
 	return _item_dict.get("tier", 1) as int if has_item else 1
 
 
-func set_cooldown_progress(ratio: float) -> void:
-	_progress.value = clampf(ratio, 0.0, 1.0)
+# Charge Bar — fills from 0→1 as the element charges toward its next fire.
+func set_charge(ratio: float) -> void:
+	_charge_bar.value = clampf(ratio, 0.0, 1.0)
 
 
 func play_fire_animation() -> void:

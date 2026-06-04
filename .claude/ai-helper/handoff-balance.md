@@ -1,97 +1,63 @@
-# Handoff — Steam + Async PvP Infrastructure
+# Handoff — Architecture + Balance
 
-**Date:** 2026-06-02  
-**Picking up from:** Architecture review + grill session (Steam/async PvP readiness)  
-**Status:** Partially complete — see build plan below for current state
+**Last updated:** 2026-06-03
 
 ---
 
-## What was decided this session
+## Infrastructure settled (2026-06-02) — no further action needed
 
-### Architecture review
-Architecture review was conducted this session (report file since deleted).  
-5 candidates identified; 3 are in scope to build now (no backend or custom engine build required).
-
-### Grill session — all decisions settled
-
-All design decisions recorded in [.claude/ai-helper/memory.md](memory.md) under "Steam + backend seams". Summary of key choices:
-
-**OpponentProvider**
-- Pure static class `systems/OpponentProvider.gd`
-- `static func get_opponent(context: Dictionary) -> Dictionary` returns a full Ghost snapshot
-- Context: `{"day": int, "round": int, "shop_tier": int}`
-- LocalDaySeeded adapter: filter ElementData by `shop_tier`, seed with `hash(date_string + str(round_num))`
-- `PhaseSystem.to_battle()` signature changes to `to_battle(state, opponent_snapshot: Dictionary)`; Battle.gd calls OpponentProvider first
-
-**AchievementSystem**
-- Pure static `AchievementSystem.check(state, profile, event: String) -> Dictionary` in `systems/`
-- Returns updated profile dict — no side effects inside the function
-- Events: `"round_win"`, `"round_loss"`, `"match_win"`, `"match_eliminated"`, `"forge_discovered"`
-- Also merges current-match `discovered_recipes` into profile on every call
-- Damage accumulates on both `round_win` and `round_loss`
-- First 5 achievements: `ACH_FIRST_WIN`, `ACH_FIRST_FORGE`, `ACH_CLUTCH`, `ACH_SURVIVOR`, `ACH_DAMAGE_20K`
-
-**PlayerProfile**
-- Autoload `autoloads/PlayerProfile.gd`, persists to `user://profile.cfg`
-- Three ConfigFile sections: `[stats]`, `[progress]`, `[discovery]`
-- Fields: `total_damage_dealt`, `matches_played`, `matches_won`, `achievements_unlocked`, `discovered_recipes`
-- Save: immediate on achievement unlock; batch save at match end (victory/eliminated)
-- Is master for `discovered_recipes` — GameState gets a snapshot at match start
-
-**Ghost Fixtures**
-- `data/GhostFixtures.gd` — one prebuilt Ghost snapshot per shop_tier (3 fixtures)
-- Used as test fixtures and as fallback if day-seeded generation returns empty
-
-**New CONTEXT.md terms added:** Ghost, Ghost Pool, Milestone (see [CONTEXT.md](../../CONTEXT.md))
+- **OpponentProvider** (`systems/`): `get_opponent(context)` → Ghost snapshot. LocalDaySeeded + GhostFixtures fallback.
+- **AchievementSystem** (`systems/`): `check(state, profile, event) → {profile, unlocked}` — pure, no I/O. 5 achievements. Callers own PlayerProfile I/O.
+- **PlayerProfile** (`autoloads/`): ConfigFile `user://profile.cfg`. Three sections: stats / progress / discovery.
+- **GhostFixtures** (`data/`): 3 prebuilt Ghost snapshots (tier 1 / 2 / 3).
+- **PhaseSystem.to_battle(state, opponent_snapshot)**: reads grid from snapshot, calls OpponentProvider before invoking.
+- PlatformLayer (SteamAdapter) still deferred — needs custom engine build decision.
 
 ---
 
-## Build plan for next session
+## Architecture work — 2026-06-03 (improve-architecture session)
 
-Implement in this order (each step is independently testable):
+Full review in [`.claude/ai-helper/reviews/architecture-review-20260603.html`](reviews/architecture-review-20260603.html).
 
-| # | Status | File | Change |
-|---|--------|------|--------|
-| 1 | ✅ done | `autoloads/PlayerProfile.gd` | NEW — ConfigFile load/save, 3 sections, get/set helpers |
-| 2 | ✅ done | `data/GhostFixtures.gd` | NEW — 3 static Ghost snapshot dicts (tier 1, 2, 3) |
-| 3 | ✅ done | `data/GameState.gd` | Add `opponent_snapshot: {}` field; seed `discovered_recipes` from PlayerProfile at create() |
-| 4 | ✅ done | `systems/OpponentProvider.gd` | NEW — `get_opponent(context)`, LocalDaySeeded logic, fixture fallback |
-| 5 | ✅ done | `systems/AchievementSystem.gd` | NEW — `check(state, profile, event)`, all 5 achievement conditions, recipe merge |
-| 6 | ✅ done | `systems/PhaseSystem.gd` | `to_battle(state, opponent_snapshot)` — store snapshot, read grid from it |
-| 7 | ✅ done | `scenes/screens/Battle.gd` | Call OpponentProvider before `to_battle()`; call AchievementSystem + save profile after `advance_round()` |
-| 8 | ✅ done | `test/unit/test_opponent_provider.gd` | NEW — fixture-injected tests |
-| 9 | ⬜ todo | `test/unit/test_achievement_system.gd` | NEW — event-driven tests for all 5 achievements |
-| 10 | ⬜ todo | `test/unit/test_player_profile.gd` | NEW — load/save/merge/section tests |
+### Implemented this session
 
-Register `PlayerProfile` as an Autoload in `project.godot` (after `GameManager`) — verify this is done.
+**#1 — Deepen AchievementSystem (Strong)**
+- `check()` was reading/writing `PlayerProfile` internally (untestable). Now pure: takes `profile: Dictionary`, returns `{profile, unlocked}`. Battle.gd and Shop.gd own `to_dict() / from_dict() / save_profile()`.
+- Added 5 direct `check()` tests. **284/284 passing.**
 
----
+**#2 — Collapse tick_battle firing loop (Strong)**
+- Two 35-line near-identical player/opponent loops → single `_tick_side(s, ctx, delta, events, use_effects, bstats)`.
+- `_make_side_ctx(is_player)` returns the key-map dict; `_apply_element_effect` takes explicit key strings instead of `is_player_side: bool`.
+- All 21 BattleSystem tests pass unchanged.
 
-## What is NOT in scope for next session
+### Remaining candidates (open)
 
-- `PlatformLayer` autoload (GodotSteam isolation) — identified but deferred; needs custom engine build decision
-- Opponent Snapshot flat-field collapse in GameState — partly handled by step 3 above, but full UI wiring (showing ghost name in Battle) deferred
-- Real backend HTTP adapter for OpponentProvider — needs server infrastructure
-- Internal Milestone reward design — seam exists via AchievementSystem, rewards TBD in dedicated session
+| # | Title | Strength | Notes |
+|---|-------|----------|-------|
+| 3 | Unify Forge module interface | Worth exploring | 10 fns with 3 return shapes → `attempt(state, op)` + `preview(state, op)`. Scene stops doing before/after recipe count. |
+| 4 | Pull drag-validation out of slot components | Worth exploring | BattleSlot/InventorySlot/ForgeSlot each call `ShopSystem.can_transfer()` directly. Move to `GameManager.can_drop()`. |
+| 5 | Consolidate battle-init constants into GameState | Speculative | `player_hp = 30` and `gold += 5` appear in 3 places each. Named constants in `GameState.gd`. |
 
 ---
 
-## Suggested skills for next session
+## BalanceSystem status (2026-06-03)
 
-- `/tdd` — implement each file test-first; GUT test suite is already wired (`godot --headless -s addons/gut/gut_cmdln.gd -gdir=res://test/unit/ -gprefix=test_ -gexit`)
-- `/grill-with-docs` — if any implementation decision feels uncertain mid-build, stop and grill before committing
-- `/zoom-out` — after all 3 features land, check the overall shape hasn't drifted from the architecture intent
+`systems/BalanceSystem.gd` — gated by `FeatureFlags.efficiency_scoring`. Dev panel lives in Compendium scene.
+
+- **DPS Score**: `effective_damage(elem, level) / cooldown`. Computed per level.
+- **Effect Score**: hardcoded lookup table, T1 only. T2/T3 score 0 — pending effect design.
+- **Board score**: sum of 4 slots.
+- ADR: `docs/adr/0002-two-axis-efficiency-scoring.md`.
+
+**Known gap:** Effect Score table covers T1 only. As T2/T3 effects are designed, scores must be added to the table. No test coverage for BalanceSystem itself yet.
 
 ---
 
-## Current test status (end of this session)
-
-140/140 passing (from prior session). No new tests written this session — that's the first thing next session does.
-
-## Build validation commands
+## Test suite
 
 ```
-godot --headless --import
-godot --headless --quit
-godot --headless -s addons/gut/gut_cmdln.gd -gdir=res://test/unit/ -gprefix=test_ -gexit
+godot --headless -s addons/gut/gut_cmdln.gd -gdir=res://test/unit/data/ -gdir=res://test/unit/systems/ -gdir=res://test/unit/autoloads/ -gprefix=test_ -gexit
 ```
+
+**284/284 passing** as of 2026-06-03.  
+Do NOT use `-gdir=res://test/unit/` — this GUT version does not recurse and will silently run nothing.

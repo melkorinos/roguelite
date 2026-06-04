@@ -145,6 +145,10 @@ _Avoid_: undo, time rewind
 The arrangement zone inside the Shop UI where the player positions their elements before clicking Fight. Elements placed here fight in the combat phase. *(Grid size — 2×2 / 2×3 / 3×3 — is undecided; the combat backend is grid-size-agnostic, deriving size from the slot array and using an orthogonal-neighbor helper for adjacency.)*
 _Avoid_: board, bench, lineup
 
+**Charge Bar**:
+The thin bar on each Battle slot that fills 0→1 as an element charges toward its next fire, then resets when it fires. Driven by the element's cooldown; rendered smoothly by interpolating between the fixed combat steps. Empty while the slot is frozen.
+_Avoid_: cooldown bar, progress bar, loading bar
+
 **Battle Summary**:
 A per-element debrief shown inline at the end of a combat phase. Shows fires count, total damage dealt, and DPS for each element on both sides. Embodies the "Clinical" win/loss feel goal.
 _Avoid_: combat log, result screen, debrief

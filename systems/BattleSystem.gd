@@ -208,7 +208,7 @@ static func _fire_element_once(s: Dictionary, ctx: Dictionary, elem: Dictionary,
 	slot_stats["damage"] = (slot_stats["damage"] as int) + dmg
 	if use_effects and elem.has("effect"):
 		_apply_element_effect(s, effect_str, own_statuses_key, opp_statuses_key, own_hp_key, timers, dmg)
-		slot_stats["effects"] = (slot_stats["effects"] as int) + 1
+		_tally_effect(slot_stats, effect_str)
 	# Probabilistic on-hit passives (Dust, Static, Pollen, Flint, Sand), rolled
 	# from the seeded RNG in slot order so replays reproduce exactly.
 	if use_effects:
@@ -219,7 +219,7 @@ static func _fire_element_once(s: Dictionary, ctx: Dictionary, elem: Dictionary,
 				var statuses_key: String = own_statuses_key if (entry.get("target", "opponent") as String) == "own" else opp_statuses_key
 				var res: Dictionary = StatusSystem.apply_effect(s[statuses_key] as Dictionary, entry["status"] as String)
 				s[statuses_key] = res["statuses"] as Dictionary
-				slot_stats["effects"] = (slot_stats["effects"] as int) + 1
+				_tally_effect(slot_stats, entry["status"] as String)
 
 
 # dmg_dealt: actual damage that landed (used for leech heal).
@@ -266,6 +266,13 @@ static func select_freeze_target(grid: Array, last_frozen_slot: int) -> int:
 		if slot != last_frozen_slot:
 			return slot
 	return occupied[0]
+
+
+# Records one status application onto an element's Summary row (total + per-status).
+static func _tally_effect(slot_stats: Dictionary, status: String) -> void:
+	slot_stats["effects"] = (slot_stats["effects"] as int) + 1
+	var by_status: Dictionary = slot_stats["effects_by_status"] as Dictionary
+	by_status[status] = (by_status.get(status, 0) as int) + 1
 
 
 static func compute_result(state: Dictionary) -> String:

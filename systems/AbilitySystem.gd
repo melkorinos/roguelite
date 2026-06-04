@@ -76,8 +76,10 @@ static func _side_keys(side: String) -> Dictionary:
 
 # ── effect application (mutates the passed state) ─────────────────────────────
 
-# Returns the number of status applications made (for the Summary effects tally).
-static func _apply_atom(state: Dictionary, effect: Dictionary, source_side: String) -> int:
+# Returns a { status_name: count } map of the status applications made (for the
+# Summary breakdown). deal_damage / modify_cooldown / set_status_field apply no
+# named status and return {}.
+static func _apply_atom(state: Dictionary, effect: Dictionary, source_side: String) -> Dictionary:
 	var kind: String = effect.get("kind", "") as String
 	match kind:
 		"apply_status":
@@ -91,18 +93,18 @@ static func _apply_atom(state: Dictionary, effect: Dictionary, source_side: Stri
 				statuses = result["statuses"] as Dictionary
 				state[keys["hp"]] = (state[keys["hp"]] as int) + (result["hp_delta"] as int)
 			state[keys["statuses"]] = statuses
-			return amount
+			return { status: amount }
 		"deal_damage":
 			var target_side: String = _resolve_target(effect.get("target", "opponent") as String, source_side)
 			var keys: Dictionary = _side_keys(target_side)
 			state[keys["hp"]] = maxi(0, (state[keys["hp"]] as int) - (effect["amount"] as int))
-			return 0
+			return {}
 		"modify_cooldown":
 			var target_side: String = _resolve_target(effect.get("target", "opponent") as String, source_side)
 			var keys: Dictionary = _side_keys(target_side)
 			var statuses: Dictionary = state[keys["statuses"]] as Dictionary
 			statuses["cooldown_modifier_deciseconds"] = (statuses["cooldown_modifier_deciseconds"] as int) + (effect["deciseconds"] as int)
-			return 0
+			return {}
 		"freeze":
 			var target_side: String = _resolve_target(effect.get("target", "opponent") as String, source_side)
 			var keys: Dictionary = _side_keys(target_side)
@@ -117,7 +119,7 @@ static func _apply_atom(state: Dictionary, effect: Dictionary, source_side: Stri
 					frozen[slot] = duration_seconds
 					state[keys["last_frozen"]] = slot
 					frozen_applied += 1
-			return frozen_applied
+			return { "freeze": frozen_applied } if frozen_applied > 0 else {}
 		"set_status_field":
 			var target_side: String = _resolve_target(effect.get("target", "opponent") as String, source_side)
 			var keys: Dictionary = _side_keys(target_side)
@@ -129,29 +131,39 @@ static func _apply_atom(state: Dictionary, effect: Dictionary, source_side: Stri
 				status_dict[field] = value
 			else:
 				status_dict[field] = (status_dict[field] as int) + (value as int)
-			return 0
-	return 0
+			return {}
+	return {}
 
 
-# source_slot >= 0 attributes the applied status count to that element's Summary row.
+# source_slot >= 0 attributes the applied statuses to that element's Summary row.
 static func _apply_effects(state: Dictionary, effects: Array, source_side: String, source_slot: int = -1) -> void:
-	var applied: int = 0
+	var applied: Dictionary = {}
 	for effect: Variant in effects:
 		var e: Dictionary = effect as Dictionary
 		if _conditions_met(state, e.get("when", []) as Array, source_side):
-			applied += _apply_atom(state, e, source_side)
-	if source_slot >= 0 and applied > 0:
+			var made: Dictionary = _apply_atom(state, e, source_side)
+			for status: Variant in made:
+				applied[status] = (applied.get(status, 0) as int) + (made[status] as int)
+	if source_slot >= 0 and not applied.is_empty():
 		_record_effects(state, source_side, source_slot, applied)
 
 
-static func _record_effects(state: Dictionary, side: String, slot: int, count: int) -> void:
+static func _record_effects(state: Dictionary, side: String, slot: int, applied: Dictionary) -> void:
 	var battle_stats: Dictionary = state.get("battle_stats", {}) as Dictionary
 	if not battle_stats.has(side):
 		return
 	var rows: Array = battle_stats[side] as Array
-	if slot >= 0 and slot < rows.size():
-		var row: Dictionary = rows[slot] as Dictionary
-		row["effects"] = (row.get("effects", 0) as int) + count
+	if slot < 0 or slot >= rows.size():
+		return
+	var row: Dictionary = rows[slot] as Dictionary
+	var by_status: Dictionary = row.get("effects_by_status", {}) as Dictionary
+	var total: int = 0
+	for status: Variant in applied:
+		var n: int = applied[status] as int
+		by_status[status] = (by_status.get(status, 0) as int) + n
+		total += n
+	row["effects_by_status"] = by_status
+	row["effects"] = (row.get("effects", 0) as int) + total
 
 
 # ── conditions (the "when" guard on any effect) ───────────────────────────────

@@ -28,8 +28,8 @@ static func create(seed_recipes: Array[String] = []) -> Dictionary:
 		"battle_timer": 0.0,
 		"forge_slots": [null, null],
 		"battle_stats": {
-			"player": [{"fires": 0, "damage": 0, "effects": 0}, {"fires": 0, "damage": 0, "effects": 0}, {"fires": 0, "damage": 0, "effects": 0}, {"fires": 0, "damage": 0, "effects": 0}],
-			"opponent": [{"fires": 0, "damage": 0, "effects": 0}, {"fires": 0, "damage": 0, "effects": 0}, {"fires": 0, "damage": 0, "effects": 0}, {"fires": 0, "damage": 0, "effects": 0}],
+			"player": [{"fires": 0, "damage": 0, "effects": 0, "effects_by_status": {}}, {"fires": 0, "damage": 0, "effects": 0, "effects_by_status": {}}, {"fires": 0, "damage": 0, "effects": 0, "effects_by_status": {}}, {"fires": 0, "damage": 0, "effects": 0, "effects_by_status": {}}],
+			"opponent": [{"fires": 0, "damage": 0, "effects": 0, "effects_by_status": {}}, {"fires": 0, "damage": 0, "effects": 0, "effects_by_status": {}}, {"fires": 0, "damage": 0, "effects": 0, "effects_by_status": {}}, {"fires": 0, "damage": 0, "effects": 0, "effects_by_status": {}}],
 		},
 		"lives": 100,
 		"wins": 0,

@@ -8,6 +8,20 @@ const TIER_NAMES: Dictionary = {
 	4: "Tier 4 — Phenomena",
 }
 
+# Human-readable label per ability trigger. Fixed triggers only; "periodic" and
+# "on_status_applied" are formatted in _trigger_label from their extra fields.
+const TRIGGER_LABELS: Dictionary = {
+	"combat_start":      "Combat start",
+	"passive":           "Passive",
+	"passive_on_hit":    "On hit",
+	"on_burn_applied":   "On [burn]",
+	"on_heal_applied":   "On [heal]",
+	"on_leech":          "On [leech]",
+	"on_poison_tick":    "On [poison] tick",
+	"on_armor_stripped": "On armor strip",
+	"on_haste_applied":  "On [haste]",
+}
+
 
 func _ready() -> void:
 	_build_content()
@@ -95,16 +109,24 @@ func _make_card(elem: Dictionary) -> PanelContainer:
 	dps_lbl.modulate = Color(1.0, 0.75, 0.35)
 	vbox.add_child(dps_lbl)
 
-	# Ability description (elements with a defined Ability only)
+	# Ability trigger + description (elements with a defined Ability only)
 	var ability: Dictionary = AbilityData.get_ability(elem["id"] as String)
 	var ability_text: String = ability.get("description", "") as String
 	if ability_text != "":
+		var trigger_lbl := Label.new()
+		trigger_lbl.text = _trigger_label(ability)
+		trigger_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		trigger_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD
+		UIScale.apply(trigger_lbl, UIScale.COMP_TRIGGER)
+		trigger_lbl.modulate = ThemeData.COLOR_COMP_TRIGGER
+		vbox.add_child(trigger_lbl)
+
 		var ability_lbl := Label.new()
 		ability_lbl.text = ability_text
 		ability_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		ability_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD
 		UIScale.apply(ability_lbl, UIScale.COMP_ABILITY)
-		ability_lbl.modulate = Color(0.78, 0.82, 0.95)
+		ability_lbl.modulate = ThemeData.COLOR_COMP_ABILITY
 		vbox.add_child(ability_lbl)
 
 	# Recipes — emoji row + name row per ingredient pair
@@ -130,6 +152,25 @@ func _make_card(elem: Dictionary) -> PanelContainer:
 			vbox.add_child(names_lbl)
 
 	return card
+
+
+func _trigger_label(ability: Dictionary) -> String:
+	var trigger: String = ability.get("trigger", "") as String
+	var label: String = ""
+	match trigger:
+		"periodic":
+			var seconds_text: String = "%.1f" % (float(ability.get("interval_deciseconds", 0) as int) / 10.0)
+			if seconds_text.ends_with(".0"):
+				seconds_text = seconds_text.left(seconds_text.length() - 2)
+			label = "Every %ss" % seconds_text
+		"on_status_applied":
+			label = "On [%s]" % (ability.get("status", "") as String)
+		_:
+			label = TRIGGER_LABELS.get(trigger, trigger) as String
+	var multicast: int = ability.get("multicast", 0) as int
+	if multicast > 0:
+		label += "  ×%d" % (multicast + 1)
+	return label
 
 
 func _recipes_for(element_id: String) -> Array[Dictionary]:

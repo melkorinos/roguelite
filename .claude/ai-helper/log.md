@@ -4,6 +4,10 @@
 - `FeatureFlags` all default **true** (early-state: ship everything on; only `status_effects` is code-read). Abilities now apply in combat. 341/341 still green.
 - TooltipCard + Compendium card now render `AbilityData.get_ability(id).description`. Handoff doc updated with impl status + remaining work (glossary hover, ~23 skipped abilities, adjacency, T4).
 
+## 2026-06-04 — Battle UX: Charge Bar smoothing + Summary effect breakdown
+- Named the slot cooldown bar the **Charge Bar** (`BattleSlot.set_charge`; CONTEXT term). Fixed-timestep made it fill in chunks; `Battle.gd._update_side_charge` now interpolates with `_combat_accumulator` between steps (skipped while frozen) → smooth.
+- Battle Summary now shows a per-status breakdown ("2 blind, 2 burn") instead of "N fx": `battle_stats` slot gains `effects_by_status`; `AbilitySystem._apply_atom` returns a {status:count} map, `BattleSystem._tally_effect` records on-fire/on-hit. 386/386 green.
+
 ## 2026-06-04 — Battle perf pass (review in `.claude/ai-helper/perf-notes.md`)
 - **#1 in-place tick**: `resolve_reactive_inplace`/`resolve_periodic_inplace`/`apply_command` mutate the tick's existing duplicate (removed ~3 deep copies/frame); public duplicating forms kept for tests.
 - **#2 fixed timestep**: `BattleSystem.COMBAT_STEP_SECONDS=0.1` + `Battle.gd` accumulator (frame-rate-independent); `simulate_battle()` headless/Replay sim, deterministic + step-capped.

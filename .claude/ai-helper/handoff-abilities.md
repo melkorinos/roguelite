@@ -26,20 +26,39 @@ what's left.** Older proposal tables (now implemented) were removed — read the
 - Adjacency: `adjacency_upgrade` reactives gated by `FeatureFlags.combat_adjacency` + `GridSystem.neighbors`.
 - Seeded `combat_rng_state` (per round) → reproducible combat/Replay; blind + on-hit passives draw from it.
 - Innate/Replay backend seam: `pending_commands` + `queue_command` / `_drain_commands` / `resolve_command`.
-- Tooltip + Compendium show abilities; tooltip live-updates battle stats + keyword glossary (shift-to-pin,
-  `data/StatusGlossary.gd`). All `FeatureFlags` default true.
+- Tooltip + Compendium show abilities; Compendium also shows a per-ability **trigger line** (e.g. `Every 5s ×2`,
+  `Combat start`, `On [burn]`, `Passive`) via `Compendium._trigger_label` + `TRIGGER_LABELS`. Tooltip live-updates
+  battle stats + keyword glossary (shift-to-pin, `data/StatusGlossary.gd`). All `FeatureFlags` default true.
 
 **Pending — prioritised:**
 
-1. **~10 skipped abilities** (`get_ability` returns `{}`), each needs a NEW engine capability:
-   - *strip-a-status-value effect* (reduce opponent plating per tick): shrapnel, rootrot, moldsteel.
-   - *bonus-damage-vs-condition at the hit site*: gore (+dmg vs weakened), ancientgrove (+dmg while HP>50%).
-   - *damage-output modifier* (no per-attacker model yet): ash (blind → less dmg).
-   - *every-N-ticks counter*: rot (poison grows every 5 ticks).
-   - *random-positive-status pick*: rainbow. *heal-amount modifier*: plant (+1). *cleanse/heal-efficiency
-     debuff*: voidrift.
-   - Next seams to add: a `strip_status` effect kind; a hit-site outgoing-damage modifier (mirror of the
-     combat_start passive-modifier layer); an `every_n_ticks` counter on tick events.
+1. **10 skipped abilities** (`get_ability` returns `{}`): 5×T2 (shrapnel, rootrot, gore, rot, moldsteel) +
+   5×T3 (rainbow, plant, ash, ancientgrove, voidrift). Two designs proposed per element (2026-06-04): an
+   **A = ships-today** version (existing effect kinds + `when`-guards, zero engine work) and a **B = needs-seam**
+   version (more on-theme, costs a new capability). All 10 can ship today if every A is chosen. Proposals:
+
+   | Element | A — ships today | B — needs seam |
+   |---|---|---|
+   | shrapnel 💥 | combat_start: 3 dmg + 2 [weaken] | periodic 3s: strip 1 [armor]+1 [plating] |
+   | rootrot 🍂 | periodic 5s: 2 [poison]; +1 [weaken] if opp has [armor] | periodic 4s: 2 [poison] + strip 1 [armor] |
+   | gore ⚔️ | periodic 4s: 3 dmg; +3 more if opp [weaken]ed | passive: +1 dmg vs [weaken]ed opponents |
+   | rot 🌵 | on_poison_tick 30%: +1 [poison] | every 5th [poison] tick: +2 [poison] |
+   | moldsteel 🗜️ | on_armor_stripped: 2 [poison] | periodic 4s: strip 1 [plating] + 2 [poison] |
+   | rainbow 🌈 | combat_start: 1 each [armor]/[heal]/[cleanse]/[haste] own | periodic 4s: random positive status own |
+   | plant 🌿 | periodic 6s: [heal] 4 + 1 [cleanse] own | passive: all [heal] +1 |
+   | ash ⚫ | on [blind] applied: also 1 [weaken] | passive: [blind]ed opp deals −1 dmg |
+   | ancientgrove 🍀 | periodic 8s: [heal] 4 + 1 [armor] own | passive: +1 dmg while own HP > 50% |
+   | voidrift 🪐 | combat_start: 1 permanent [curse] + 2 [blind]; opp CDs +0.5s | combat_start: opp [heal]/[cleanse] 50% weaker |
+
+   **Consolidated seams** (only needed if a B option is chosen):
+   - `strip_status` effect kind — remove N stacks of a status (mirror of `apply_status`). *small.* → shrapnel/rootrot/moldsteel B
+   - **hit-site outgoing-damage modifier** — per-attacker +/− dmg at `compute_incoming_damage`, gated by a
+     condition (target [weaken]ed / own HP>50% / attacker [blind]ed). No per-attacker model yet. *large.* → gore/ash/ancientgrove B
+   - `every_n_ticks` counter on tick events. *small-medium.* → rot B
+   - `random_status` pick-from-list effect (seeded RNG already exists). *small.* → rainbow B
+   - heal-amount modifier field, read at heal application. *small.* → plant B
+   - heal/cleanse efficiency debuff, scaled at apply-time on opponent. *medium.* → voidrift B
+   - (ancientgrove B also needs an own-HP `when`-condition kind alongside the hit-site modifier.)
 2. **Grid growth 2×3 / 3×3** — backend is grid-agnostic (loops `grid.size()`, `GridSystem`, `CombatSide`),
    but the live grid is 4 slots. Widen the per-slot arrays in `GameState`/`PhaseSystem`, `create_opponent_grid`,
    and the Battle/Shop slot UI. Adjacency only gets interesting at 3×3.

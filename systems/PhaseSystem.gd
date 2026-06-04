@@ -27,8 +27,8 @@ static func to_battle(state: Dictionary, opponent_snapshot: Dictionary) -> Dicti
 	s["opponent_hp"] = opp_hp
 	s["opponent_starting_hp"] = opp_hp
 	s["battle_stats"] = {
-		"player": [{"fires": 0, "damage": 0, "effects": 0}, {"fires": 0, "damage": 0, "effects": 0}, {"fires": 0, "damage": 0, "effects": 0}, {"fires": 0, "damage": 0, "effects": 0}],
-		"opponent": [{"fires": 0, "damage": 0, "effects": 0}, {"fires": 0, "damage": 0, "effects": 0}, {"fires": 0, "damage": 0, "effects": 0}, {"fires": 0, "damage": 0, "effects": 0}],
+		"player": [{"fires": 0, "damage": 0, "effects": 0, "effects_by_status": {}}, {"fires": 0, "damage": 0, "effects": 0, "effects_by_status": {}}, {"fires": 0, "damage": 0, "effects": 0, "effects_by_status": {}}, {"fires": 0, "damage": 0, "effects": 0, "effects_by_status": {}}],
+		"opponent": [{"fires": 0, "damage": 0, "effects": 0, "effects_by_status": {}}, {"fires": 0, "damage": 0, "effects": 0, "effects_by_status": {}}, {"fires": 0, "damage": 0, "effects": 0, "effects_by_status": {}}, {"fires": 0, "damage": 0, "effects": 0, "effects_by_status": {}}],
 	}
 	s["player_statuses"] = StatusSystem.empty_statuses()
 	s["opponent_statuses"] = StatusSystem.empty_statuses()

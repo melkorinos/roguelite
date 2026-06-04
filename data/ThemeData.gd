@@ -69,6 +69,8 @@ const COLOR_ROUND_LABEL      := Color(0.78, 0.78, 1.00)  # round / timer text
 const COLOR_COMP_HEADER_T1   := Color(0.45, 0.72, 0.45)  # compendium tier 1
 const COLOR_COMP_HEADER_T2   := Color(0.40, 0.60, 0.95)  # compendium tier 2
 const COLOR_COMP_HEADER_T3   := Color(0.92, 0.68, 0.18)  # compendium tier 3
+const COLOR_COMP_TRIGGER     := Color(0.55, 0.85, 0.95)  # compendium ability trigger line
+const COLOR_COMP_ABILITY     := Color(0.78, 0.82, 0.95)  # compendium ability description
 
 
 static func tier_bg(tier: int) -> Color:
