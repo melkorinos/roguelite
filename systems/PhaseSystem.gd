@@ -21,13 +21,14 @@ static func to_battle(state: Dictionary, opponent_snapshot: Dictionary) -> Dicti
 	var combat_rng := RandomNumberGenerator.new()
 	combat_rng.seed = hash("combat:%d" % (s["round"] as int))
 	s["combat_rng_state"] = combat_rng.state
+	s["pending_commands"] = []
 	s["battle_events"] = []
 	var opp_hp: int = BattleSystem.compute_opponent_hp(s["opponent_grid"])
 	s["opponent_hp"] = opp_hp
 	s["opponent_starting_hp"] = opp_hp
 	s["battle_stats"] = {
-		"player": [{"fires": 0, "damage": 0}, {"fires": 0, "damage": 0}, {"fires": 0, "damage": 0}, {"fires": 0, "damage": 0}],
-		"opponent": [{"fires": 0, "damage": 0}, {"fires": 0, "damage": 0}, {"fires": 0, "damage": 0}, {"fires": 0, "damage": 0}],
+		"player": [{"fires": 0, "damage": 0, "effects": 0}, {"fires": 0, "damage": 0, "effects": 0}, {"fires": 0, "damage": 0, "effects": 0}, {"fires": 0, "damage": 0, "effects": 0}],
+		"opponent": [{"fires": 0, "damage": 0, "effects": 0}, {"fires": 0, "damage": 0, "effects": 0}, {"fires": 0, "damage": 0, "effects": 0}, {"fires": 0, "damage": 0, "effects": 0}],
 	}
 	s["player_statuses"] = StatusSystem.empty_statuses()
 	s["opponent_statuses"] = StatusSystem.empty_statuses()

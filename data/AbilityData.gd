@@ -64,8 +64,8 @@ const ABILITIES: Dictionary = {
 	"freeze": { "trigger": "combat_start", "description": "[freeze] one opponent element for 8s and apply 2 [weaken].",
 		"effects": [{ "kind": "freeze", "deciseconds": 80, "count": 1, "target": "opponent" },
 			{ "kind": "apply_status", "status": "weaken", "amount": 2, "target": "opponent" }] },
-	"ichor": { "trigger": "passive", "multicast": 1, "description": "Fires twice per cooldown.",
-		"effects": [] },
+	"ichor": { "trigger": "passive", "multicast": 1, "description": "[leech] heals double; fires twice per cooldown.",
+		"effects": [{ "kind": "set_status_field", "status": "leech", "field": "double", "value": true, "target": "own" }] },
 
 	# ── T2 — Nature family ───────────────────────────────────────────────────
 	"bloom": { "trigger": "combat_start", "description": "Apply [heal] 2 and 1 [cleanse] to your side.",
@@ -272,4 +272,30 @@ const ABILITIES: Dictionary = {
 		"effects": [{ "kind": "deal_damage", "amount": 5, "target": "opponent" },
 			{ "kind": "apply_status", "status": "armor", "amount": 2, "target": "own" },
 			{ "kind": "apply_status", "status": "plating", "amount": 1, "target": "own" }] },
+
+	# ── Passive-modifier abilities (review #2, candidate 1) ──────────────────
+	"gust": { "trigger": "passive", "description": "[haste] reduces cooldowns by 0.5s instead of 0.3s.",
+		"effects": [{ "kind": "set_status_field", "status": "haste", "field": "reduction_bonus_deciseconds", "value": 2, "target": "own" }] },
+	"pulse": { "trigger": "passive", "description": "[leech] heals damage + 1 instead of exact damage.",
+		"effects": [{ "kind": "set_status_field", "status": "leech", "field": "bonus", "value": 1, "target": "own" }] },
+	"steel": { "trigger": "passive", "description": "[plating] also reduces [burn] and [poison] tick damage.",
+		"effects": [{ "kind": "set_status_field", "status": "plating", "field": "reduces_dot", "value": true, "target": "own" }] },
+	"mountain": { "trigger": "passive", "description": "Your [armor] cannot be reduced below 2 stacks.",
+		"effects": [{ "kind": "set_status_field", "status": "armor", "field": "floor", "value": 2, "target": "own" }] },
+	"blackice": { "trigger": "passive", "description": "[weaken] on the opponent lasts 2 extra ticks before expiring.",
+		"effects": [{ "kind": "set_status_field", "status": "weaken", "field": "duration_bonus", "value": 2, "target": "opponent" }] },
+	"magnet": { "trigger": "on_status_applied", "status": "shock", "description": "When [shock] is applied, gain 1 [plating].",
+		"effects": [{ "kind": "apply_status", "status": "plating", "amount": 1, "target": "own" }] },
+	"tempest": { "trigger": "passive", "description": "[shock] stacks never decay during combat.", "effects": [] },
+	"acid": { "trigger": "passive", "description": "[armor] stripped during this combat does not regenerate.", "effects": [] },
+
+	# ── Tick / armor / haste event reactives (review #2, candidate 2) ─────────
+	"miasma": { "trigger": "on_poison_tick", "chance": 25, "description": "[poison] ticks have a 25% chance to also apply 1 [blind].",
+		"effects": [{ "kind": "apply_status", "status": "blind", "amount": 1, "target": "opponent" }] },
+	"rust": { "trigger": "on_armor_stripped", "description": "When the opponent's [armor] is stripped, deal 1 bonus damage.",
+		"effects": [{ "kind": "deal_damage", "amount": 1, "target": "opponent" }] },
+	"aurora": { "trigger": "on_haste_applied", "description": "Each [haste] application also applies 1 [blind] to the opponent.",
+		"effects": [{ "kind": "apply_status", "status": "blind", "amount": 1, "target": "opponent" }] },
+	"razorwind": { "trigger": "on_status_applied", "status": "weaken", "description": "When [weaken] is applied, also apply 1 [shock] to the opponent.",
+		"effects": [{ "kind": "apply_status", "status": "shock", "amount": 1, "target": "opponent" }] },
 }

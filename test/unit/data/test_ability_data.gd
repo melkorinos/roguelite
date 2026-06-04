@@ -3,6 +3,7 @@ extends GutTest
 const ALLOWED_TRIGGERS: Array = [
 	"combat_start", "periodic", "passive", "passive_on_hit",
 	"on_burn_applied", "on_heal_applied", "on_leech", "on_damage_dealt", "on_status_applied",
+	"on_poison_tick", "on_burn_tick", "on_armor_stripped", "on_haste_applied",
 ]
 const INTEGER_KEYS: Array = ["amount", "deciseconds", "chance", "interval_deciseconds", "multicast", "count"]
 

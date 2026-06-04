@@ -3,19 +3,24 @@ class_name StatusSystem
 # Per-application strength of the Haste action, in deciseconds (0.3 s). Gust upgrades this.
 const HASTE_REDUCTION_DECISECONDS: int = 3
 
+# Safety ceiling on stacking statuses so a runaway "infinite build" can't grow numbers
+# without bound over a 30 s combat. Far above any realistic stack count.
+const MAX_STACKS: int = 99
+
 
 static func empty_statuses() -> Dictionary:
 	return {
 		"burn":    { "stacks": 0, "tick_damage_bonus": 0 },
 		"poison":  { "stacks": 0, "tick_damage_bonus": 0 },
-		"armor":   { "value": 0 },
-		"plating": { "value": 0 },
+		"armor":   { "value": 0, "floor": 0 },
+		"plating": { "value": 0, "reduces_dot": false },
 		"blind":   { "percent": 0 },
 		"shock":   { "n": 0, "effective_stack_bonus": 0 },
 		"slow":    { "n": 0 },
-		"haste":   { "reduction": 0 },
-		"weaken":  { "stacks": 0, "ticks": 0 },
+		"haste":   { "reduction": 0, "reduction_bonus_deciseconds": 0 },
+		"weaken":  { "stacks": 0, "ticks": 0, "duration_bonus": 0 },
 		"curse":   { "ticks_remaining": 0, "is_permanent": false, "damage_amplifier": 0 },
+		"leech":   { "bonus": 0, "double": false },
 		"cooldown_modifier_deciseconds": 0,
 	}
 
@@ -46,8 +51,6 @@ static func effective_cooldown_deciseconds(base_deciseconds: int, own_statuses: 
 
 # Returns { "statuses": Dictionary, "hp_delta": int }.
 # hp_delta is non-zero only for instant self-effects (heal, leech).
-# Caller passes the relevant side's statuses dict (own for armor/haste/heal/cleanse,
-# opponent for burn/poison/blind/shock/weaken/curse).
 static func apply_effect(statuses: Dictionary, effect: String) -> Dictionary:
 	var s: Dictionary = statuses.duplicate(true)
 	var hp_delta: int = 0
@@ -55,32 +58,32 @@ static func apply_effect(statuses: Dictionary, effect: String) -> Dictionary:
 	match effect:
 		"burn":
 			var d: Dictionary = s["burn"] as Dictionary
-			d["stacks"] = (d["stacks"] as int) + 1
+			d["stacks"] = mini((d["stacks"] as int) + 1, MAX_STACKS)
 		"poison":
 			var d: Dictionary = s["poison"] as Dictionary
-			d["stacks"] = (d["stacks"] as int) + 1
+			d["stacks"] = mini((d["stacks"] as int) + 1, MAX_STACKS)
 		"armor":
 			var d: Dictionary = s["armor"] as Dictionary
-			d["value"] = (d["value"] as int) + 1
+			d["value"] = mini((d["value"] as int) + 1, MAX_STACKS)
 		"plating":
 			var d: Dictionary = s["plating"] as Dictionary
-			d["value"] = (d["value"] as int) + 1
+			d["value"] = mini((d["value"] as int) + 1, MAX_STACKS)
 		"blind":
 			var d: Dictionary = s["blind"] as Dictionary
 			d["percent"] = mini((d["percent"] as int) + 15, 50)
 		"shock":
 			var d: Dictionary = s["shock"] as Dictionary
-			d["n"] = (d["n"] as int) + 1
+			d["n"] = mini((d["n"] as int) + 1, MAX_STACKS)
 		"slow":
 			var d: Dictionary = s["slow"] as Dictionary
-			d["n"] = (d["n"] as int) + 1
+			d["n"] = mini((d["n"] as int) + 1, MAX_STACKS)
 		"haste":
 			var d: Dictionary = s["haste"] as Dictionary
 			d["reduction"] = (d["reduction"] as int) + HASTE_REDUCTION_DECISECONDS
 		"weaken":
 			var d: Dictionary = s["weaken"] as Dictionary
-			d["stacks"] = (d["stacks"] as int) + 1
-			d["ticks"] = 3
+			d["stacks"] = mini((d["stacks"] as int) + 1, MAX_STACKS)
+			d["ticks"] = 3 + (d["duration_bonus"] as int)
 		"curse":
 			var d: Dictionary = s["curse"] as Dictionary
 			d["ticks_remaining"] = 3
@@ -107,31 +110,41 @@ static func apply_effect(statuses: Dictionary, effect: String) -> Dictionary:
 
 # Advances all time-based statuses by one tick (1 second).
 # Returns { "statuses": Dictionary, "damage": int } where damage is HP damage
-# dealt this tick (burn + poison). Armor absorbs burn at half rate.
+# dealt this tick (burn + poison). Armor absorbs burn at half rate but never
+# below its floor; Plating with reduces_dot shaves the tick total.
 static func tick(statuses: Dictionary) -> Dictionary:
 	var s: Dictionary = statuses.duplicate(true)
 	var hp_damage: int = 0
+	var events: Array = []
 	var curse: Dictionary = s["curse"] as Dictionary
 	var curse_bonus: int = 1 if curse_active(curse) else 0
 
-	# Burn: deal damage (armor absorbs at half rate), decrement stacks
+	# Burn: deal damage (armor absorbs at half rate, never below floor), decrement stacks
 	var burn: Dictionary = s["burn"] as Dictionary
 	var burn_stacks: int = burn["stacks"] as int
 	if burn_stacks > 0:
 		var raw_burn: int = burn_stacks + (burn["tick_damage_bonus"] as int) + curse_bonus
 		var armor: Dictionary = s["armor"] as Dictionary
 		var armor_val: int = armor["value"] as int
+		var absorbable: int = maxi(0, armor_val - (armor["floor"] as int))
 		@warning_ignore("integer_division")
-		var armor_absorbed: int = mini(armor_val, raw_burn / 2)
+		var armor_absorbed: int = mini(absorbable, raw_burn / 2)
 		armor["value"] = armor_val - armor_absorbed
 		hp_damage += raw_burn - armor_absorbed
 		burn["stacks"] = burn_stacks - 1
+		events.append("on_burn_tick")
 
 	# Poison: deal damage, stacks never decrease
 	var poison: Dictionary = s["poison"] as Dictionary
 	var poison_stacks: int = poison["stacks"] as int
 	if poison_stacks > 0:
 		hp_damage += poison_stacks + (poison["tick_damage_bonus"] as int) + curse_bonus
+		events.append("on_poison_tick")
+
+	# Plating-vs-DOT (Steel): plating shaves the tick total when flagged
+	var plating: Dictionary = s["plating"] as Dictionary
+	if (plating["reduces_dot"] as bool) and hp_damage > 0:
+		hp_damage = maxi(0, hp_damage - (plating["value"] as int))
 
 	# Weaken: decrement ticks, stacks stay
 	var weaken: Dictionary = s["weaken"] as Dictionary
@@ -145,14 +158,12 @@ static func tick(statuses: Dictionary) -> Dictionary:
 		if curse_ticks > 0:
 			curse["ticks_remaining"] = curse_ticks - 1
 
-	return { "statuses": s, "damage": hp_damage }
+	return { "statuses": s, "damage": hp_damage, "events": events }
 
 
-# Computes final HP damage after applying Weaken (attacker output penalty),
-# Plating (flat reduction on defender), Armor (physical absorption on defender),
-# and Curse (defender vulnerability bonus). Returns { "damage": int,
-# "defender_statuses": Dictionary } — armor depletion is reflected in the returned
-# defender_statuses; caller must write it back.
+# Computes final HP damage after Weaken (attacker penalty), Plating (flat reduction),
+# Armor (physical absorption, never below floor), and Curse (defender vulnerability).
+# Returns { "damage": int, "defender_statuses": Dictionary }.
 static func compute_incoming_damage(raw: int, attacker_statuses: Dictionary, defender_statuses: Dictionary) -> Dictionary:
 	var dmg: int = raw
 	var def_s: Dictionary = defender_statuses.duplicate(true)
@@ -166,11 +177,12 @@ static func compute_incoming_damage(raw: int, attacker_statuses: Dictionary, def
 	var plating_val: int = (def_s["plating"] as Dictionary)["value"] as int
 	dmg = maxi(0, dmg - plating_val)
 
-	# Armor: absorbs remaining physical damage, depletes
+	# Armor: absorbs remaining physical damage, depletes but never below floor
 	var armor: Dictionary = def_s["armor"] as Dictionary
 	var armor_val: int = armor["value"] as int
-	if armor_val > 0:
-		var absorbed: int = mini(armor_val, dmg)
+	var absorbable: int = maxi(0, armor_val - (armor["floor"] as int))
+	if absorbable > 0 and dmg > 0:
+		var absorbed: int = mini(absorbable, dmg)
 		armor["value"] = armor_val - absorbed
 		dmg -= absorbed
 

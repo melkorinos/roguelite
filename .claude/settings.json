@@ -8,8 +8,17 @@
       "Bash(godot --headless *)",
       "PowerShell(godot --headless *)",
       "PowerShell(godot *)",
+      "PowerShell(Get-Content*)",
+      "PowerShell(Get-ChildItem*)",
+      "PowerShell(Get-Command*)",
+      "PowerShell(Test-Path*)",
+      "PowerShell(Select-String*)",
+      "PowerShell(Measure-Object*)",
       "Bash(mkdir *)",
       "Edit(.claude/ai-helper/*)",
+      "Edit(.claude/ai-helper/**)",
+      "Edit(.claude/ai-helper/memory.md)",
+      "Edit(.claude/ai-helper/log.md)",
       "Edit(data/*.gd)",
       "Edit(systems/*.gd)",
       "Edit(scenes/**/*.gd)",
@@ -17,7 +26,10 @@
       "Edit(CONTEXT.md)",
       "Edit(docs/**/*.md)",
       "Write(docs/**/*.md)",
-      "Write(.claude/ai-helper/*)"
+      "Write(.claude/ai-helper/*)",
+      "Write(.claude/ai-helper/**)",
+      "Write(.claude/ai-helper/memory.md)",
+      "Write(.claude/ai-helper/log.md)"
     ]
   }
 }

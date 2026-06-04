@@ -39,3 +39,8 @@ const TOOLTIP_BODY    := 13
 
 static func apply(node: Control, size: int) -> void:
 	node.add_theme_font_size_override("font_size", size)
+
+
+# RichTextLabel reads "normal_font_size" rather than "font_size".
+static func apply_rich(node: RichTextLabel, size: int) -> void:
+	node.add_theme_font_size_override("normal_font_size", size)

@@ -7,6 +7,9 @@ var _paused: bool = false
 var _speed_mult: float = 1.0
 var _tooltip: TooltipCard
 var _pause_overlay: PauseOverlay
+var _combat_accumulator: float = 0.0
+const MAX_FLOAT_LABELS: int = 40  # cap concurrent combat labels so heavy multicast can't flood the renderer
+var _active_float_labels: int = 0
 
 
 func _ready() -> void:
@@ -48,9 +51,14 @@ func _unhandled_key_input(event: InputEvent) -> void:
 func _process(delta: float) -> void:
 	if GameManager.state["phase"] == "result" or _paused or _pause_overlay.is_open():
 		return
-	GameManager.state = BattleSystem.tick_battle(GameManager.state, delta * _speed_mult)
+	# Fixed-timestep: advance combat in COMBAT_STEP_SECONDS chunks so the simulation
+	# is frame-rate-independent and deterministic. Spread accumulated time across steps.
+	_combat_accumulator += delta * _speed_mult
+	while _combat_accumulator >= BattleSystem.COMBAT_STEP_SECONDS and GameManager.state["phase"] != "result":
+		_combat_accumulator -= BattleSystem.COMBAT_STEP_SECONDS
+		GameManager.state = BattleSystem.tick_battle(GameManager.state, BattleSystem.COMBAT_STEP_SECONDS)
+		_process_fire_events(GameManager.state)
 	_update_progress_bars(GameManager.state)
-	_process_fire_events(GameManager.state)
 	_render()
 
 
@@ -66,7 +74,7 @@ func _build_grids() -> void:
 		var ps: BattleSlot = BattleSlot.new()
 		ps.slot_index = i
 		ps.draggable = false
-		ps.tooltip_requested.connect(_on_tooltip_requested)
+		ps.tooltip_requested.connect(_on_tooltip_requested.bind("player", i))
 		ps.tooltip_hide_requested.connect(_on_tooltip_hide)
 		pgrid_node.add_child(ps)
 		ps.set_element(s["battle_grid"][i])
@@ -75,7 +83,7 @@ func _build_grids() -> void:
 		var os: BattleSlot = BattleSlot.new()
 		os.slot_index = i
 		os.draggable = false
-		os.tooltip_requested.connect(_on_tooltip_requested)
+		os.tooltip_requested.connect(_on_tooltip_requested.bind("opponent", i))
 		os.tooltip_hide_requested.connect(_on_tooltip_hide)
 		ogrid_node.add_child(os)
 		os.set_element(s["opponent_grid"][i])
@@ -103,8 +111,12 @@ func _update_progress_bars(s: Dictionary) -> void:
 
 
 func _process_fire_events(s: Dictionary) -> void:
+	# battle_events holds only fire/miss events (see AbilitySystem combat-event model);
+	# trigger events are filtered out by BattleSystem before this list is stored.
 	for event: Variant in s["battle_events"]:
 		var e: Dictionary = event as Dictionary
+		if not AbilitySystem.is_visual_event(e):
+			continue
 		var idx: int = e["slot"] as int
 		var slot: BattleSlot
 		if e["side"] == "player":
@@ -146,6 +158,9 @@ func _spawn_float_labels(slot: BattleSlot, event: Dictionary) -> void:
 
 
 func _float_label(slot: BattleSlot, text: String, color: Color, y_nudge: float) -> void:
+	if _active_float_labels >= MAX_FLOAT_LABELS:
+		return  # renderer guard — drop excess labels under heavy multicast
+	_active_float_labels += 1
 	var lbl := Label.new()
 	lbl.text = text
 	lbl.add_theme_color_override("font_color", color)
@@ -162,7 +177,9 @@ func _float_label(slot: BattleSlot, text: String, color: Color, y_nudge: float) 
 	tween.set_parallel(true)
 	tween.tween_property(lbl, "position:y", ly - 52.0, 0.85)
 	tween.tween_property(lbl, "modulate:a", 0.0, 0.85).set_delay(0.30)
-	tween.chain().tween_callback(lbl.queue_free)
+	tween.chain().tween_callback(func() -> void:
+		_active_float_labels -= 1
+		lbl.queue_free())
 
 
 func _render() -> void:
@@ -263,6 +280,7 @@ func _add_summary_rows(parent: Node, grid: Array, stats: Array, battle_time: flo
 		var st: Dictionary = stats[i] as Dictionary
 		var fires: int = st["fires"] as int
 		var dmg: int = st["damage"] as int
+		var effects: int = st.get("effects", 0) as int
 		var dps: float = dmg / battle_time
 
 		var row := HBoxContainer.new()
@@ -286,6 +304,12 @@ func _add_summary_rows(parent: Node, grid: Array, stats: Array, battle_time: flo
 		dmg_lbl.modulate = Color(1.0, 0.75, 0.4)
 		row.add_child(dmg_lbl)
 
+		var effects_lbl := Label.new()
+		effects_lbl.text = "%d fx" % effects
+		UIScale.apply(effects_lbl, UIScale.SUMMARY_ROW)
+		effects_lbl.modulate = Color(0.7, 0.95, 0.7)
+		row.add_child(effects_lbl)
+
 		var dps_lbl := Label.new()
 		dps_lbl.text = "%.1f dps" % dps
 		UIScale.apply(dps_lbl, UIScale.SUMMARY_ROW)
@@ -304,8 +328,8 @@ func _add_summary_rows(parent: Node, grid: Array, stats: Array, battle_time: flo
 
 # ── Item Tooltip ─────────────────────────────────────────────────────────────
 
-func _on_tooltip_requested(element: Dictionary) -> void:
-	_tooltip.show_for(element)
+func _on_tooltip_requested(element: Dictionary, side: String, slot: int) -> void:
+	_tooltip.show_for_battle(element, side, slot)
 
 
 func _on_tooltip_hide() -> void:

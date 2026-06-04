@@ -41,7 +41,7 @@ _Avoid_: merge bonus, upgrade reward
 ### Build and combat
 
 **Board** (canonical term):
-The full set of elements a player fields during a Run. Currently, position within the Board does not affect combat outcome; adjacency bonuses are planned for a future session.
+The full set of elements a player fields during a Run. Position matters for **adjacency_upgrade** Abilities (which react only to an orthogonally-adjacent source while `FeatureFlags.combat_adjacency` is on); broader Faction/adjacency synergies are still planned.
 _Avoid_: composition, loadout, lineup, deck
 
 **Synergy**:
@@ -110,6 +110,10 @@ _Avoid_: hook, event handler, condition
 **Reactive Trigger**:
 A Trigger that fires in response to an in-combat event emitted by another piece. Bound by the **depth-1 rule**: a reactively-activated Ability may deal damage and apply Statuses, but its own output emits no further reactive events, and it never Multicasts. Caps every synergy chain at one hop.
 _Avoid_: chain trigger, cascade
+
+**Combat Event**:
+A record emitted during a combat tick that Reactive Triggers respond to. Two shapes, built by `AbilitySystem` factories: a **fire event** (a piece fired — carries side, slot, damage, effect; also rendered by the Battle view) and a **trigger event** (a typed signal such as a Status ticking, Armour being stripped, or Haste applied — carries a trigger name and side, optionally a source slot; never rendered). Only fire events are stored in `battle_events`.
+_Avoid_: signal, message, log entry
 
 **Multicast**:
 An Ability property that repeats a piece's full cooldown fire (damage + on-fire effects) N times in one cooldown — capped 2× at Tier 2/3, 3× at Tier 4. Each repeat is an independent Reactive Trigger.

@@ -221,6 +221,66 @@ func test_global_reactive_ignores_slot_distance() -> void:
 	assert_eq(s["opponent_hp"] as int, before - 1)
 
 
+# ── typed-trigger events + chance-gated reactives ─────────────────────────────
+
+func test_reactive_handles_typed_trigger_event() -> void:
+	# Rust pattern: on_armor_stripped → deal damage. Event carries a trigger, not an effect.
+	var ability: Dictionary = { "trigger": "on_armor_stripped",
+		"effects": [{ "kind": "deal_damage", "amount": 1, "target": "opponent" }] }
+	var st: Dictionary = _with_ability("player", 0, ability)
+	var before: int = st["opponent_hp"] as int
+	var events: Array = [{ "trigger": "on_armor_stripped", "side": "player", "slot": 1, "is_miss": false }]
+	var s: Dictionary = AbilitySystem.resolve_reactive(st, events)
+	assert_eq(s["opponent_hp"] as int, before - 1)
+
+
+func test_reactive_typed_event_without_slot_fires() -> void:
+	# on_poison_tick is side-wide (no source slot) — should still fire.
+	var ability: Dictionary = { "trigger": "on_poison_tick",
+		"effects": [{ "kind": "apply_status", "status": "blind", "amount": 1, "target": "opponent" }] }
+	var st: Dictionary = _with_ability("player", 0, ability)
+	var events: Array = [{ "trigger": "on_poison_tick", "side": "player", "is_miss": false }]
+	var s: Dictionary = AbilitySystem.resolve_reactive(st, events)
+	assert_eq(((s["opponent_statuses"] as Dictionary)["blind"] as Dictionary)["percent"] as int, 15)
+
+
+func test_reactive_chance_zero_never_applies() -> void:
+	var ability: Dictionary = { "trigger": "on_poison_tick", "chance": 0,
+		"effects": [{ "kind": "apply_status", "status": "blind", "amount": 1, "target": "opponent" }] }
+	var st: Dictionary = _with_ability("player", 0, ability)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 1
+	var events: Array = [{ "trigger": "on_poison_tick", "side": "player", "is_miss": false }]
+	var s: Dictionary = AbilitySystem.resolve_reactive(st, events, rng)
+	assert_eq(((s["opponent_statuses"] as Dictionary)["blind"] as Dictionary)["percent"] as int, 0)
+
+
+func test_reactive_chance_hundred_always_applies() -> void:
+	var ability: Dictionary = { "trigger": "on_poison_tick", "chance": 100,
+		"effects": [{ "kind": "apply_status", "status": "blind", "amount": 1, "target": "opponent" }] }
+	var st: Dictionary = _with_ability("player", 0, ability)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 1
+	var events: Array = [{ "trigger": "on_poison_tick", "side": "player", "is_miss": false }]
+	var s: Dictionary = AbilitySystem.resolve_reactive(st, events, rng)
+	assert_eq(((s["opponent_statuses"] as Dictionary)["blind"] as Dictionary)["percent"] as int, 15)
+
+
+# ── circuit breaker (infinite-build guard) ────────────────────────────────────
+
+func test_reactive_circuit_breaker_caps_activations() -> void:
+	var ability: Dictionary = { "trigger": "on_damage_dealt",
+		"effects": [{ "kind": "deal_damage", "amount": 1, "target": "opponent" }] }
+	var st: Dictionary = _with_ability("player", 0, ability)
+	st["opponent_hp"] = 100000
+	var events: Array = []
+	for _i: int in (AbilitySystem.MAX_REACTIONS_PER_TICK + 500):
+		events.append({ "side": "player", "slot": 1, "damage": 1, "effect": "", "is_miss": false })
+	var s: Dictionary = AbilitySystem.resolve_reactive(st, events)
+	# Only MAX activations fire, each dealing 1 — the rest are dropped.
+	assert_eq(s["opponent_hp"] as int, 100000 - AbilitySystem.MAX_REACTIONS_PER_TICK)
+
+
 # ── resolve_periodic ──────────────────────────────────────────────────────────
 
 func test_periodic_does_not_fire_before_interval() -> void:

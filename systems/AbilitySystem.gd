@@ -18,8 +18,40 @@ class_name AbilitySystem
 #   { "kind": "set_status_field", "status": String, "field": String, "value": Variant, "target": "own"|"opponent" }
 
 
+# ── Combat events ─────────────────────────────────────────────────────────────
+# Two event shapes flow through the reactive seam (resolve_reactive). Producers
+# (BattleSystem) build them with the factories below so the shape lives in one
+# place; consumers branch on whether a "trigger" key is present.
+#
+#   Fire event    — visual + reactive: { side, slot, damage, effect, is_miss }
+#   Trigger event — reactive only:     { trigger, side, slot }  (slot -1 = side-wide)
+#
+# Only fire events are stored in state["battle_events"] for the view layer
+# (Battle.gd); trigger events (ticks, armor-strip, haste) are consumed within the
+# tick and never rendered. Use is_visual_event() to split the two.
+
+static func fire_event(side: String, slot: int, damage: int, effect: String) -> Dictionary:
+	return { "side": side, "slot": slot, "damage": damage, "effect": effect, "is_miss": false }
+
+
+static func miss_event(side: String, slot: int) -> Dictionary:
+	return { "side": side, "slot": slot, "damage": 0, "effect": "", "is_miss": true }
+
+
+static func trigger_event(trigger: String, side: String, slot: int = -1) -> Dictionary:
+	return { "trigger": trigger, "side": side, "slot": slot }
+
+
+static func is_visual_event(event: Dictionary) -> bool:
+	return not event.has("trigger")
+
+
 # ── ability lookup ────────────────────────────────────────────────────────────
 
+# PERF (deferred 2026-06-04): ability_for, on_hit_status_chances, and the reactive
+# grid scans are O(grid) per fire/event. Per-combat caches (a precomputed on-hit
+# list, a trigger→[slots] map, cached ability_for) would cut this — deferred until
+# abilities/elements stabilize, since precomputing now would churn during brainstorming.
 static func ability_for(element: Dictionary) -> Dictionary:
 	if element.has("ability"):
 		return element["ability"] as Dictionary
@@ -32,31 +64,20 @@ static func multicast_count(element: Dictionary) -> int:
 
 # ── side plumbing ─────────────────────────────────────────────────────────────
 
-static func _other_side(side: String) -> String:
-	return "opponent" if side == "player" else "player"
-
-
 static func _resolve_target(target: String, source_side: String) -> String:
 	if target == "own":
 		return source_side
-	return _other_side(source_side)
+	return CombatSide.opponent_of(source_side)
 
 
 static func _side_keys(side: String) -> Dictionary:
-	if side == "player":
-		return {
-			"statuses": "player_statuses", "hp": "player_hp", "grid": "battle_grid",
-			"frozen": "player_frozen_seconds", "last_frozen": "player_last_frozen_slot",
-		}
-	return {
-		"statuses": "opponent_statuses", "hp": "opponent_hp", "grid": "opponent_grid",
-		"frozen": "opponent_frozen_seconds", "last_frozen": "opponent_last_frozen_slot",
-	}
+	return CombatSide.keys(side)
 
 
 # ── effect application (mutates the passed state) ─────────────────────────────
 
-static func _apply_atom(state: Dictionary, effect: Dictionary, source_side: String) -> void:
+# Returns the number of status applications made (for the Summary effects tally).
+static func _apply_atom(state: Dictionary, effect: Dictionary, source_side: String) -> int:
 	var kind: String = effect.get("kind", "") as String
 	match kind:
 		"apply_status":
@@ -70,15 +91,18 @@ static func _apply_atom(state: Dictionary, effect: Dictionary, source_side: Stri
 				statuses = result["statuses"] as Dictionary
 				state[keys["hp"]] = (state[keys["hp"]] as int) + (result["hp_delta"] as int)
 			state[keys["statuses"]] = statuses
+			return amount
 		"deal_damage":
 			var target_side: String = _resolve_target(effect.get("target", "opponent") as String, source_side)
 			var keys: Dictionary = _side_keys(target_side)
 			state[keys["hp"]] = maxi(0, (state[keys["hp"]] as int) - (effect["amount"] as int))
+			return 0
 		"modify_cooldown":
 			var target_side: String = _resolve_target(effect.get("target", "opponent") as String, source_side)
 			var keys: Dictionary = _side_keys(target_side)
 			var statuses: Dictionary = state[keys["statuses"]] as Dictionary
 			statuses["cooldown_modifier_deciseconds"] = (statuses["cooldown_modifier_deciseconds"] as int) + (effect["deciseconds"] as int)
+			return 0
 		"freeze":
 			var target_side: String = _resolve_target(effect.get("target", "opponent") as String, source_side)
 			var keys: Dictionary = _side_keys(target_side)
@@ -86,11 +110,14 @@ static func _apply_atom(state: Dictionary, effect: Dictionary, source_side: Stri
 			var frozen: Array = state[keys["frozen"]] as Array
 			var duration_seconds: float = float(effect["deciseconds"] as int) / 10.0
 			var count: int = effect.get("count", 1) as int
+			var frozen_applied: int = 0
 			for _c: int in count:
 				var slot: int = BattleSystem.select_freeze_target(grid, state[keys["last_frozen"]] as int)
 				if slot >= 0:
 					frozen[slot] = duration_seconds
 					state[keys["last_frozen"]] = slot
+					frozen_applied += 1
+			return frozen_applied
 		"set_status_field":
 			var target_side: String = _resolve_target(effect.get("target", "opponent") as String, source_side)
 			var keys: Dictionary = _side_keys(target_side)
@@ -102,13 +129,29 @@ static func _apply_atom(state: Dictionary, effect: Dictionary, source_side: Stri
 				status_dict[field] = value
 			else:
 				status_dict[field] = (status_dict[field] as int) + (value as int)
+			return 0
+	return 0
 
 
-static func _apply_effects(state: Dictionary, effects: Array, source_side: String) -> void:
+# source_slot >= 0 attributes the applied status count to that element's Summary row.
+static func _apply_effects(state: Dictionary, effects: Array, source_side: String, source_slot: int = -1) -> void:
+	var applied: int = 0
 	for effect: Variant in effects:
 		var e: Dictionary = effect as Dictionary
 		if _conditions_met(state, e.get("when", []) as Array, source_side):
-			_apply_atom(state, e, source_side)
+			applied += _apply_atom(state, e, source_side)
+	if source_slot >= 0 and applied > 0:
+		_record_effects(state, source_side, source_slot, applied)
+
+
+static func _record_effects(state: Dictionary, side: String, slot: int, count: int) -> void:
+	var battle_stats: Dictionary = state.get("battle_stats", {}) as Dictionary
+	if not battle_stats.has(side):
+		return
+	var rows: Array = battle_stats[side] as Array
+	if slot >= 0 and slot < rows.size():
+		var row: Dictionary = rows[slot] as Dictionary
+		row["effects"] = (row.get("effects", 0) as int) + count
 
 
 # ── conditions (the "when" guard on any effect) ───────────────────────────────
@@ -155,17 +198,24 @@ static func resolve_combat_start(state: Dictionary) -> Dictionary:
 			var ability: Dictionary = ability_for(grid[i] as Dictionary)
 			var trigger: String = ability.get("trigger", "") as String
 			if trigger == "combat_start" or trigger == "passive":
-				_apply_effects(s, ability.get("effects", []) as Array, side)
+				_apply_effects(s, ability.get("effects", []) as Array, side, i)
 	return s
 
 
 # Advances periodic ability timers by delta seconds and fires any that reach their
 # interval. Timers live in player_ability_timers / opponent_ability_timers.
+# Public form duplicates (immutable); the tick loop uses the _inplace form to avoid
+# a full-state deep copy every frame.
 static func resolve_periodic(state: Dictionary, delta: float) -> Dictionary:
 	var s: Dictionary = state.duplicate(true)
+	resolve_periodic_inplace(s, delta)
+	return s
+
+
+static func resolve_periodic_inplace(state: Dictionary, delta: float) -> void:
 	for side: String in ["player", "opponent"]:
-		var grid: Array = s[_side_keys(side)["grid"]] as Array
-		var timers: Array = s[side + "_ability_timers"] as Array
+		var grid: Array = state[_side_keys(side)["grid"]] as Array
+		var timers: Array = state[CombatSide.keys(side)["ability_timers"]] as Array
 		for i: int in grid.size():
 			if grid[i] == null:
 				continue
@@ -178,26 +228,46 @@ static func resolve_periodic(state: Dictionary, delta: float) -> Dictionary:
 			timers[i] = (timers[i] as float) + delta
 			while (timers[i] as float) >= interval_seconds:
 				timers[i] = (timers[i] as float) - interval_seconds
-				_apply_effects(s, ability.get("effects", []) as Array, side)
-	return s
+				_apply_effects(state, ability.get("effects", []) as Array, side, i)
 
 
 # Resolves depth-1 reactive abilities against this tick's fire events. Each event
 # carries the firing side, the effect string it applied, and the damage it dealt.
 # A reactive ability's effects are applied once per matching event but emit no
 # further events (depth-1) and never multicast.
-static func resolve_reactive(state: Dictionary, events: Array) -> Dictionary:
+# Depth-1 reactive abilities against this tick's events. Public form duplicates;
+# the tick loop uses the _inplace form. A per-tick **circuit breaker**
+# (MAX_REACTIONS_PER_TICK) caps total activations so a pathological "infinite build"
+# can't spike a single tick — far above any legitimate board's worst case.
+const MAX_REACTIONS_PER_TICK: int = 1024
+
+static func resolve_reactive(state: Dictionary, events: Array, combat_rng: RandomNumberGenerator = null) -> Dictionary:
 	var s: Dictionary = state.duplicate(true)
+	resolve_reactive_inplace(s, events, combat_rng)
+	return s
+
+
+static func resolve_reactive_inplace(state: Dictionary, events: Array, combat_rng: RandomNumberGenerator = null) -> void:
+	var activations: int = 0
 	for event: Variant in events:
 		var e: Dictionary = event as Dictionary
 		if e.get("is_miss", false) as bool:
 			continue
 		var side: String = e["side"] as String
-		var triggers: Array = _event_triggers(e["effect"] as String, e["damage"] as int)
+		# Fire events derive triggers from their effect string and carry a source
+		# slot (for adjacency); typed events (ticks, armor-strip) carry the trigger
+		# directly and may be side-wide (no slot).
+		var triggers: Array
+		var source_slot: int = -1
+		if e.has("trigger"):
+			triggers = [e["trigger"] as String]
+			source_slot = e.get("slot", -1) as int
+		else:
+			triggers = _event_triggers(e["effect"] as String, e["damage"] as int)
+			source_slot = e["slot"] as int
 		if triggers.is_empty():
 			continue
-		var grid: Array = s[_side_keys(side)["grid"]] as Array
-		var source_slot: int = e["slot"] as int
+		var grid: Array = state[_side_keys(side)["grid"]] as Array
 		var dimensions: Vector2i = GridSystem.dimensions(grid.size())
 		for i: int in grid.size():
 			if grid[i] == null:
@@ -205,12 +275,19 @@ static func resolve_reactive(state: Dictionary, events: Array) -> Dictionary:
 			var ability: Dictionary = ability_for(grid[i] as Dictionary)
 			if not _reactive_matches(ability, triggers):
 				continue
-			# adjacency_upgrade abilities only react to an orthogonally-adjacent source.
-			if (ability.get("adjacency_upgrade", false) as bool) and FeatureFlags.combat_adjacency:
+			# adjacency_upgrade abilities only react to an adjacent source (when a
+			# source slot is known — side-wide events skip the check).
+			if source_slot >= 0 and (ability.get("adjacency_upgrade", false) as bool) and FeatureFlags.combat_adjacency:
 				if not GridSystem.neighbors(i, dimensions.x, dimensions.y).has(source_slot):
 					continue
-			_apply_effects(s, ability.get("effects", []) as Array, side)
-	return s
+			# Probabilistic reactives (Miasma) roll against the seeded RNG.
+			if ability.has("chance") and combat_rng != null:
+				if combat_rng.randf() * 100.0 >= float(ability["chance"] as int):
+					continue
+			activations += 1
+			if activations > MAX_REACTIONS_PER_TICK:
+				return  # circuit breaker — stop processing reactions this tick
+			_apply_effects(state, ability.get("effects", []) as Array, side, i)
 
 
 static func _event_triggers(effect: String, damage: int) -> Array:
@@ -219,6 +296,7 @@ static func _event_triggers(effect: String, damage: int) -> Array:
 		"burn": triggers.append("on_burn_applied")
 		"heal": triggers.append("on_heal_applied")
 		"leech": triggers.append("on_leech")
+		"haste": triggers.append("on_haste_applied")
 	if effect in ["burn", "poison", "shock", "weaken", "blind", "curse"]:
 		triggers.append("on_status_applied:" + effect)
 	if damage > 0:
@@ -233,6 +311,22 @@ static func _reactive_matches(ability: Dictionary, triggers: Array) -> bool:
 	if trigger == "on_status_applied":
 		return triggers.has("on_status_applied:" + (ability.get("status", "") as String))
 	return triggers.has(trigger)
+
+
+# ── player commands (Innate Ability / Replay seam) ────────────────────────────
+
+# Applies one timed player command's ability effects, once. A command is
+# { at_seconds, side, ability, fired }. Public form duplicates; the tick loop's
+# command drain uses apply_command in place.
+static func resolve_command(state: Dictionary, command: Dictionary) -> Dictionary:
+	var s: Dictionary = state.duplicate(true)
+	apply_command(s, command)
+	return s
+
+
+static func apply_command(state: Dictionary, command: Dictionary) -> void:
+	var ability: Dictionary = command["ability"] as Dictionary
+	_apply_effects(state, ability.get("effects", []) as Array, command["side"] as String)
 
 
 # ── passive on-hit query ──────────────────────────────────────────────────────

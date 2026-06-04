@@ -1,10 +1,25 @@
 class_name TooltipCard
 extends CanvasLayer
 
+# The Item Tooltip. In the shop it shows base stats. In battle (show_for_battle) it
+# shows the element's *current* effective stats — cooldown after shock/cooldown
+# modifiers, damage after weaken — and live-updates every frame while shown.
+# Holding Shift pins the card in place so the player can hover the [keyword] links
+# in the ability text and read a secondary glossary card.
+
 var _panel: PanelContainer
 var _name_lbl: Label
 var _stat_vals: Dictionary = {}
-var _ability_lbl: Label
+var _ability_rich: RichTextLabel
+
+var _glossary_panel: PanelContainer
+var _glossary_lbl: Label
+
+# Battle context: empty side = shop/static. When set, stats refresh from live state.
+var _battle_side: String = ""
+var _battle_slot: int = -1
+var _pinned: bool = false
+var _last_ability_text: String = ""  # guards against per-frame RichText resets (hover flicker)
 
 
 func _ready() -> void:
@@ -16,6 +31,7 @@ func _build_ui() -> void:
 	_panel = PanelContainer.new()
 	_panel.custom_minimum_size = Vector2(230, 0)
 	_panel.visible = false
+	_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE  # never steals slot/game hover
 
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0.08, 0.08, 0.13, 0.97)
@@ -39,8 +55,7 @@ func _build_ui() -> void:
 	UIScale.apply(_name_lbl, UIScale.TOOLTIP_TITLE)
 	vbox.add_child(_name_lbl)
 
-	var stats_sep := HSeparator.new()
-	vbox.add_child(stats_sep)
+	vbox.add_child(HSeparator.new())
 
 	var stat_keys: Array[String] = ["▲ Tier", "⬆ Level", "⏱ Cooldown", "⚔ Base Dmg", "💥 Eff. Dmg", "💰 Price"]
 	for key: String in stat_keys:
@@ -58,8 +73,7 @@ func _build_ui() -> void:
 		_stat_vals[key] = v_lbl
 		vbox.add_child(row)
 
-	var ab_sep := HSeparator.new()
-	vbox.add_child(ab_sep)
+	vbox.add_child(HSeparator.new())
 
 	var ab_header := Label.new()
 	ab_header.text = "ABILITIES"
@@ -67,26 +81,105 @@ func _build_ui() -> void:
 	ab_header.modulate = Color(0.55, 0.55, 0.62)
 	vbox.add_child(ab_header)
 
-	_ability_lbl = Label.new()
-	_ability_lbl.text = "— none yet —"
-	_ability_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD
-	_ability_lbl.custom_minimum_size = Vector2(210, 0)
-	UIScale.apply(_ability_lbl, UIScale.TOOLTIP_BODY)
-	_ability_lbl.modulate = Color(0.42, 0.42, 0.48)
-	vbox.add_child(_ability_lbl)
+	_ability_rich = RichTextLabel.new()
+	_ability_rich.bbcode_enabled = true
+	_ability_rich.fit_content = true
+	_ability_rich.autowrap_mode = TextServer.AUTOWRAP_WORD
+	_ability_rich.custom_minimum_size = Vector2(210, 0)
+	_ability_rich.scroll_active = false
+	_ability_rich.mouse_filter = Control.MOUSE_FILTER_STOP  # so keyword links are hoverable
+	UIScale.apply_rich(_ability_rich, UIScale.TOOLTIP_BODY)
+	_ability_rich.meta_hover_started.connect(_on_keyword_hover)
+	_ability_rich.meta_hover_ended.connect(_on_keyword_unhover)
+	vbox.add_child(_ability_rich)
+
+	var hint := Label.new()
+	hint.text = "hold Shift to inspect keywords"
+	UIScale.apply(hint, UIScale.TOOLTIP_SECTION)
+	hint.modulate = Color(0.4, 0.4, 0.5)
+	vbox.add_child(hint)
 
 	add_child(_panel)
+	_build_glossary_panel()
 
+
+func _build_glossary_panel() -> void:
+	_glossary_panel = PanelContainer.new()
+	_glossary_panel.custom_minimum_size = Vector2(210, 0)
+	_glossary_panel.visible = false
+	_glossary_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.05, 0.10, 0.16, 0.98)
+	style.set_border_width_all(1)
+	style.border_color = Color(0.4, 0.6, 0.85, 0.95)
+	style.set_corner_radius_all(5)
+	_glossary_panel.add_theme_stylebox_override("panel", style)
+	var gm := MarginContainer.new()
+	gm.add_theme_constant_override("margin_left", 8)
+	gm.add_theme_constant_override("margin_right", 8)
+	gm.add_theme_constant_override("margin_top", 6)
+	gm.add_theme_constant_override("margin_bottom", 6)
+	_glossary_panel.add_child(gm)
+	_glossary_lbl = Label.new()
+	_glossary_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD
+	_glossary_lbl.custom_minimum_size = Vector2(194, 0)
+	UIScale.apply(_glossary_lbl, UIScale.TOOLTIP_BODY)
+	_glossary_lbl.modulate = Color(0.85, 0.92, 1.0)
+	gm.add_child(_glossary_lbl)
+	add_child(_glossary_panel)
+
+
+# ── public entry points ───────────────────────────────────────────────────────
 
 func show_for(element: Dictionary) -> void:
+	_battle_side = ""
+	_battle_slot = -1
+	_render(element, {})
+	_panel.visible = true
+	_update_position()
+
+
+func show_for_battle(element: Dictionary, side: String, slot: int) -> void:
+	_battle_side = side
+	_battle_slot = slot
+	_render(element, CombatSide.statuses(GameManager.state, side))
+	_panel.visible = true
+	_update_position()
+
+
+func hide_card() -> void:
+	if _pinned:
+		return  # keep the card while the player inspects keywords
+	_force_hide()
+
+
+func _force_hide() -> void:
+	_panel.visible = false
+	_glossary_panel.visible = false
+
+
+# ── rendering ─────────────────────────────────────────────────────────────────
+
+func _render(element: Dictionary, own_statuses: Dictionary) -> void:
 	var emoji: String = element.get("emoji", "") as String
 	var elem_name: String = element.get("name", "") as String
 	var tier: int = element.get("tier", 1) as int
 	var level: int = element.get("level", 1) as int
-	var cooldown_seconds: float = float(element.get("cooldown_deciseconds", 0) as int) / 10.0
+	var base_cooldown_deciseconds: int = element.get("cooldown_deciseconds", 0) as int
 	var base_dmg: int = element.get("damage", 0) as int
 	var eff_dmg: int = ElementData.effective_damage(element)
 	var price: int = element.get("price", 0) as int
+
+	var cooldown_seconds: float
+	if own_statuses.is_empty():
+		cooldown_seconds = float(base_cooldown_deciseconds) / 10.0
+	else:
+		# Live: effective cooldown reflects shock-slow + cooldown modifiers; damage
+		# output drops while the side is weakened.
+		cooldown_seconds = float(StatusSystem.effective_cooldown_deciseconds(base_cooldown_deciseconds, own_statuses)) / 10.0
+		var weaken: Dictionary = own_statuses["weaken"] as Dictionary
+		if (weaken["ticks"] as int) > 0:
+			eff_dmg = maxi(0, eff_dmg - (weaken["stacks"] as int))
 
 	_name_lbl.text = "%s  %s" % [emoji, elem_name]
 	(_stat_vals["▲ Tier"] as Label).text = "T%d" % tier
@@ -97,26 +190,66 @@ func show_for(element: Dictionary) -> void:
 	(_stat_vals["💰 Price"] as Label).text = "%dg" % price
 
 	var element_id: String = element.get("element_id", element.get("id", "")) as String
-	var ability: Dictionary = AbilityData.get_ability(element_id)
-	var description: String = ability.get("description", "") as String
-	if description != "":
-		_ability_lbl.text = description
-		_ability_lbl.modulate = Color(0.82, 0.82, 0.9)
-	else:
-		_ability_lbl.text = "— none yet —"
-		_ability_lbl.modulate = Color(0.42, 0.42, 0.48)
-
-	_panel.visible = true
-	_update_position()
+	var description: String = AbilityData.get_ability(element_id).get("description", "") as String
+	var new_text: String = _to_bbcode(description) if description != "" else "— none yet —"
+	if new_text != _last_ability_text:
+		_ability_rich.text = new_text
+		_ability_rich.modulate = Color(0.82, 0.82, 0.9) if description != "" else Color(0.42, 0.42, 0.48)
+		_last_ability_text = new_text
 
 
-func hide_card() -> void:
-	_panel.visible = false
+# Turns [keyword] tags into hoverable links for keywords the glossary defines.
+func _to_bbcode(description: String) -> String:
+	var out: String = description
+	for keyword: Variant in StatusGlossary.keywords():
+		var k: String = keyword as String
+		out = out.replace("[%s]" % k, "[url=%s][color=#8fd3ff]%s[/color][/url]" % [k, k])
+	return out
 
+
+# ── live refresh + shift-to-pin ───────────────────────────────────────────────
 
 func _process(_delta: float) -> void:
-	if _panel.visible:
+	if not _panel.visible:
+		return
+	var shift_held: bool = Input.is_key_pressed(KEY_SHIFT)
+	if shift_held and not _pinned:
+		_pinned = true  # freeze in place so the player can reach the keywords
+	elif _pinned and not shift_held:
+		_pinned = false
+		_force_hide()  # releasing Shift dismisses the pinned card
+		return
+
+	if _battle_side != "":
+		_refresh_live()
+	if not _pinned:
 		_update_position()
+
+
+func _refresh_live() -> void:
+	var state: Dictionary = GameManager.state
+	var grid: Array = CombatSide.grid(state, _battle_side)
+	if _battle_slot < 0 or _battle_slot >= grid.size() or grid[_battle_slot] == null:
+		return
+	_render(grid[_battle_slot] as Dictionary, CombatSide.statuses(state, _battle_side))
+
+
+func _on_keyword_hover(meta: Variant) -> void:
+	var definition: String = StatusGlossary.get_definition(str(meta))
+	if definition == "":
+		return
+	_glossary_lbl.text = "%s — %s" % [str(meta).capitalize(), definition]
+	_glossary_panel.visible = true
+	var vp_size: Vector2 = get_viewport().get_visible_rect().size
+	var mouse_pos: Vector2 = get_viewport().get_mouse_position()
+	var pos: Vector2 = mouse_pos + Vector2(14, 14)
+	pos.x = minf(pos.x, vp_size.x - _glossary_panel.size.x - 8.0)
+	pos.y = minf(pos.y, vp_size.y - _glossary_panel.size.y - 8.0)
+	_glossary_panel.position = pos
+
+
+func _on_keyword_unhover(_meta: Variant) -> void:
+	_glossary_panel.visible = false
 
 
 func _update_position() -> void:

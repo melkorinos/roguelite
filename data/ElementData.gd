@@ -156,6 +156,9 @@ static func all_elements() -> Array[Dictionary]:
 	]
 
 
+# PERF (deferred 2026-06-04): all_elements() rebuilds 132 dicts per call and find()
+# scans linearly. A lazy static cache + id→dict index would remove that — deferred
+# while the element roster is in flux (brainstorming). Not in the combat hot path.
 static func find(element_id: String) -> Dictionary:
 	for elem: Dictionary in all_elements():
 		if elem["id"] == element_id:

@@ -248,6 +248,82 @@ func test_combat_is_deterministic_given_seed() -> void:
 		((run_b["opponent_statuses"] as Dictionary)["weaken"] as Dictionary)["stacks"] as int)
 
 
+# ── simulate_battle (fixed-step headless sim) ─────────────────────────────────
+
+func test_simulate_battle_reaches_result() -> void:
+	var st := PhaseSystem.to_battle(_state_with_player_element("fire"), _fixture())
+	var s := BattleSystem.simulate_battle(st)
+	assert_eq(s["phase"] as String, "result")
+
+
+func test_simulate_battle_is_deterministic() -> void:
+	var st := PhaseSystem.to_battle(_state_with_player_element("blaze"), _fixture())
+	var a := BattleSystem.simulate_battle(st.duplicate(true))
+	var b := BattleSystem.simulate_battle(st.duplicate(true))
+	assert_eq(a["opponent_hp"] as int, b["opponent_hp"] as int)
+	assert_eq(a["player_hp"] as int, b["player_hp"] as int)
+
+
+# ── battle_stats effects tally (Summary) ──────────────────────────────────────
+
+func test_battle_stats_counts_on_fire_effects() -> void:
+	var state := PhaseSystem.to_battle(_state_with_player_element("fire"), _fixture())
+	var cooldown: float = float(ElementData.find("fire")["cooldown_deciseconds"] as int) / 10.0
+	var s := BattleSystem.tick_battle(state, cooldown)
+	var pstats: Array = (s["battle_stats"] as Dictionary)["player"] as Array
+	assert_gt((pstats[0] as Dictionary)["effects"] as int, 0)  # fire applied burn
+
+
+func test_battle_stats_counts_ability_effects_at_combat_start() -> void:
+	# Boulder: combat_start applies 4 [armor] to own side → 4 effect applications.
+	var st := _make_state()
+	var elem: Dictionary = ElementData.find("boulder").duplicate()
+	elem["element_id"] = "boulder"
+	elem["level"] = 1
+	st["battle_grid"][0] = elem
+	var s := PhaseSystem.to_battle(st, _fixture())
+	var pstats: Array = (s["battle_stats"] as Dictionary)["player"] as Array
+	assert_eq((pstats[0] as Dictionary)["effects"] as int, 4)
+
+
+# ── timed commands (Innate Ability / Replay seam) ─────────────────────────────
+
+func _deal3_command() -> Dictionary:
+	return { "effects": [{ "kind": "deal_damage", "amount": 3, "target": "opponent" }] }
+
+
+func test_queue_command_appends_pending() -> void:
+	var st := PhaseSystem.to_battle(_make_state(), _fixture())
+	var s := BattleSystem.queue_command(st, 1.0, _deal3_command(), "player")
+	assert_eq((s["pending_commands"] as Array).size(), 1)
+
+
+func test_command_fires_at_its_time() -> void:
+	# Empty player grid → opponent_hp only changes via the command.
+	var st := PhaseSystem.to_battle(_make_state(), _fixture())
+	st = BattleSystem.queue_command(st, 1.0, _deal3_command(), "player")
+	var before: int = st["opponent_hp"] as int
+	var s := BattleSystem.tick_battle(st, 1.0)
+	assert_eq(s["opponent_hp"] as int, before - 3)
+
+
+func test_command_does_not_fire_before_its_time() -> void:
+	var st := PhaseSystem.to_battle(_make_state(), _fixture())
+	st = BattleSystem.queue_command(st, 5.0, _deal3_command(), "player")
+	var before: int = st["opponent_hp"] as int
+	var s := BattleSystem.tick_battle(st, 1.0)
+	assert_eq(s["opponent_hp"] as int, before)
+
+
+func test_command_fires_only_once() -> void:
+	var st := PhaseSystem.to_battle(_make_state(), _fixture())
+	st = BattleSystem.queue_command(st, 0.5, _deal3_command(), "player")
+	var before: int = st["opponent_hp"] as int
+	var s := BattleSystem.tick_battle(st, 1.0)
+	s = BattleSystem.tick_battle(s, 1.0)
+	assert_eq(s["opponent_hp"] as int, before - 3)
+
+
 # ── compute_result ────────────────────────────────────────────────────────────
 
 func test_compute_result_player_wins_when_opponent_hp_lower() -> void:

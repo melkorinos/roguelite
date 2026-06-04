@@ -191,6 +191,22 @@ func test_slow_pct_never_reaches_50() -> void:
 	assert_lt(StatusSystem.slow_pct(1000), 50.0)
 
 
+# ── stack cap (infinite-build guard) ──────────────────────────────────────────
+
+func test_poison_stacks_are_capped() -> void:
+	var s: Dictionary = _s()
+	for _i: int in 200:
+		s = _apply(s, "poison")
+	assert_eq((s["poison"] as Dictionary)["stacks"] as int, StatusSystem.MAX_STACKS)
+
+
+func test_armor_value_is_capped() -> void:
+	var s: Dictionary = _s()
+	for _i: int in 200:
+		s = _apply(s, "armor")
+	assert_eq((s["armor"] as Dictionary)["value"] as int, StatusSystem.MAX_STACKS)
+
+
 # ── effective_cooldown_deciseconds ────────────────────────────────────────────
 
 func test_effective_cooldown_no_statuses_returns_base() -> void:
@@ -303,6 +319,22 @@ func test_tick_curse_expires_after_3_ticks() -> void:
 	assert_eq((s["curse"] as Dictionary)["ticks_remaining"] as int, 0)
 
 
+func test_tick_emits_poison_tick_event() -> void:
+	var s: Dictionary = _apply(_s(), "poison")
+	var r: Dictionary = StatusSystem.tick(s)
+	assert_true((r["events"] as Array).has("on_poison_tick"))
+
+
+func test_tick_emits_burn_tick_event() -> void:
+	var s: Dictionary = _apply(_s(), "burn")
+	var r: Dictionary = StatusSystem.tick(s)
+	assert_true((r["events"] as Array).has("on_burn_tick"))
+
+
+func test_tick_emits_no_events_when_idle() -> void:
+	assert_true((StatusSystem.tick(_s())["events"] as Array).is_empty())
+
+
 func test_tick_no_damage_on_empty_statuses() -> void:
 	assert_eq(_tick_dmg(_s()), 0)
 
@@ -378,6 +410,41 @@ func test_cooldown_modifier_reduction_respects_floor() -> void:
 	var s: Dictionary = _s()
 	s["cooldown_modifier_deciseconds"] = -50
 	assert_eq(StatusSystem.effective_cooldown_deciseconds(25, s), 10)
+
+
+# ── passive modifiers (steel / mountain / blackice patterns) ──────────────────
+
+func test_weaken_duration_bonus_extends_ticks() -> void:
+	var s: Dictionary = _s()
+	(s["weaken"] as Dictionary)["duration_bonus"] = 2
+	s = _apply(s, "weaken")
+	assert_eq((s["weaken"] as Dictionary)["ticks"] as int, 5)  # 3 + 2
+
+
+func test_plating_reduces_dot_when_flagged() -> void:
+	# 2 burn stacks → 2 dot; plating value 1 with reduces_dot → 1 damage.
+	var s: Dictionary = _apply(_apply(_s(), "burn"), "burn")
+	var plating: Dictionary = s["plating"] as Dictionary
+	plating["value"] = 1
+	plating["reduces_dot"] = true
+	assert_eq(_tick_dmg(s), 1)
+
+
+func test_plating_does_not_reduce_dot_when_unflagged() -> void:
+	var s: Dictionary = _apply(_apply(_s(), "burn"), "burn")
+	(s["plating"] as Dictionary)["value"] = 1  # reduces_dot stays false
+	assert_eq(_tick_dmg(s), 2)
+
+
+func test_armor_floor_prevents_depletion_below_floor() -> void:
+	# armor 3, floor 2, big hit → only 1 absorbable, armor lands on floor.
+	var def: Dictionary = _s()
+	var armor: Dictionary = def["armor"] as Dictionary
+	armor["value"] = 3
+	armor["floor"] = 2
+	var r: Dictionary = StatusSystem.compute_incoming_damage(5, _s(), def)
+	assert_eq(((r["defender_statuses"] as Dictionary)["armor"] as Dictionary)["value"] as int, 2)
+	assert_eq(r["damage"] as int, 4)  # 5 - 1 absorbed
 
 
 # ── compute_incoming_damage ───────────────────────────────────────────────────

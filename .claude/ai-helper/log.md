@@ -4,6 +4,36 @@
 - `FeatureFlags` all default **true** (early-state: ship everything on; only `status_effects` is code-read). Abilities now apply in combat. 341/341 still green.
 - TooltipCard + Compendium card now render `AbilityData.get_ability(id).description`. Handoff doc updated with impl status + remaining work (glossary hover, ~23 skipped abilities, adjacency, T4).
 
+## 2026-06-04 — Battle perf pass (review in `.claude/ai-helper/perf-notes.md`)
+- **#1 in-place tick**: `resolve_reactive_inplace`/`resolve_periodic_inplace`/`apply_command` mutate the tick's existing duplicate (removed ~3 deep copies/frame); public duplicating forms kept for tests.
+- **#2 fixed timestep**: `BattleSystem.COMBAT_STEP_SECONDS=0.1` + `Battle.gd` accumulator (frame-rate-independent); `simulate_battle()` headless/Replay sim, deterministic + step-capped.
+- **#3 infinite-build guards**: `StatusSystem.MAX_STACKS=99`; `AbilitySystem.MAX_REACTIONS_PER_TICK=1024` circuit breaker. (Existing guards: 10-ds cooldown floor = 1 fire/sec/elem, 30s cap.)
+- **#5**: float-label cap (40). **Deferred (brainstorming):** per-combat ability caches (#4) + ElementData lazy cache — noted in code + perf-notes.md. **385/385 green.**
+
+## 2026-06-04 — Battle Summary "effects applied" tally
+- `battle_stats` slot rows gain `effects`; counted in `_fire_element_once` (T1 effect + on-hit procs) and `AbilitySystem._apply_effects`/`_record_effects` (ability status applications, attributed to source slot). Summary shows "N fx". 380/380 green.
+
+## 2026-06-04 — Doc-consistency pass + round-lifecycle section
+- Added "Round lifecycle (shop→battle→result)" to CLAUDE.md for future readers. Fixed discrepancies in memory.md (freeze field names, `cooldown_modifier_deciseconds`, adjacency-in-combat, flag list) + CONTEXT.md (Board adjacency). Rewrote handoff lean (~520→102 lines; dropped implemented proposal tables, kept status/pending/T4/rules). settings.json: allow read-only PowerShell getters + robust `.claude/ai-helper/**` edit perms.
+
+## 2026-06-04 — Tooltip: live battle stats + keyword glossary + shift-to-pin
+- Razorwind ability added (on_status_applied weaken → shock); was the element showing "— none yet —".
+- TooltipCard `show_for_battle(element, side, slot)` live-updates in combat: effective cooldown (shock/CD-mods) + weaken-adjusted damage, refreshed each frame. Shop keeps base stats.
+- `data/StatusGlossary.gd` NEW; ability text now a RichTextLabel with `[url]` keyword links. **Hold Shift** pins the card; hovering a keyword shows a glossary sub-card. RichText text guarded against per-frame resets (no hover flicker).
+- **378/378 green.** Boot exit 0. ~10 abilities still skipped (down from 21).
+
+## 2026-06-04 — Combat-event model centralised + CombatSide + Innate/Replay seam
+- **Combat events** now built by `AbilitySystem.fire_event/miss_event/trigger_event` (one source of shape). `battle_events` filtered to visual (fire/miss) only — `is_visual_event()`; trigger events (tick/armor/haste) are reactive-only. Battle.gd guarded. Documented in CONTEXT.md + ADR 0004 + memory.md. (Fixes latent crash: typed events lacked `slot` the view read.)
+- **C3 CombatSide** NEW: single source for side→state-key mapping (`keys`, `opponent_of`, getters). `_make_side_ctx` + `_side_keys` now delegate; the two hand-rolled key maps deleted.
+- **C4 Innate/Replay seam:** `pending_commands` in GameState; `BattleSystem.queue_command` + `_drain_commands` (fire timed commands when the clock reaches them); `AbilitySystem.resolve_command`. Reproducible via the seeded RNG. Backend seam only — UI later.
+- **372/372 green.** Boot exit 0.
+
+## 2026-06-04 — Architecture review #2 + deepenings: passive-modifier layer + tick/armor events
+- **Review #2** in `.claude/ai-helper/reviews/architecture-review-20260604-b.html`.
+- **C1 passive-modifier layer:** new status-dict modifier fields read at calc sites — `haste.reduction_bonus_deciseconds` (gust), `leech.{bonus,double}` (pulse, ichor), `plating.reduces_dot` (steel), `armor.floor` (mountain), `weaken.duration_bonus` (blackice). Set via combat_start `set_status_field`. Also wired magnet (on_status_applied shock→plating), tempest/acid (display).
+- **C2 tick/armor/haste events:** `StatusSystem.tick` returns `events` (on_burn_tick/on_poison_tick); `_fire_element_once` emits on_armor_stripped; `_event_triggers` adds on_haste_applied. `resolve_reactive` now handles typed-trigger (slot-less) events + **chance-gated** reactives (seeded RNG). Wired miasma (25% blind on poison tick), rust (on_armor_stripped), aurora (on_haste_applied).
+- 12 more abilities live (~11 still skipped: shrapnel, rootrot, gore, razorwind, rot, moldsteel, rainbow, plant, ash, ancientgrove, voidrift). **362/362 green.**
+
 ## 2026-06-04 — Architecture review + deepenings 1/2/3 (review in `.claude/ai-helper/reviews/`)
 - **C1 condition layer:** effects take an optional `when: [conditions]` guard (`target_has_status at_least`). Conditional clauses restored on surge/blight/sporeflow/cryptbloom/arcbeam/wildrot.
 - **C2 typed events + adjacency:** reactive resolution reads the event's source slot; `adjacency_upgrade` abilities (Ember, Photosynthesis) gated by `FeatureFlags.combat_adjacency` (default true) via `GridSystem.neighbors`.

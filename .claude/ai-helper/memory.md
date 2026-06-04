@@ -7,8 +7,8 @@ Auto-battler. Build synergies, break the system, lose to your exact counter, mas
 Plain data objects + standalone static fns. No class inheritance. Systems take `GameState` dict, return new dict — no mutation. `GameManager.state` global. `GameState.create()` in `data/GameState.gd`.
 
 ## Feature flags (`data/FeatureFlags.gd`)
-Static class, `static var` (not `const`) so flags flip at runtime. **All default true since 2026-06-04** (early-state policy: ship everything on; flags are kill-switches, not gates). Only `status_effects` is actually read by code (`BattleSystem._tick_side`) — it gates the Status pipeline that Abilities apply through; the other four are inert placeholders.
-- `status_effects`, `hidden_recipes`, `efficiency_scoring`, `ability_chain`, `innate_ability`
+Static class, `static var` (not `const`) so flags flip at runtime. **All default true since 2026-06-04** (early-state policy: ship everything on; flags are kill-switches, not gates). Read by code: `status_effects` (gates the Status pipeline Abilities apply through) and `combat_adjacency` (adjacency_upgrade reactives). `hidden_recipes`/`efficiency_scoring`/`ability_chain`/`innate_ability` are inert placeholders.
+- `status_effects`, `hidden_recipes`, `efficiency_scoring`, `ability_chain`, `innate_ability`, `combat_adjacency`
 
 ## Match structure
 8 players, last standing wins. Each round: Shop phase → combat phase. Mixed PvP + PvE (fixed schedule).
@@ -70,7 +70,7 @@ ESC in Shop or Battle → PauseOverlay (CanvasLayer 110). Resume, Settings, Forf
 `_ready()` fires on `add_child()`, not `.new()`. Set plain properties before `add_child`; call child-node methods only after.
 
 ## Board + synergies (partially TBD)
-Battlegrid size TBD. Adjacency bonuses apply at setup, not during combat. Faction threshold synergies. Full design deferred — see `ideas.md`.
+Battlegrid size TBD (backend grid-agnostic, live grid 4 slots). **Reactive adjacency IS in combat** for `adjacency_upgrade` abilities (Ember, Photosynthesis) via `FeatureFlags.combat_adjacency` + `GridSystem.neighbors` — supersedes the old "adjacency at setup only" note. Faction threshold synergies still deferred — see `ideas.md`.
 
 ## Steam + backend seams
 - **OpponentProvider** (`systems/`): `get_opponent(context)` → Ghost snapshot `{player_id, player_name, round, grid, acquired_day, source}`. LocalDaySeededAdapter + GhostFixtures fallback.
@@ -88,14 +88,17 @@ T1 mechanics: burn (ramp stacks, tick dmg), poison (permanent stacks), armor (ab
 **BalanceSystem** (`systems/`, gated by `FeatureFlags.efficiency_scoring`). Two axes: DPS Score (`effective_damage / cooldown`) + Effect Score (hardcoded table, T1 only; T2/T3 = 0 pending design). Board score = sum of 4 slots. Dev panel in Compendium. ADR: `docs/adr/0002-two-axis-efficiency-scoring.md`.
 
 ## Ability System (settled 2026-06-03, grilling) — see ADR 0003/0004
-- **Time = integer deciseconds.** No decimals in combat design values. `cooldown` 2.5s→25; haste −0.3s→−3; penalties +0.8s→+8. Float `delta` converted at one chokepoint. Effective CD floored at 10 (1 fire/sec). Shock-slow result rounded to nearest decisecond. Blind = integer percent (+15/stack, cap 50). Plating = integer everywhere (T2→1, T3→2, T4→3–4). Rebalance cooldowns up so effective firing ≈ 2–5s.
+- **Time = integer deciseconds.** No decimals in combat design values. Field is `cooldown_deciseconds` (was `cooldown`): 2.5s→25; haste −0.3s→−3; penalties +0.8s→+8. Float `delta` converted at one chokepoint. Effective CD floored at 10 (1 fire/sec). Shock-slow result rounded to nearest decisecond. Blind = integer percent (+15/stack, cap 50). Plating = integer everywhere (T2→1, T3→2, T4→3–4). Rebalance cooldowns up so effective firing ≈ 2–5s.
 - **`data/AbilityData.gd`** (pure data, keyed by id) + **`systems/AbilitySystem.gd`** (execution). One ability/element for v1. Schema: `{trigger, effects:[{kind,status/amount/seconds,target}], interval_deciseconds?, adjacency_upgrade?, description}`. Compound = array of atomic effects. Buffs→own side, debuffs→opponent (violating spec rows auto-corrected).
 - **Triggers:** combat_start (t=0 in `to_battle`), periodic (first fire at +interval), passive (queried at calc site, probabilistic ones roll per-hit from combat-seeded RNG in slot order), reactive `on_*`. **Depth-1 rule:** reactive output emits no further reactives and never multicasts. Scan order slot 0…N.
+- **Combat events (ADR 0004):** reactive resolution runs off events built by `AbilitySystem.fire_event/miss_event/trigger_event`. Fire events `{side,slot,damage,effect,is_miss}` are visual+reactive (the only ones in `battle_events`); trigger events `{trigger,side,slot}` (on_burn_tick/on_poison_tick from `StatusSystem.tick`, on_armor_stripped, on_haste_applied) are reactive-only, filtered out of `battle_events` via `is_visual_event()`. Reactives may carry `chance` (seeded roll) + `when` conditions. A DOT ticking on one side is the other side's event.
 - **Multicast:** repeats full cooldown fire N× (T2/3 cap 2×, T4 3×). Each repeat is an independent reactive trigger (1 multicast = 2 synergy triggers). Periodic/combat_start never multicast. Echo cut from v1; conditional refire supported.
-- **Curse** expanded: `{ticks_remaining, is_permanent, damage_amplifier}` — amplifier adds flat dmg to cursed side's incoming hits; permanent ignores tick-down until cleansed.
-- **New StatusSystem fields:** `burn_tick_damage_bonus`, `shock_effective_stack_bonus`, `poison_tick_damage_bonus`, side-wide `cooldown_penalty_seconds` (deciseconds). Dead `slow` status kept reserved (may reimplement).
-- **Freeze:** per-slot `frozen_slot_deciseconds_remaining` array (grid-agnostic), counts down, blocks fire, cleansable, anti-permalock (skip last-frozen slot). Own logic, not StatusSystem.
-- **Grid-agnostic backend:** size derived from slot array; orthogonal `neighbors(slot,w,h)` helper. Adjacency-upgrade abilities ship global by default, gated by `FeatureFlags.combat_adjacency`. v1: implement T2+T3 fully, T4 stubbed `{tbd:true}`. Armor-strip cut from v1.
+- **Curse** expanded: `curse.{ticks_remaining, is_permanent, damage_amplifier}` — amplifier adds flat dmg to cursed side's incoming hits; permanent ignores tick-down until cleansed.
+- **StatusSystem modifier fields** (set via combat_start `set_status_field`, read at calc sites): `burn.tick_damage_bonus`, `poison.tick_damage_bonus`, `shock.effective_stack_bonus`, `plating.reduces_dot`, `armor.floor`, `weaken.duration_bonus`, `haste.reduction_bonus_deciseconds`, `leech.{bonus,double}`, and side-wide signed `cooldown_modifier_deciseconds` (penalties +, reductions −). Dead `slow` status kept reserved.
+- **Freeze:** per-side float-seconds arrays `player_frozen_seconds`/`opponent_frozen_seconds` (parallel to timers, grid-agnostic) + `*_last_frozen_slot`. Frozen slot is paused (skips fire, CD doesn't advance). `BattleSystem.select_freeze_target` anti-permalock. Own logic, not StatusSystem.
+- **Grid-agnostic backend:** size derived from slot array; `GridSystem.dimensions`/orthogonal `neighbors`. `systems/CombatSide.gd` is the single side→state-key map. v1: T2+T3 filled (~10 still skipped — see handoff), T4 stubbed. Armor-strip: no strip-effect, but `on_armor_stripped` event fires when a hit depletes armour to 0 (Rust reacts).
+- **Innate/Replay seam:** `pending_commands` in GameState + `BattleSystem.queue_command`/`_drain_commands` + `AbilitySystem.resolve_command`. Reproducible via seeded `combat_rng_state`. UI pending.
+- **Tooltip:** `show_for_battle` live-updates effective cooldown + weaken-adjusted damage each frame; `data/StatusGlossary.gd` + RichText `[url]` keyword links; hold Shift pins the card for keyword inspection.
 
 ## Deferred / TBD
 Backlog in `.claude/ai-helper/ideas.md`. Key: T2 placeholder names (8 Group-G combos remaining), T2/T3 action design, Level 2 Reward impl, Innate Ability economy, Faction synergy + grid adjacency, Draft system, Meta-progression shape, PlatformLayer, Battlegrid size. Code renames pending: `"effect"` field → `"action"`, `effect_score` → `action_score`.
