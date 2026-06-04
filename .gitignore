@@ -13,3 +13,14 @@
 # OS files
 .DS_Store
 Thumbs.db
+
+# Godot GDExtension shadow copies (Windows loads a ~-prefixed working copy of
+# native libs so the original isn't locked) + Windows replace-file temp artifacts.
+# These regenerate every editor session while a GDExtension (e.g. godotsteam) is present.
+~*
+*.TMP
+
+# GodotSteam removed 2026-06-04 (unused until Steam work; stock GDExtension, re-add
+# the prebuilt zip from godotsteam.com into addons/godotsteam/ when needed).
+# Remove this line if you later want the binaries tracked again.
+addons/godotsteam/
