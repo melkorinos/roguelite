@@ -69,6 +69,19 @@ func test_conditional_requires_all_conditions() -> void:
 	assert_eq(s["opponent_hp"] as int, before)
 
 
+func test_slow_condition_evaluates_correctly() -> void:
+	# Regression: _status_count had no case for "slow" → always returned 0 →
+	# target_has_status:slow conditions silently never triggered.
+	var ability: Dictionary = { "trigger": "combat_start", "effects": [
+		{ "kind": "deal_damage", "amount": 2, "target": "opponent",
+			"when": [{ "kind": "target_has_status", "target": "opponent", "status": "slow", "at_least": 1 }] }] }
+	var st: Dictionary = _with_ability("player", 0, ability)
+	((st["opponent_statuses"] as Dictionary)["slow"] as Dictionary)["n"] = 1
+	var before: int = st["opponent_hp"] as int
+	var s: Dictionary = AbilitySystem.resolve_combat_start(st)
+	assert_eq(s["opponent_hp"] as int, before - 2)
+
+
 # ── resolve_combat_start ──────────────────────────────────────────────────────
 
 func test_combat_start_applies_armor_to_own_side() -> void:

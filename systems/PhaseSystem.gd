@@ -1,6 +1,14 @@
 class_name PhaseSystem
 
 
+static func _lives_lost(ratio: float) -> int:
+	if ratio >= 0.70:
+		return 30
+	elif ratio >= 0.30:
+		return 20
+	return 10
+
+
 static func to_battle(state: Dictionary, opponent_snapshot: Dictionary) -> Dictionary:
 	var s: Dictionary = state.duplicate(true)
 	s["phase"] = "battle"
@@ -56,12 +64,7 @@ static func advance_round(state: Dictionary) -> Dictionary:
 			return s
 	else:
 		var ratio: float = float(opp_hp) / float(maxi(opp_start, 1))
-		var lives_lost: int = 10
-		if ratio >= 0.70:
-			lives_lost = 30
-		elif ratio >= 0.30:
-			lives_lost = 20
-		s["lives"] = (s["lives"] as int) - lives_lost
+		s["lives"] = (s["lives"] as int) - _lives_lost(ratio)
 		if (s["lives"] as int) <= 0:
 			s["phase"] = "eliminated"
 			return s
@@ -82,11 +85,7 @@ static func describe_result(state: Dictionary) -> Dictionary:
 		wins_after = wins + 1
 	else:
 		var ratio: float = float(opp_hp) / float(maxi(opp_start, 1))
-		lives_lost = 10
-		if ratio >= 0.70:
-			lives_lost = 30
-		elif ratio >= 0.30:
-			lives_lost = 20
+		lives_lost = _lives_lost(ratio)
 	var lives_after: int = lives - lives_lost
 	return {
 		"outcome": outcome,

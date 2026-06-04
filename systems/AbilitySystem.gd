@@ -187,14 +187,13 @@ static func _condition_met(state: Dictionary, condition: Dictionary, source_side
 
 # The headline integer for a status — used by conditions to test thresholds.
 static func _status_count(statuses: Dictionary, status: String) -> int:
-	var dict: Dictionary = statuses[status] as Dictionary
-	match status:
-		"burn", "poison", "weaken": return dict["stacks"] as int
-		"shock": return dict["n"] as int
-		"armor", "plating": return dict["value"] as int
-		"blind": return dict["percent"] as int
-		"curse": return dict["ticks_remaining"] as int
-	return 0
+	if not EffectRegistry.EFFECTS.has(status):
+		return 0
+	var entry: Dictionary = EffectRegistry.EFFECTS[status] as Dictionary
+	var field: String = entry.get("count_field", "") as String
+	if field.is_empty() or not statuses.has(status):
+		return 0
+	return ((statuses[status] as Dictionary).get(field, 0)) as int
 
 
 # ── resolvers (return a new state, immutable to caller) ───────────────────────
@@ -304,13 +303,9 @@ static func resolve_reactive_inplace(state: Dictionary, events: Array, combat_rn
 
 static func _event_triggers(effect: String, damage: int) -> Array:
 	var triggers: Array = []
-	match effect:
-		"burn": triggers.append("on_burn_applied")
-		"heal": triggers.append("on_heal_applied")
-		"leech": triggers.append("on_leech")
-		"haste": triggers.append("on_haste_applied")
-	if effect in ["burn", "poison", "shock", "weaken", "blind", "curse"]:
-		triggers.append("on_status_applied:" + effect)
+	if EffectRegistry.EFFECTS.has(effect):
+		var entry: Dictionary = EffectRegistry.EFFECTS[effect] as Dictionary
+		triggers.append_array(entry.get("triggers", []) as Array)
 	if damage > 0:
 		triggers.append("on_damage_dealt")
 	return triggers

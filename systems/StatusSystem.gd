@@ -9,20 +9,14 @@ const MAX_STACKS: int = 99
 
 
 static func empty_statuses() -> Dictionary:
-	return {
-		"burn":    { "stacks": 0, "tick_damage_bonus": 0 },
-		"poison":  { "stacks": 0, "tick_damage_bonus": 0 },
-		"armor":   { "value": 0, "floor": 0 },
-		"plating": { "value": 0, "reduces_dot": false },
-		"blind":   { "percent": 0 },
-		"shock":   { "n": 0, "effective_stack_bonus": 0 },
-		"slow":    { "n": 0 },
-		"haste":   { "reduction": 0, "reduction_bonus_deciseconds": 0 },
-		"weaken":  { "stacks": 0, "ticks": 0, "duration_bonus": 0 },
-		"curse":   { "ticks_remaining": 0, "is_permanent": false, "damage_amplifier": 0 },
-		"leech":   { "bonus": 0, "double": false },
-		"cooldown_modifier_deciseconds": 0,
-	}
+	var result: Dictionary = {}
+	for effect: Variant in EffectRegistry.EFFECTS:
+		var entry: Dictionary = EffectRegistry.EFFECTS[effect] as Dictionary
+		var shape: Dictionary = entry.get("status_shape", {}) as Dictionary
+		if not shape.is_empty():
+			result[effect as String] = shape.duplicate(true)
+	result["cooldown_modifier_deciseconds"] = 0
+	return result
 
 
 static func slow_pct(n: int) -> float:
