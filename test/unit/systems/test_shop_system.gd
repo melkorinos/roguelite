@@ -24,8 +24,10 @@ func _state_with_inv_item(inv_slot: int, id: String) -> Dictionary:
 
 func test_transfer_buy_deducts_gold() -> void:
 	var state := _state_with_shop_item(0, "water")
+	var before: int = state["gold"] as int
+	var price: int = (state["shop_items"][0] as Dictionary)["price"] as int
 	var s := ShopSystem.transfer(state, {"zone": "shop", "slot": 0}, {"zone": "inventory", "slot": -1})
-	assert_eq(s["gold"], 5)
+	assert_eq(s["gold"] as int, before - price)
 
 
 func test_transfer_buy_places_element_in_first_empty_slot() -> void:
@@ -106,8 +108,10 @@ func test_transfer_buy_level_up_deducts_gold() -> void:
 	water["element_id"] = "water"
 	water["level"] = 1
 	state["inventory"][0] = water
+	var before: int = state["gold"] as int
+	var price: int = (state["shop_items"][1] as Dictionary)["price"] as int
 	var s := ShopSystem.transfer(state, {"zone": "shop", "slot": 1}, {"zone": "inventory", "slot": 0})
-	assert_eq(s["gold"] as int, 5)
+	assert_eq(s["gold"] as int, before - price)
 
 
 func test_transfer_buy_level_up_nulls_shop_slot() -> void:
@@ -263,13 +267,15 @@ func test_sell_grid_item_refunds_and_clears() -> void:
 # ── reroll ────────────────────────────────────────────────────────────────────
 
 func test_reroll_free_does_not_cost_gold() -> void:
-	var s := ShopSystem.reroll_shop(_make_state(), true)
-	assert_eq(s["gold"], 10)
+	var state := _make_state()
+	var s := ShopSystem.reroll_shop(state, true)
+	assert_eq(s["gold"] as int, state["gold"] as int)
 
 
 func test_reroll_costs_2_gold() -> void:
-	var s := ShopSystem.reroll_shop(_make_state())
-	assert_eq(s["gold"], 8)
+	var state := _make_state()
+	var s := ShopSystem.reroll_shop(state)
+	assert_eq(s["gold"] as int, (state["gold"] as int) - 2)
 
 
 func test_reroll_fails_without_enough_gold() -> void:
@@ -278,6 +284,42 @@ func test_reroll_fails_without_enough_gold() -> void:
 	var s := ShopSystem.reroll_shop(state)
 	var all_null: bool = (s["shop_items"] as Array).all(func(x: Variant) -> bool: return x == null)
 	assert_true(all_null)
+
+
+# ── escalating reroll cost (resets each round) ────────────────────────────────
+
+func test_reroll_cost_starts_at_base() -> void:
+	assert_eq(ShopSystem.reroll_cost(_make_state()), ShopSystem.REROLL_BASE_COST)
+
+
+func test_paid_reroll_escalates_cost_by_one() -> void:
+	var state := _make_state()
+	var after_first := ShopSystem.reroll_shop(state)
+	assert_eq(after_first["reroll_count"] as int, 1)
+	assert_eq(ShopSystem.reroll_cost(after_first), ShopSystem.REROLL_BASE_COST + 1)
+
+
+func test_second_paid_reroll_costs_one_more_gold() -> void:
+	var state := _make_state()
+	var a := ShopSystem.reroll_shop(state)          # costs base (2)
+	var gold_after_first: int = a["gold"] as int
+	var b := ShopSystem.reroll_shop(a)              # costs base+1 (3)
+	assert_eq(b["gold"] as int, gold_after_first - (ShopSystem.REROLL_BASE_COST + 1))
+
+
+func test_free_reroll_does_not_escalate_or_charge() -> void:
+	var state := _make_state()
+	var s := ShopSystem.reroll_shop(state, true)
+	assert_eq(s["gold"] as int, state["gold"] as int)
+	assert_eq(s["reroll_count"] as int, 0)
+
+
+func test_advance_round_resets_reroll_count() -> void:
+	var state := _make_state()
+	state = ShopSystem.reroll_shop(state)
+	state["opponent_hp"] = 0  # count it as a win so advance_round routes back to shop
+	var s := PhaseSystem.advance_round(state)
+	assert_eq(s["reroll_count"] as int, 0)
 
 
 func test_reroll_returns_only_tier1_at_default_shop_tier() -> void:
@@ -431,3 +473,66 @@ func test_can_transfer_grid_to_grid_different_slots_allowed() -> void:
 func test_can_transfer_grid_to_grid_same_slot_rejected() -> void:
 	var state := _make_state()
 	assert_false(ShopSystem.can_transfer(state, {"zone": "grid", "slot": 2}, {"zone": "grid", "slot": 2}))
+
+
+# ── resolve_drop: outcome-reporting shop intake ───────────────────────────────
+
+func test_resolve_drop_buy_into_empty_reports_bought() -> void:
+	var state := _state_with_shop_item(0, "water")
+	var r := ShopSystem.resolve_drop(state, {"zone": "shop", "slot": 0}, {"zone": "inventory", "slot": -1})
+	assert_eq(r["outcome"], "bought")
+	assert_not_null((r["state"] as Dictionary)["inventory"][0])
+
+
+func test_resolve_drop_buy_onto_matching_level1_reports_merged() -> void:
+	var state := _state_with_inv_item(0, "water")
+	state["shop_items"][0] = ElementData.find("water").duplicate()
+	var r := ShopSystem.resolve_drop(state, {"zone": "shop", "slot": 0}, {"zone": "inventory", "slot": 0})
+	assert_eq(r["outcome"], "merged")
+	assert_eq(((r["state"] as Dictionary)["inventory"][0] as Dictionary)["level"], 2)
+
+
+func test_resolve_drop_rejects_when_gold_insufficient() -> void:
+	var state := _state_with_shop_item(0, "water")
+	state["gold"] = 0
+	var r := ShopSystem.resolve_drop(state, {"zone": "shop", "slot": 0}, {"zone": "inventory", "slot": -1})
+	assert_eq(r["outcome"], "rejected")
+
+
+func test_resolve_drop_grid_merge_same_element_reports_merged() -> void:
+	var state := _make_state()
+	for slot: int in [0, 1]:
+		var elem: Dictionary = ElementData.find("fire").duplicate()
+		elem["element_id"] = "fire"
+		elem["level"] = 1
+		state["battle_grid"][slot] = elem
+	var r := ShopSystem.resolve_drop(state, {"zone": "grid", "slot": 0}, {"zone": "grid", "slot": 1})
+	assert_eq(r["outcome"], "merged")
+	# level_up_grid lands the result in the lower index (mini) and clears the other.
+	assert_eq(((r["state"] as Dictionary)["battle_grid"][0] as Dictionary)["level"], 2)
+	assert_null((r["state"] as Dictionary)["battle_grid"][1])
+
+
+func test_resolve_drop_grid_swap_different_elements_reports_swapped() -> void:
+	var state := _make_state()
+	var fire: Dictionary = ElementData.find("fire").duplicate()
+	fire["element_id"] = "fire"
+	fire["level"] = 1
+	var water: Dictionary = ElementData.find("water").duplicate()
+	water["element_id"] = "water"
+	water["level"] = 1
+	state["battle_grid"][0] = fire
+	state["battle_grid"][1] = water
+	var r := ShopSystem.resolve_drop(state, {"zone": "grid", "slot": 0}, {"zone": "grid", "slot": 1})
+	assert_eq(r["outcome"], "swapped")
+	assert_eq(((r["state"] as Dictionary)["battle_grid"][0] as Dictionary)["element_id"], "water")
+
+
+func test_resolve_drop_inventory_non_mergeable_reports_rejected() -> void:
+	var state := _state_with_inv_item(0, "fire")
+	var water: Dictionary = ElementData.find("water").duplicate()
+	water["element_id"] = "water"
+	water["level"] = 1
+	state["inventory"][1] = water
+	var r := ShopSystem.resolve_drop(state, {"zone": "inventory", "slot": 0}, {"zone": "inventory", "slot": 1})
+	assert_eq(r["outcome"], "rejected")

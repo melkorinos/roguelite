@@ -43,7 +43,7 @@ static func _day_seeded_grid(day: int, round_num: int, shop_tier: int) -> Array:
 		indices[j] = tmp
 
 	var grid: Array = [null, null, null, null]
-	var count: int = mini(4, pool.size())
+	var count: int = mini(_max_slots_for_round(round_num), pool.size())
 	for i: int in count:
 		var elem: Dictionary = pool[indices[i]].duplicate()
 		elem["element_id"] = elem["id"]
@@ -51,6 +51,14 @@ static func _day_seeded_grid(day: int, round_num: int, shop_tier: int) -> Array:
 		grid[i] = elem
 
 	return grid
+
+
+static func _max_slots_for_round(round_num: int) -> int:
+	if round_num <= 1:
+		return 2
+	if round_num <= 3:
+		return 3
+	return 4
 
 
 static func _grid_is_empty(grid: Array) -> bool:

@@ -57,7 +57,7 @@ static func all_elements() -> Array[Dictionary]:
 		{ "id": "lifebloom",    "name": "Lifebloom",    "emoji": "🌺",  "tier": 2, "price": 8, "cooldown_deciseconds": 30, "damage": 2 },
 		{ "id": "hemogoblin",   "name": "Hemogoblin",   "emoji": "👺",  "tier": 2, "price": 8, "cooldown_deciseconds": 30, "damage": 2 },
 		{ "id": "nightveil",    "name": "Nightveil",    "emoji": "💀",  "tier": 2, "price": 8, "cooldown_deciseconds": 30, "damage": 2 },
-		{ "id": "gore",         "name": "Gore",         "emoji": "⚔️",  "tier": 2, "price": 8, "cooldown_deciseconds": 30, "damage": 2 },
+		{ "id": "gore",         "name": "Gore",         "emoji": "⚔️",  "tier": 2, "price": 8, "cooldown_deciseconds": 30, "damage": 2, "effect": "leech" },
 		{ "id": "hemospore",    "name": "Hemospore",    "emoji": "🦠",  "tier": 2, "price": 8, "cooldown_deciseconds": 30, "damage": 2 },
 		{ "id": "frostbite",    "name": "Frostbite",    "emoji": "🩹",  "tier": 2, "price": 8, "cooldown_deciseconds": 30, "damage": 2 },
 		# ── Tier 2 — cross-combos (Frost × all) ─────────────────────────────────
@@ -169,4 +169,6 @@ static func find(element_id: String) -> Dictionary:
 # Effective damage = base_damage × level + tier. Applies universally (level-up and forge results).
 static func effective_damage(item: Dictionary) -> int:
 	var level: int = item.get("level", 1) as int
-	return (item["damage"] as int) * level + (item["tier"] as int)
+	# Starting Pick (and future buffs) can multiply an element's base damage.
+	var multiplier: int = item.get("damage_multiplier", 1) as int
+	return (item["damage"] as int) * multiplier * level + (item["tier"] as int)

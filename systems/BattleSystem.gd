@@ -19,25 +19,6 @@ static func simulate_battle(state: Dictionary) -> Dictionary:
 	return s
 
 
-static func create_opponent_grid(round_num: int) -> Array:
-	var ids: Array[String] = []
-	match round_num:
-		1: ids = ["fire", "water"]
-		2: ids = ["fire", "water", "air"]
-		3: ids = ["fire", "steam", "air", "earth"]
-		4: ids = ["lava", "storm", "cloud", "rain"]
-		_: ids = ["lava", "lightning", "storm", "volcano"]
-	@warning_ignore("integer_division")
-	var level: int = 1 + round_num / 4
-	var grid: Array = [null, null, null, null]
-	for i: int in mini(ids.size(), 4):
-		var def: Dictionary = ElementData.find(ids[i]).duplicate()
-		def["element_id"] = def["id"]
-		def["level"] = level
-		grid[i] = def
-	return grid
-
-
 static func compute_opponent_hp(opp_grid: Array) -> int:
 	var total: int = 0
 	for slot: Variant in opp_grid:
@@ -74,8 +55,8 @@ static func tick_battle(state: Dictionary, delta: float) -> Dictionary:
 	# Reconstruct the seeded combat RNG, advance it through both sides + reactives, persist it.
 	var combat_rng := RandomNumberGenerator.new()
 	combat_rng.state = s["combat_rng_state"] as int
-	_tick_side(s, _make_side_ctx(true), delta, events, use_effects, bstats, combat_rng)
-	_tick_side(s, _make_side_ctx(false), delta, events, use_effects, bstats, combat_rng)
+	_tick_side(s, "player", delta, events, use_effects, bstats, combat_rng)
+	_tick_side(s, "opponent", delta, events, use_effects, bstats, combat_rng)
 
 	# Depth-1 reactive abilities respond to this tick's fire/tick/armor events;
 	# periodic abilities advance their own timers. In-place (s is already a fresh
@@ -125,29 +106,14 @@ static func _drain_commands(s: Dictionary, current_time: float) -> Dictionary:
 	return s
 
 
-static func _make_side_ctx(is_player: bool) -> Dictionary:
-	var side: String = "player" if is_player else "opponent"
-	var own: Dictionary = CombatSide.keys(side)
-	var opp: Dictionary = CombatSide.keys(CombatSide.opponent_of(side))
-	return {
-		"grid_key": own["grid"],
-		"timers_key": own["timers"],
-		"own_statuses_key": own["statuses"],
-		"opp_statuses_key": opp["statuses"],
-		"own_hp_key": own["hp"],
-		"opp_hp_key": opp["hp"],
-		"side": side,
-		"stats_key": own["stats"],
-		"frozen_key": own["frozen"],
-	}
-
-
-static func _tick_side(s: Dictionary, ctx: Dictionary, delta: float, events: Array, use_effects: bool, bstats: Dictionary, combat_rng: RandomNumberGenerator) -> void:
-	var own_statuses_key: String = ctx["own_statuses_key"] as String
-	var grid: Array = s[ctx["grid_key"] as String] as Array
-	var timers: Array = s[ctx["timers_key"] as String] as Array
-	var frozen_seconds: Array = s[ctx["frozen_key"] as String] as Array
-	var stats: Array = bstats[ctx["stats_key"] as String] as Array
+static func _tick_side(s: Dictionary, side: String, delta: float, events: Array, use_effects: bool, bstats: Dictionary, combat_rng: RandomNumberGenerator) -> void:
+	# All side→state-key mapping goes through CombatSide — the single side accessor.
+	var k: Dictionary = CombatSide.keys(side)
+	var own_statuses_key: String = k["statuses"] as String
+	var grid: Array = s[k["grid"] as String] as Array
+	var timers: Array = s[k["timers"] as String] as Array
+	var frozen_seconds: Array = s[k["frozen"] as String] as Array
+	var stats: Array = bstats[k["stats"] as String] as Array
 
 	for i: int in grid.size():
 		if grid[i] == null:
@@ -177,19 +143,20 @@ static func _tick_side(s: Dictionary, ctx: Dictionary, delta: float, events: Arr
 				# independent event so synergies trigger once per repeat.
 				var repeats: int = 1 + AbilitySystem.multicast_count(elem)
 				for _repeat: int in repeats:
-					_fire_element_once(s, ctx, elem, i, stats, events, timers, use_effects, combat_rng)
+					_fire_element_once(s, side, elem, i, stats, events, use_effects, combat_rng)
 			else:
-				events.append(AbilitySystem.miss_event(ctx["side"] as String, i))
+				events.append(AbilitySystem.miss_event(side, i))
 		timers[i] = t
 
 
 # Resolves a single fire of one element: damage hit, event, stats, and on-fire
 # effect. Called once per multicast repeat.
-static func _fire_element_once(s: Dictionary, ctx: Dictionary, elem: Dictionary, slot_index: int, stats: Array, events: Array, timers: Array, use_effects: bool, combat_rng: RandomNumberGenerator) -> void:
-	var own_statuses_key: String = ctx["own_statuses_key"] as String
-	var opp_statuses_key: String = ctx["opp_statuses_key"] as String
-	var own_hp_key: String = ctx["own_hp_key"] as String
-	var opp_hp_key: String = ctx["opp_hp_key"] as String
+static func _fire_element_once(s: Dictionary, side: String, elem: Dictionary, slot_index: int, stats: Array, events: Array, use_effects: bool, combat_rng: RandomNumberGenerator) -> void:
+	var k: Dictionary = CombatSide.keys(side)
+	var opp_k: Dictionary = CombatSide.keys(CombatSide.opponent_of(side))
+	var own_statuses_key: String = k["statuses"] as String
+	var opp_statuses_key: String = opp_k["statuses"] as String
+	var opp_hp_key: String = opp_k["hp"] as String
 	var raw: int = ElementData.effective_damage(elem)
 	var dmg: int = raw
 	if use_effects:
@@ -199,20 +166,26 @@ static func _fire_element_once(s: Dictionary, ctx: Dictionary, elem: Dictionary,
 		s[opp_statuses_key] = hit["defender_statuses"] as Dictionary
 		var armor_after: int = ((s[opp_statuses_key] as Dictionary)["armor"] as Dictionary)["value"] as int
 		if armor_before > 0 and armor_after == 0:
-			events.append(AbilitySystem.trigger_event("on_armor_stripped", ctx["side"] as String, slot_index))
+			events.append(AbilitySystem.trigger_event("on_armor_stripped", side, slot_index))
 	s[opp_hp_key] = maxi(0, (s[opp_hp_key] as int) - dmg)
 	var effect_str: String = elem.get("effect", "") as String
-	events.append(AbilitySystem.fire_event(ctx["side"] as String, slot_index, dmg, effect_str))
+	events.append(AbilitySystem.fire_event(side, slot_index, dmg, effect_str))
 	var slot_stats: Dictionary = stats[slot_index] as Dictionary
 	slot_stats["fires"] = (slot_stats["fires"] as int) + 1
 	slot_stats["damage"] = (slot_stats["damage"] as int) + dmg
 	if use_effects and elem.has("effect"):
-		_apply_element_effect(s, effect_str, own_statuses_key, opp_statuses_key, own_hp_key, timers, dmg)
-		_tally_effect(slot_stats, effect_str)
+		# On-fire Action runs through the same effect vocabulary as Abilities;
+		# apply_on_fire also records this element's Summary tally.
+		AbilitySystem.apply_on_fire(s, effect_str, side, slot_index, dmg)
+	if use_effects:
+		# On-activate abilities fire alongside the Action, through the same
+		# vocabulary; every_n gates them off this slot's fire tally (no-op unless
+		# the element's ability is on_activate).
+		AbilitySystem.apply_on_activate(s, AbilitySystem.ability_for(elem), side, slot_index, slot_stats["fires"] as int)
 	# Probabilistic on-hit passives (Dust, Static, Pollen, Flint, Sand), rolled
 	# from the seeded RNG in slot order so replays reproduce exactly.
 	if use_effects:
-		var own_grid: Array = s[ctx["grid_key"] as String] as Array
+		var own_grid: Array = s[k["grid"] as String] as Array
 		for chance_entry: Variant in AbilitySystem.on_hit_status_chances(own_grid):
 			var entry: Dictionary = chance_entry as Dictionary
 			if combat_rng.randf() * 100.0 < float(entry["chance"] as int):
@@ -220,36 +193,6 @@ static func _fire_element_once(s: Dictionary, ctx: Dictionary, elem: Dictionary,
 				var res: Dictionary = StatusSystem.apply_effect(s[statuses_key] as Dictionary, entry["status"] as String)
 				s[statuses_key] = res["statuses"] as Dictionary
 				_tally_effect(slot_stats, entry["status"] as String)
-
-
-# dmg_dealt: actual damage that landed (used for leech heal).
-static func _apply_element_effect(s: Dictionary, effect: String, own_statuses_key: String, opp_statuses_key: String, own_hp_key: String, timers: Array, dmg_dealt: int) -> void:
-	match effect:
-		"haste":
-			var res: Dictionary = StatusSystem.apply_effect(s[own_statuses_key] as Dictionary, "haste")
-			s[own_statuses_key] = res["statuses"] as Dictionary
-			# Gust raises haste strength via haste.reduction_bonus_deciseconds.
-			var bonus: int = ((s[own_statuses_key] as Dictionary)["haste"] as Dictionary)["reduction_bonus_deciseconds"] as int
-			var haste_seconds: float = float(StatusSystem.HASTE_REDUCTION_DECISECONDS + bonus) / 10.0
-			for j: int in timers.size():
-				timers[j] = maxf(0.0, (timers[j] as float) - haste_seconds)
-		"heal":
-			var res: Dictionary = StatusSystem.apply_effect(s[own_statuses_key] as Dictionary, "heal")
-			s[own_statuses_key] = res["statuses"] as Dictionary
-			s[own_hp_key] = (s[own_hp_key] as int) + (res["hp_delta"] as int)
-		"cleanse":
-			var res: Dictionary = StatusSystem.apply_effect(s[own_statuses_key] as Dictionary, "cleanse")
-			s[own_statuses_key] = res["statuses"] as Dictionary
-		"leech":
-			# Pulse adds leech.bonus; Ichor doubles via leech.double.
-			var leech: Dictionary = (s[own_statuses_key] as Dictionary)["leech"] as Dictionary
-			var heal: int = dmg_dealt + (leech["bonus"] as int)
-			if leech["double"] as bool:
-				heal *= 2
-			s[own_hp_key] = (s[own_hp_key] as int) + heal
-		_:
-			var res: Dictionary = StatusSystem.apply_effect(s[opp_statuses_key] as Dictionary, effect)
-			s[opp_statuses_key] = res["statuses"] as Dictionary
 
 
 # Picks a slot to freeze on the given grid. Prefers any occupied slot other than

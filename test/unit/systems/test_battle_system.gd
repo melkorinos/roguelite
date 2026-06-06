@@ -18,33 +18,6 @@ func _state_with_player_element(element_id: String) -> Dictionary:
 	return state
 
 
-# ── create_opponent_grid ──────────────────────────────────────────────────────
-
-func test_create_opponent_grid_round1_contains_fire_and_water() -> void:
-	var grid := BattleSystem.create_opponent_grid(1)
-	var ids: Array = []
-	for slot: Variant in grid:
-		if slot != null:
-			ids.append((slot as Dictionary)["element_id"])
-	assert_true(ids.has("fire"))
-	assert_true(ids.has("water"))
-
-
-func test_create_opponent_grid_has_four_slots() -> void:
-	var grid := BattleSystem.create_opponent_grid(1)
-	assert_eq(grid.size(), 4)
-
-
-func test_create_opponent_grid_level_1_at_round_1() -> void:
-	var grid := BattleSystem.create_opponent_grid(1)
-	assert_eq((grid[0] as Dictionary)["level"], 1)
-
-
-func test_create_opponent_grid_level_2_at_round_4() -> void:
-	var grid := BattleSystem.create_opponent_grid(4)
-	assert_eq((grid[0] as Dictionary)["level"], 2)
-
-
 # ── compute_opponent_hp ───────────────────────────────────────────────────────
 
 func test_compute_opponent_hp_has_minimum_of_15() -> void:
@@ -246,6 +219,58 @@ func test_combat_is_deterministic_given_seed() -> void:
 	assert_eq(run_a["opponent_hp"] as int, run_b["opponent_hp"] as int)
 	assert_eq(((run_a["opponent_statuses"] as Dictionary)["weaken"] as Dictionary)["stacks"] as int,
 		((run_b["opponent_statuses"] as Dictionary)["weaken"] as Dictionary)["stacks"] as int)
+
+
+# ── on_activate abilities through the combat tick ─────────────────────────────
+
+func _silence_opponent(st: Dictionary) -> void:
+	# Null the opponent board so only the player's element moves combat state
+	# (opponent_hp is already set from the pre-null grid). Keeps fire counts and
+	# leech deterministic without opponent blind/weaken interference.
+	var opp_grid: Array = st["opponent_grid"] as Array
+	for i: int in opp_grid.size():
+		opp_grid[i] = null
+
+
+func test_on_activate_ability_applies_through_tick() -> void:
+	var ability: Dictionary = { "trigger": "on_activate",
+		"effects": [{ "kind": "apply_status", "status": "poison", "amount": 1, "target": "opponent" }] }
+	var st := _battle_with_player_ability("fire", ability)
+	var cooldown: float = float(ElementData.find("fire")["cooldown_deciseconds"] as int) / 10.0
+	var s := BattleSystem.tick_battle(st, cooldown)
+	assert_eq(((s["opponent_statuses"] as Dictionary)["poison"] as Dictionary)["stacks"] as int, 1)
+
+
+func test_shrapnel_applies_shock_only_every_third_fire() -> void:
+	var st := PhaseSystem.to_battle(_state_with_player_element("shrapnel"), _fixture())
+	_silence_opponent(st)
+	var cooldown: float = float(ElementData.find("shrapnel")["cooldown_deciseconds"] as int) / 10.0
+	var s := BattleSystem.tick_battle(st, cooldown)        # fire 1
+	s = BattleSystem.tick_battle(s, cooldown)              # fire 2
+	assert_eq(((s["opponent_statuses"] as Dictionary)["shock"] as Dictionary)["n"] as int, 0, "no shock before the 3rd fire")
+	s = BattleSystem.tick_battle(s, cooldown)              # fire 3 → shock
+	assert_eq(((s["opponent_statuses"] as Dictionary)["shock"] as Dictionary)["n"] as int, 1, "shock on the 3rd fire")
+
+
+func test_rainbow_periodic_heals_and_armors_own_side() -> void:
+	# rainbow is periodic (every 5s) → all four colors are live, unlike the inert
+	# combat_start version. Heal + armor land on the own side after one interval.
+	var st := PhaseSystem.to_battle(_state_with_player_element("rainbow"), _fixture())
+	_silence_opponent(st)
+	var before_hp: int = st["player_hp"] as int
+	var s := BattleSystem.tick_battle(st, 5.0)
+	assert_gt(s["player_hp"] as int, before_hp, "rainbow periodic should heal its own side")
+	assert_gt(((s["player_statuses"] as Dictionary)["armor"] as Dictionary)["value"] as int, 0, "rainbow periodic should grant armor")
+
+
+func test_gore_lifesteals_and_weakens_on_fire() -> void:
+	var st := PhaseSystem.to_battle(_state_with_player_element("gore"), _fixture())
+	_silence_opponent(st)
+	var before_hp: int = st["player_hp"] as int
+	var cooldown: float = float(ElementData.find("gore")["cooldown_deciseconds"] as int) / 10.0
+	var s := BattleSystem.tick_battle(st, cooldown)
+	assert_gt(s["player_hp"] as int, before_hp, "gore should lifesteal for the damage it dealt")
+	assert_gt(((s["opponent_statuses"] as Dictionary)["weaken"] as Dictionary)["stacks"] as int, 0, "gore should also apply weaken")
 
 
 # ── simulate_battle (fixed-step headless sim) ─────────────────────────────────

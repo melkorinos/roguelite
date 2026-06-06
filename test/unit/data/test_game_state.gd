@@ -13,7 +13,7 @@ func test_create_starts_at_round_1() -> void:
 
 func test_create_has_correct_starting_gold() -> void:
 	var state := GameState.create()
-	assert_eq(state["gold"], 10)
+	assert_eq(state["gold"], 20)
 
 
 func test_create_has_correct_starting_hp() -> void:

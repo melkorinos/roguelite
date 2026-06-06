@@ -1,8 +1,8 @@
 class_name StatusGlossary
 
 # One-line definitions for the [keyword] tags used in ability descriptions. The
-# Item Tooltip renders these keywords as hoverable links (shift-to-pin) and shows
-# the matching definition in a secondary card.
+# Abilities Panel renders these as hoverable links; mousing over one shows a
+# Keyword Tooltip with the matching definition.
 
 const DEFINITIONS: Dictionary = {
 	"burn": "Deals damage each second, then loses a stack. Armour absorbs half.",

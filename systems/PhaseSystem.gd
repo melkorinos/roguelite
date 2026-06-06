@@ -11,36 +11,21 @@ static func _lives_lost(ratio: float) -> int:
 
 static func to_battle(state: Dictionary, opponent_snapshot: Dictionary) -> Dictionary:
 	var s: Dictionary = state.duplicate(true)
+	# CombatState owns the per-combat shape: every per-slot array, the status
+	# pools, and the Battle Summary stat rows, all sized to the board.
+	s = CombatState.reset(s)
 	s["phase"] = "battle"
-	s["battle_timer"] = 0.0
 	s["player_hp"] = 30
-	s["element_timers"] = [0.0, 0.0, 0.0, 0.0]
 	s["opponent_snapshot"] = opponent_snapshot
-	s["opponent_grid"] = opponent_snapshot.get("grid", [null, null, null, null]) as Array
-	s["opponent_timers"] = [0.0, 0.0, 0.0, 0.0]
-	s["player_frozen_seconds"] = [0.0, 0.0, 0.0, 0.0]
-	s["opponent_frozen_seconds"] = [0.0, 0.0, 0.0, 0.0]
-	s["player_last_frozen_slot"] = -1
-	s["opponent_last_frozen_slot"] = -1
-	s["player_ability_timers"] = [0.0, 0.0, 0.0, 0.0]
-	s["opponent_ability_timers"] = [0.0, 0.0, 0.0, 0.0]
+	s["opponent_grid"] = opponent_snapshot.get("grid", CombatState.empty_slots()) as Array
 	# Seed the combat RNG deterministically per round so Replay and async Ghost
 	# playback reproduce the exact fight.
 	var combat_rng := RandomNumberGenerator.new()
 	combat_rng.seed = hash("combat:%d" % (s["round"] as int))
 	s["combat_rng_state"] = combat_rng.state
-	s["pending_commands"] = []
-	s["battle_events"] = []
 	var opp_hp: int = BattleSystem.compute_opponent_hp(s["opponent_grid"])
 	s["opponent_hp"] = opp_hp
 	s["opponent_starting_hp"] = opp_hp
-	s["battle_stats"] = {
-		"player": [{"fires": 0, "damage": 0, "effects": 0, "effects_by_status": {}}, {"fires": 0, "damage": 0, "effects": 0, "effects_by_status": {}}, {"fires": 0, "damage": 0, "effects": 0, "effects_by_status": {}}, {"fires": 0, "damage": 0, "effects": 0, "effects_by_status": {}}],
-		"opponent": [{"fires": 0, "damage": 0, "effects": 0, "effects_by_status": {}}, {"fires": 0, "damage": 0, "effects": 0, "effects_by_status": {}}, {"fires": 0, "damage": 0, "effects": 0, "effects_by_status": {}}, {"fires": 0, "damage": 0, "effects": 0, "effects_by_status": {}}],
-	}
-	s["player_statuses"] = StatusSystem.empty_statuses()
-	s["opponent_statuses"] = StatusSystem.empty_statuses()
-	s["status_tick_timer"] = 0.0
 	s = AbilitySystem.resolve_combat_start(s)
 	return s
 
@@ -52,6 +37,7 @@ static func advance_round(state: Dictionary) -> Dictionary:
 	s["player_hp"] = 30
 	s["battle_events"] = []
 	s["shop_items"] = [null, null, null, null, null]
+	s["reroll_count"] = 0  # reroll cost escalates within a phase; reset each round
 
 	var opp_hp: int = s["opponent_hp"] as int
 	var opp_start: int = s["opponent_starting_hp"] as int

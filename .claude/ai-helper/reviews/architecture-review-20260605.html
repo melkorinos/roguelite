@@ -1,0 +1,421 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Architecture review — roguelite auto-battler</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="module">
+      import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+      mermaid.initialize({ startOnLoad: true, theme: "neutral", securityLevel: "loose" });
+    </script>
+    <style>
+      .seam { stroke-dasharray: 5 4; }
+      .deep { background: linear-gradient(135deg, #0f172a, #1e293b); }
+      .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+      .card-shadow { box-shadow: 0 1px 2px rgba(15,23,42,.06), 0 8px 24px -12px rgba(15,23,42,.18); }
+    </style>
+  </head>
+  <body class="bg-stone-50 text-slate-900 font-sans antialiased">
+    <main class="max-w-5xl mx-auto px-6 py-12 space-y-12">
+
+      <!-- ── Header ─────────────────────────────────────────────── -->
+      <header class="space-y-4">
+        <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Architecture review</p>
+        <h1 class="text-4xl font-serif font-semibold tracking-tight">roguelite — auto-battler</h1>
+        <p class="text-sm text-slate-500">2026-06-05 · 36 GDScript modules, ~5.6k lines · systems well-tested, scene scripts untested</p>
+        <div class="flex flex-wrap gap-x-6 gap-y-2 text-xs text-slate-600 border-t border-slate-200 pt-4">
+          <span class="flex items-center gap-2"><span class="inline-block w-5 h-3 border-2 border-slate-700 bg-white"></span> module</span>
+          <span class="flex items-center gap-2"><svg width="34" height="8"><line x1="0" y1="4" x2="34" y2="4" stroke="#475569" stroke-width="2" class="seam"/></svg> seam</span>
+          <span class="flex items-center gap-2"><svg width="34" height="8"><line x1="0" y1="4" x2="34" y2="4" stroke="#dc2626" stroke-width="2"/></svg> leakage</span>
+          <span class="flex items-center gap-2"><span class="inline-block w-5 h-3 deep"></span> deep module</span>
+        </div>
+        <p class="text-sm text-slate-600 leading-relaxed max-w-3xl">
+          Five deepening candidates, framed in the architecture vocabulary (module / interface / depth /
+          seam / leverage / locality) and the project's domain language (Element Card, Action, Ability,
+          Battlegrid, Combat Event). The systems tier is clean and pure; the friction concentrates where
+          <em>shape knowledge</em> and <em>domain rules</em> have spread across modules that should each own one.
+        </p>
+      </header>
+
+      <!-- ── Candidate index ───────────────────────────────────── -->
+      <nav class="grid grid-cols-1 sm:grid-cols-5 gap-2 text-xs">
+        <a href="#c1" class="rounded-md border border-slate-200 bg-white px-3 py-2 hover:border-emerald-400 card-shadow"><span class="text-slate-400">01</span><br>Combat-state factory</a>
+        <a href="#c2" class="rounded-md border border-slate-200 bg-white px-3 py-2 hover:border-emerald-400 card-shadow"><span class="text-slate-400">02</span><br>Element Card module</a>
+        <a href="#c3" class="rounded-md border border-slate-200 bg-white px-3 py-2 hover:border-emerald-400 card-shadow"><span class="text-slate-400">03</span><br>Shop intake seam</a>
+        <a href="#c4" class="rounded-md border border-slate-200 bg-white px-3 py-2 hover:border-amber-400 card-shadow"><span class="text-slate-400">04</span><br>One effect engine</a>
+        <a href="#c5" class="rounded-md border border-slate-200 bg-white px-3 py-2 hover:border-amber-400 card-shadow"><span class="text-slate-400">05</span><br>CombatSide accessor</a>
+      </nav>
+
+      <section id="candidates" class="space-y-12">
+
+      <!-- ════════════════ CANDIDATE 1 ════════════════ -->
+      <article id="c1" class="rounded-xl border border-slate-200 bg-white p-7 space-y-5 card-shadow">
+        <div class="flex items-start justify-between gap-4">
+          <h2 class="text-2xl font-serif font-semibold">01 · Give combat-phase state one factory</h2>
+          <div class="flex gap-2 shrink-0">
+            <span class="text-xs font-medium px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800">Strong</span>
+            <span class="text-xs font-medium px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">in-process</span>
+          </div>
+        </div>
+
+        <div class="mono text-xs text-slate-500 space-y-0.5">
+          <div>data/GameState.gd · systems/PhaseSystem.gd (to_battle)</div>
+          <div>systems/CombatSide.gd · systems/BattleSystem.gd (create_opponent_grid)</div>
+        </div>
+
+        <!-- before / after -->
+        <div class="grid md:grid-cols-2 gap-4">
+          <div class="rounded-lg border border-slate-200 p-4">
+            <p class="text-xs uppercase tracking-wider text-slate-400 mb-3">Before — shape knowledge spread</p>
+            <pre class="mermaid">
+flowchart TB
+  subgraph GS[GameState.create]
+    A1["per-slot arrays ×4<br/>battle_stats rows ×8"]
+  end
+  subgraph TB2[PhaseSystem.to_battle]
+    A2["per-slot arrays ×4 again<br/>battle_stats rows ×8 again"]
+  end
+  COS[CombatSide.keys<br/>names the keys] -.seam.-> GS
+  COS -.seam.-> TB2
+  HARD["hardcoded 4-slot literals<br/>scattered: 26 occurrences"]:::leak
+  HARD --> GS
+  HARD --> TB2
+  classDef leak stroke:#dc2626,stroke-width:2px,fill:#fef2f2;
+  class HARD leak
+            </pre>
+          </div>
+          <div class="rounded-lg border border-slate-300 p-4 deep text-slate-100">
+            <p class="text-xs uppercase tracking-wider text-slate-400 mb-3">After — one deep factory</p>
+            <pre class="mermaid">
+flowchart TB
+  COS[CombatSide<br/>keys + slot count] --> CS
+  CS["CombatState.begin(state, snapshot)<br/>builds every per-slot array<br/>+ stat rows from the board size"]:::deep
+  CS --> GSx[GameState.create<br/>calls CombatState for combat fields]
+  CS --> TBx[PhaseSystem.to_battle<br/>one call, no literals]
+  classDef deep fill:#10b981,stroke:#34d399,color:#04221a,stroke-width:2px;
+  class CS deep
+            </pre>
+          </div>
+        </div>
+
+        <div class="grid sm:grid-cols-2 gap-x-8 gap-y-3 text-sm">
+          <div>
+            <p class="font-semibold text-slate-800">Problem</p>
+            <p class="text-slate-600">What a valid combat-phase state <em>is</em> — its per-slot arrays and the 8× <code class="mono">{"fires":0,…}</code> stat-row literal — is hand-rolled in both <code class="mono">GameState.create</code> and <code class="mono">to_battle</code>, and the board size leaks as hardcoded 4-slot literals in 26 places.</p>
+          </div>
+          <div>
+            <p class="font-semibold text-slate-800">Solution</p>
+            <p class="text-slate-600">A <code class="mono">CombatState</code> module owns "given a board, produce fresh combat state." It sizes every per-slot array from <code class="mono">CombatSide</code>'s key list and the slot count; both callers delegate to it.</p>
+          </div>
+        </div>
+
+        <div>
+          <p class="font-semibold text-slate-800 text-sm mb-2">Wins</p>
+          <ul class="grid sm:grid-cols-2 gap-x-8 gap-y-1 text-sm text-slate-600 list-disc pl-5">
+            <li>locality: combat shape lives in one module</li>
+            <li>leverage: grid-agnostic claim becomes real</li>
+            <li>deletes 16 duplicated stat-row literals</li>
+            <li>interface is the test surface: assert one factory</li>
+            <li>widening the grid is the one-place change the handoff wants</li>
+            <li>retires dead <code class="mono">create_opponent_grid</code></li>
+          </ul>
+        </div>
+      </article>
+
+      <!-- ════════════════ CANDIDATE 2 ════════════════ -->
+      <article id="c2" class="rounded-xl border border-slate-200 bg-white p-7 space-y-5 card-shadow">
+        <div class="flex items-start justify-between gap-4">
+          <h2 class="text-2xl font-serif font-semibold">02 · Extract the Element Card module</h2>
+          <div class="flex gap-2 shrink-0">
+            <span class="text-xs font-medium px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800">Strong</span>
+            <span class="text-xs font-medium px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">in-process</span>
+          </div>
+        </div>
+
+        <div class="mono text-xs text-slate-500 space-y-0.5">
+          <div>scenes/slots/ShopItemTile.gd · scenes/slots/InventorySlot.gd</div>
+          <div>scenes/slots/BattleSlot.gd · scenes/screens/Shop.gd (_rebuild_inventory)</div>
+        </div>
+
+        <!-- mass diagram before/after -->
+        <div class="grid md:grid-cols-2 gap-4">
+          <div class="rounded-lg border border-slate-200 p-4">
+            <p class="text-xs uppercase tracking-wider text-slate-400 mb-4">Before — three shallow renderers</p>
+            <div class="space-y-3">
+              <div class="flex items-end gap-2">
+                <div class="text-[10px] uppercase tracking-wider text-slate-400 w-20">ShopItemTile</div>
+                <div class="flex-1 h-9 rounded bg-slate-200 border border-slate-300 flex items-center px-2 text-xs text-slate-500">emoji · name · price + hover timer</div>
+              </div>
+              <div class="flex items-end gap-2">
+                <div class="text-[10px] uppercase tracking-wider text-slate-400 w-20">InventorySlot</div>
+                <div class="flex-1 h-9 rounded bg-slate-200 border border-slate-300 flex items-center px-2 text-xs text-slate-500">"emoji\nname\nLvN dmg" + hover timer</div>
+              </div>
+              <div class="flex items-end gap-2">
+                <div class="text-[10px] uppercase tracking-wider text-slate-400 w-20">BattleSlot</div>
+                <div class="flex-1 h-9 rounded bg-slate-200 border border-slate-300 flex items-center px-2 text-xs text-slate-500">charge bar · emoji · "name LN" + hover timer</div>
+              </div>
+              <p class="text-[11px] text-red-600 pt-1 leading-snug">Three divergent layouts. None render the Tier badge, three stats, or Abilities Panel that <span class="font-semibold">ADR-0005</span> says the card always shows. The 0.3s hover-tooltip timer is copy-pasted verbatim in all three.</p>
+            </div>
+          </div>
+          <div class="rounded-lg border border-slate-300 p-4 deep text-slate-100">
+            <p class="text-xs uppercase tracking-wider text-slate-400 mb-4">After — one deep card</p>
+            <div class="space-y-2">
+              <div class="rounded-md border-2 border-emerald-400 bg-emerald-500/10 p-3 space-y-1.5">
+                <div class="text-[10px] uppercase tracking-wider text-emerald-300">ElementCard.render(elem, context)</div>
+                <div class="text-xs text-slate-300">icon · Tier badge · 3 stats · Abilities Panel · price</div>
+                <div class="text-xs text-slate-300">tier styling · hover-tooltip behavior</div>
+              </div>
+              <div class="flex gap-2 text-[10px] uppercase tracking-wider text-slate-400 pl-1">
+                <span class="rounded bg-slate-700 px-2 py-0.5">shop ctx</span>
+                <span class="rounded bg-slate-700 px-2 py-0.5">inventory ctx</span>
+                <span class="rounded bg-slate-700 px-2 py-0.5">battlegrid ctx</span>
+              </div>
+              <p class="text-[11px] text-emerald-200/80 pt-1 leading-snug">Each slot fills a slot-specific shell (drag, charge bar) around one shared card.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid sm:grid-cols-2 gap-x-8 gap-y-3 text-sm">
+          <div>
+            <p class="font-semibold text-slate-800">Problem</p>
+            <p class="text-slate-600">"Element Card" is a named domain module, but no module renders it — three slot scripts each re-implement a different subset, and none match ADR-0005's always-visible card.</p>
+          </div>
+          <div>
+            <p class="font-semibold text-slate-800">Solution</p>
+            <p class="text-slate-600">One <code class="mono">ElementCard</code> node renders an element dict the same way everywhere; slots wrap it with their own affordances (drag, charge bar, buy click).</p>
+          </div>
+        </div>
+
+        <div>
+          <p class="font-semibold text-slate-800 text-sm mb-2">Wins</p>
+          <ul class="grid sm:grid-cols-2 gap-x-8 gap-y-1 text-sm text-slate-600 list-disc pl-5">
+            <li>locality: one card layout, one place to change</li>
+            <li>code converges on ADR-0005 instead of drifting</li>
+            <li>deletes triplicated hover-tooltip timer</li>
+            <li>leverage: Abilities Panel appears in every context free</li>
+          </ul>
+        </div>
+        <div class="rounded-md bg-amber-50 border border-amber-200 px-4 py-2 text-xs text-amber-800">
+          ADR-0005 describes the card but predates the slots — this aligns the code <em>with</em> the ADR, no conflict.
+        </div>
+      </article>
+
+      <!-- ════════════════ CANDIDATE 3 ════════════════ -->
+      <article id="c3" class="rounded-xl border border-slate-200 bg-white p-7 space-y-5 card-shadow">
+        <div class="flex items-start justify-between gap-4">
+          <h2 class="text-2xl font-serif font-semibold">03 · Deepen the Shop action seam</h2>
+          <div class="flex gap-2 shrink-0">
+            <span class="text-xs font-medium px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800">Strong</span>
+            <span class="text-xs font-medium px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">in-process</span>
+          </div>
+        </div>
+
+        <div class="mono text-xs text-slate-500 space-y-0.5">
+          <div>systems/ShopSystem.gd (transfer) · systems/ForgeSystem.gd</div>
+          <div>scenes/screens/Shop.gd (_on_buy_pressed, _on_*_received_drop)</div>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-4">
+          <div class="rounded-lg border border-slate-200 p-4">
+            <p class="text-xs uppercase tracking-wider text-slate-400 mb-3">Before — outcome leaks back to the scene</p>
+            <pre class="mermaid">
+sequenceDiagram
+  participant V as Shop.gd
+  participant S as ShopSystem.transfer
+  V->>V: gold_before = state.gold
+  V->>S: transfer(...)
+  S-->>V: new state (no outcome)
+  Note over V: was it a buy or a reject?
+  V->>V: diff gold to pick the sound
+  Note over V: merge or swap?<br/>scene inspects both elems,<br/>picks level_up vs transfer
+            </pre>
+          </div>
+          <div class="rounded-lg border border-slate-300 p-4 deep text-slate-100">
+            <p class="text-xs uppercase tracking-wider text-slate-400 mb-3">After — seam returns what happened</p>
+            <pre class="mermaid">
+sequenceDiagram
+  participant V as Shop.gd
+  participant S as ShopSystem.drop
+  V->>S: drop(from_loc, to_loc)
+  S-->>V: { state, outcome }
+  Note over V: outcome ∈ buy / merge /<br/>swap / sell / rejected
+  V->>V: play sound by outcome
+            </pre>
+          </div>
+        </div>
+
+        <div class="grid sm:grid-cols-2 gap-x-8 gap-y-3 text-sm">
+          <div>
+            <p class="font-semibold text-slate-800">Problem</p>
+            <p class="text-slate-600">The scene re-derives what an action did: it diffs gold to choose the buy/reject sound and counts inventory items to detect a merge, and it decides merge-vs-swap itself by inspecting both elements — domain rules living in a render script.</p>
+          </div>
+          <div>
+            <p class="font-semibold text-slate-800">Solution</p>
+            <p class="text-slate-600">One intake <code class="mono">drop(state, from, to)</code> returns <code class="mono">{state, outcome}</code> — the same shape <code class="mono">ForgeSystem.forge_from_bench</code> already uses. The merge-vs-swap decision moves behind it.</p>
+          </div>
+        </div>
+
+        <div>
+          <p class="font-semibold text-slate-800 text-sm mb-2">Wins</p>
+          <ul class="grid sm:grid-cols-2 gap-x-8 gap-y-1 text-sm text-slate-600 list-disc pl-5">
+            <li>pricing/merge rules stop leaking into the scene</li>
+            <li>matches ForgeSystem's existing outcome pattern</li>
+            <li>interface is the test surface: assert outcomes, not gold diffs</li>
+            <li>locality: "what does dropping A on B do" lives in one place</li>
+          </ul>
+        </div>
+      </article>
+
+      <!-- ════════════════ CANDIDATE 4 ════════════════ -->
+      <article id="c4" class="rounded-xl border border-slate-200 bg-white p-7 space-y-5 card-shadow">
+        <div class="flex items-start justify-between gap-4">
+          <h2 class="text-2xl font-serif font-semibold">04 · Collapse two effect engines into one</h2>
+          <div class="flex gap-2 shrink-0">
+            <span class="text-xs font-medium px-2.5 py-1 rounded-full bg-amber-100 text-amber-800">Worth exploring</span>
+            <span class="text-xs font-medium px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">in-process</span>
+          </div>
+        </div>
+
+        <div class="mono text-xs text-slate-500 space-y-0.5">
+          <div>systems/BattleSystem.gd (_apply_element_effect) · systems/AbilitySystem.gd (_apply_atom)</div>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-4">
+          <div class="rounded-lg border border-slate-200 p-4">
+            <p class="text-xs uppercase tracking-wider text-slate-400 mb-3">Before — Action ≠ Ability appliers</p>
+            <pre class="mermaid">
+flowchart TB
+  FIRE[element fires] --> AE["_apply_element_effect<br/>match: haste/heal/cleanse/<br/>leech/default"]:::leak
+  ABIL[ability triggers] --> AA["_apply_atom<br/>apply_status/deal_damage/<br/>modify_cooldown/freeze"]
+  AE --> SS[StatusSystem]
+  AA --> SS
+  classDef leak stroke:#dc2626,stroke-width:2px,fill:#fef2f2;
+  class AE leak
+            </pre>
+          </div>
+          <div class="rounded-lg border border-slate-300 p-4 deep text-slate-100">
+            <p class="text-xs uppercase tracking-wider text-slate-400 mb-3">After — Action is an Ability effect list</p>
+            <pre class="mermaid">
+flowchart TB
+  FIRE[element fires] --> AA
+  ABIL[ability triggers] --> AA["_apply_effects<br/>(one effect vocabulary)"]:::deep
+  AA --> SS[StatusSystem]
+  Note["haste-timers + leech-from-damage<br/>stay as named effect kinds"]
+  classDef deep fill:#10b981,stroke:#34d399,color:#04221a,stroke-width:2px;
+  class AA deep
+            </pre>
+          </div>
+        </div>
+
+        <div class="grid sm:grid-cols-2 gap-x-8 gap-y-3 text-sm">
+          <div>
+            <p class="font-semibold text-slate-800">Problem</p>
+            <p class="text-slate-600">An Action (on-fire T1 effect) and an Ability apply effects through two separate dispatchers. Most branches both bottom out in <code class="mono">StatusSystem.apply_effect</code>; only haste-timers and leech-from-damage are genuinely bespoke.</p>
+          </div>
+          <div>
+            <p class="font-semibold text-slate-800">Solution</p>
+            <p class="text-slate-600">Model the on-fire Action as an effect list and route it through <code class="mono">_apply_effects</code>, with two new atomic kinds for the haste-timer and leech-from-damage cases.</p>
+          </div>
+        </div>
+
+        <div>
+          <p class="font-semibold text-slate-800 text-sm mb-2">Wins</p>
+          <ul class="grid sm:grid-cols-2 gap-x-8 gap-y-1 text-sm text-slate-600 list-disc pl-5">
+            <li>locality: one effect vocabulary, one applier</li>
+            <li>matches the planned "Actions become Abilities" direction</li>
+            <li>leverage: new effects work for Actions and Abilities at once</li>
+            <li>interface is the test surface: one applier to cover</li>
+          </ul>
+        </div>
+        <div class="rounded-md bg-amber-50 border border-amber-200 px-4 py-2 text-xs text-amber-800">
+          ⚠ Touches <span class="font-semibold">ADR-0004</span>, which split BattleSystem (call sites) from AbilitySystem (execution). Worth reopening only because the domain already plans Actions to fold into Abilities — confirm the depth-1 / RNG-ordering guarantees survive before committing.
+        </div>
+      </article>
+
+      <!-- ════════════════ CANDIDATE 5 ════════════════ -->
+      <article id="c5" class="rounded-xl border border-slate-200 bg-white p-7 space-y-5 card-shadow">
+        <div class="flex items-start justify-between gap-4">
+          <h2 class="text-2xl font-serif font-semibold">05 · Make CombatSide the only side accessor</h2>
+          <div class="flex gap-2 shrink-0">
+            <span class="text-xs font-medium px-2.5 py-1 rounded-full bg-amber-100 text-amber-800">Worth exploring</span>
+            <span class="text-xs font-medium px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">in-process</span>
+          </div>
+        </div>
+
+        <div class="mono text-xs text-slate-500 space-y-0.5">
+          <div>systems/CombatSide.gd · systems/BattleSystem.gd (_make_side_ctx)</div>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-4">
+          <div class="rounded-lg border border-slate-200 p-4">
+            <p class="text-xs uppercase tracking-wider text-slate-400 mb-3">Before — two side-context shapes</p>
+            <pre class="mermaid">
+flowchart TB
+  CS["CombatSide.keys(side)<br/>{grid, timers, statuses, ...}"] -.seam.-> BS
+  BS["BattleSystem._make_side_ctx<br/>re-wraps as grid_key, timers_key,<br/>+ opp_* keys"]:::leak
+  BS --> RAW["state[ctx.grid_key] as Array<br/>manual casts everywhere"]
+  CSacc["CombatSide.grid/statuses/...<br/>accessors exist — unused by BattleSystem"]
+  classDef leak stroke:#dc2626,stroke-width:2px,fill:#fef2f2;
+  class BS leak
+            </pre>
+          </div>
+          <div class="rounded-lg border border-slate-300 p-4 deep text-slate-100">
+            <p class="text-xs uppercase tracking-wider text-slate-400 mb-3">After — one accessor, both sides</p>
+            <pre class="mermaid">
+flowchart TB
+  CS["CombatSide<br/>grid/statuses/timers/frozen(state, side)<br/>+ opponent_of"]:::deep
+  CS --> BSx[BattleSystem reads through it]
+  CS --> ABx[AbilitySystem reads through it]
+  classDef deep fill:#10b981,stroke:#34d399,color:#04221a,stroke-width:2px;
+  class CS deep
+            </pre>
+          </div>
+        </div>
+
+        <div class="grid sm:grid-cols-2 gap-x-8 gap-y-3 text-sm">
+          <div>
+            <p class="font-semibold text-slate-800">Problem</p>
+            <p class="text-slate-600">CombatSide wants to be the single side→keys map, but BattleSystem shadows it with <code class="mono">_make_side_ctx</code> (renamed keys + opponent keys) and reads raw <code class="mono">state[...]</code> with manual casts; CombatSide's own accessors go unused there.</p>
+          </div>
+          <div>
+            <p class="font-semibold text-slate-800">Solution</p>
+            <p class="text-slate-600">Move opponent-key and read helpers into CombatSide, delete the shadow ctx, and have both systems read side state through one accessor.</p>
+          </div>
+        </div>
+
+        <div>
+          <p class="font-semibold text-slate-800 text-sm mb-2">Wins</p>
+          <ul class="grid sm:grid-cols-2 gap-x-8 gap-y-1 text-sm text-slate-600 list-disc pl-5">
+            <li>locality: side plumbing concentrates in one module</li>
+            <li>deletes the shallow re-wrapper ctx</li>
+            <li>fewer hand-rolled <code class="mono">as</code> casts at call sites</li>
+            <li>reinforces the "one-place change to grow the grid" goal</li>
+          </ul>
+        </div>
+      </article>
+
+      </section>
+
+      <!-- ── Top recommendation ───────────────────────────────── -->
+      <section id="top-recommendation" class="rounded-xl border-2 border-emerald-300 bg-emerald-50 p-7 space-y-3">
+        <p class="text-xs uppercase tracking-[0.2em] text-emerald-700">Top recommendation</p>
+        <h2 class="text-2xl font-serif font-semibold text-emerald-900">Start with 01 — the combat-state factory</h2>
+        <p class="text-sm text-emerald-900/80 max-w-3xl leading-relaxed">
+          It is the highest-leverage, lowest-risk deepening: pure systems/data code already under test, no
+          ADR conflict, and it removes the exact friction the abilities handoff flags — widening the
+          Battlegrid today means editing four modules and 26 hardcoded literals. Concentrating combat-state
+          shape in one factory makes the grid-agnostic claim real and unblocks the deferred Battlegrid-size
+          decision. <span class="font-medium">02 (Element Card)</span> is the strongest follow-up — most
+          player-visible and the clearest locality win on the scene tier.
+        </p>
+        <p class="text-xs text-emerald-700"><a href="#c1" class="underline">→ jump to candidate 01</a></p>
+      </section>
+
+      <footer class="text-center text-xs text-slate-400 pt-4">
+        Vocabulary: module · interface · implementation · depth · seam · adapter · leverage · locality.
+        Domain terms from CONTEXT.md.
+      </footer>
+
+    </main>
+  </body>
+</html>

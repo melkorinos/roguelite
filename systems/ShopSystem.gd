@@ -49,6 +49,71 @@ static func transfer(state: Dictionary, from_loc: Dictionary, to_loc: Dictionary
 	return state
 
 
+# Higher-level shop intake. Resolves a drag-drop between two locations and reports
+# WHAT happened, so the scene renders feedback (sound, undo) without re-deriving it
+# by diffing gold or counting items. Owns the merge-vs-swap decision that used to
+# live in Shop.gd. Mirrors ForgeSystem.forge_from_bench's {state, outcome} shape.
+#
+# outcome ∈ "bought"  — shop element placed into an empty slot (gold spent)
+#         | "merged"  — two same-element/level pieces combined to level+1
+#                       (includes buying onto a matching level-1 piece)
+#         | "swapped" — pieces moved or exchanged, no level change
+#         | "rejected"— nothing changed (no gold, full, invalid, not mergeable)
+static func resolve_drop(state: Dictionary, from_loc: Dictionary, to_loc: Dictionary) -> Dictionary:
+	var from_zone: String = from_loc["zone"] as String
+	var to_zone: String = to_loc["zone"] as String
+	var from_slot: int = from_loc["slot"] as int
+	var to_slot: int = to_loc["slot"] as int
+
+	if to_slot == -1:
+		var target_arr: Array = state["inventory"] if to_zone == "inventory" else state["battle_grid"]
+		to_slot = _first_empty_slot(target_arr)
+		if to_slot == -1:
+			return {"state": state, "outcome": "rejected"}
+	var resolved_to: Dictionary = {"zone": to_zone, "slot": to_slot}
+
+	# Shop purchase — buy into an empty slot, or buy onto a matching level-1 (merge to 2).
+	if from_zone == "shop":
+		if not can_transfer(state, from_loc, resolved_to):
+			return {"state": state, "outcome": "rejected"}
+		var dest_arr: Array = state["inventory"] if to_zone == "inventory" else state["battle_grid"]
+		var merging: bool = to_slot >= 0 and to_slot < dest_arr.size() and dest_arr[to_slot] != null
+		return {"state": transfer(state, from_loc, resolved_to), "outcome": "merged" if merging else "bought"}
+
+	# Inventory → inventory: merge only (a non-mergeable drop is a no-op).
+	if from_zone == "inventory" and to_zone == "inventory":
+		if _mergeable(state["inventory"] as Array, from_slot, to_slot):
+			return {"state": ForgeSystem.level_up(state, from_slot, to_slot), "outcome": "merged"}
+		return {"state": state, "outcome": "rejected"}
+
+	# Grid → grid: merge a matching pair, otherwise swap positions.
+	if from_zone == "grid" and to_zone == "grid":
+		if _mergeable(state["battle_grid"] as Array, from_slot, to_slot):
+			return {"state": ForgeSystem.level_up_grid(state, from_slot, to_slot), "outcome": "merged"}
+		return {"state": transfer(state, from_loc, resolved_to), "outcome": "swapped"}
+
+	# Inventory ↔ grid: move / swap.
+	if (from_zone == "inventory" and to_zone == "grid") or (from_zone == "grid" and to_zone == "inventory"):
+		return {"state": transfer(state, from_loc, resolved_to), "outcome": "swapped"}
+
+	return {"state": state, "outcome": "rejected"}
+
+
+# Two slots in the same array hold the same element at the same level → mergeable.
+static func _mergeable(arr: Array, slot_a: int, slot_b: int) -> bool:
+	if slot_a < 0 or slot_b < 0 or slot_a >= arr.size() or slot_b >= arr.size() or slot_a == slot_b:
+		return false
+	var ea: Variant = arr[slot_a]
+	var eb: Variant = arr[slot_b]
+	if ea == null or eb == null:
+		return false
+	var da: Dictionary = ea as Dictionary
+	var db: Dictionary = eb as Dictionary
+	if (da.get("element_id", "") as String) != (db.get("element_id", "") as String):
+		return false
+	return (da["level"] as int) == (db["level"] as int)
+
+
 static func can_transfer(state: Dictionary, from_loc: Dictionary, to_loc: Dictionary) -> bool:
 	var from_zone: String = from_loc["zone"] as String
 	var from_slot: int = from_loc["slot"] as int
@@ -141,12 +206,23 @@ static func sell_grid_item(state: Dictionary, grid_slot: int) -> Dictionary:
 	return s
 
 
+# Reroll cost escalates within a shop phase: base + how many paid rerolls already
+# happened this phase. reroll_count resets each round (PhaseSystem.advance_round).
+const REROLL_BASE_COST: int = 2
+
+
+static func reroll_cost(state: Dictionary) -> int:
+	return REROLL_BASE_COST + (state.get("reroll_count", 0) as int)
+
+
 static func reroll_shop(state: Dictionary, is_free: bool = false) -> Dictionary:
-	if not is_free and (state["gold"] as int) < 2:
+	var cost: int = reroll_cost(state)
+	if not is_free and (state["gold"] as int) < cost:
 		return state
 	var s: Dictionary = state.duplicate(true)
 	if not is_free:
-		s["gold"] = (s["gold"] as int) - 2
+		s["gold"] = (s["gold"] as int) - cost
+		s["reroll_count"] = (s.get("reroll_count", 0) as int) + 1
 
 	var shop_tier: int = s["shop_tier"] as int
 

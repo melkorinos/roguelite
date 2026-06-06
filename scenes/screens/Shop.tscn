@@ -96,6 +96,10 @@ text = "+10g"
 layout_mode = 2
 text = "Tier ↑"
 
+[node name="AddElemButton" type="Button" parent="VBox/DebugRow"]
+layout_mode = 2
+text = "Add Elem ▾"
+
 [node name="Separator1" type="HSeparator" parent="VBox"]
 layout_mode = 2
 
@@ -231,6 +235,7 @@ text = ""
 [connection signal="pressed" from="VBox/TopBar/UndoButton" to="." method="_on_undo_pressed"]
 [connection signal="pressed" from="VBox/DebugRow/AddGoldButton" to="." method="_on_add_gold_pressed"]
 [connection signal="pressed" from="VBox/DebugRow/TierUpButton" to="." method="_on_tier_up_pressed"]
+[connection signal="pressed" from="VBox/DebugRow/AddElemButton" to="." method="_on_add_elem_pressed"]
 [connection signal="pressed" from="VBox/MainArea/LeftPanel/SellZone/SellZoneVBox/ShopHeaderRow/RerollButton" to="." method="_on_reroll_pressed"]
 [connection signal="pressed" from="VBox/MainArea/LeftPanel/FightRow/FightButton" to="." method="_on_fight_pressed"]
 [connection signal="pressed" from="VBox/MainArea/RightPanel/ForgeButton" to="." method="_on_forge_button_pressed"]

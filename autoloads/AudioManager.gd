@@ -5,7 +5,7 @@ extends Node
 # All sounds are generated from PCM math at startup (~8ms one-time cost).
 # Scenes call: AudioManager.play("buy"), AudioManager.play("fire_t2"), etc.
 #
-# Sound names: click  buy  sell  forge  fire_t1  fire_t2  fire_t3
+# Sound names: click  buy  sell  forge  upgrade  reject  fire_t1  fire_t2  fire_t3
 # ──────────────────────────────────────────────────────────────────────────────
 
 const SAMPLE_RATE: int = 44100
@@ -63,13 +63,28 @@ func _build_sounds() -> void:
 	_append(sell, 523.25, 0.075, 0.42, "sine")
 	_sounds["sell"] = _wav(sell)
 
-	# forge — power-up arpeggio C4 → E4 → G4 → C5 (square wave, classic Mario 1-UP feel)
+	# forge — alchemical synthesis: triangle-wave rumble rising to a bright sine ping;
+	# triangle = warm/earthy (materials going in), sine = clean (new thing coming out)
 	var forge := PackedByteArray()
-	_append(forge, 261.63, 0.055, 0.42, "square")
-	_append(forge, 329.63, 0.055, 0.42, "square")
-	_append(forge, 392.00, 0.055, 0.44, "square")
-	_append(forge, 523.25, 0.110, 0.48, "square")
+	_append(forge, 196.00, 0.055, 0.38, "triangle")  # G3 — earthy base
+	_append(forge, 293.66, 0.050, 0.40, "triangle")  # D4
+	_append(forge, 440.00, 0.050, 0.44, "triangle")  # A4 — building tension
+	_append(forge, 880.00, 0.115, 0.52, "sine")       # A5 — bright synthesis ping
 	_sounds["forge"] = _wav(forge)
+
+	# upgrade — merge/level-up chime: ascending C5→E5→G5→C6 (sine, full octave resolve)
+	var upgrade := PackedByteArray()
+	_append(upgrade, 523.25, 0.040, 0.48, "sine")  # C5
+	_append(upgrade, 659.25, 0.040, 0.50, "sine")  # E5
+	_append(upgrade, 783.99, 0.040, 0.50, "sine")  # G5
+	_append(upgrade, 1046.5, 0.095, 0.54, "sine")  # C6 — octave resolve
+	_sounds["upgrade"] = _wav(upgrade)
+
+	# reject — denied/no-gold buzz: descending square E4→A3 (minor-7th drop, dissonant)
+	var reject := PackedByteArray()
+	_append(reject, 329.63, 0.048, 0.42, "square")  # E4
+	_append(reject, 220.00, 0.090, 0.40, "square")  # A3
+	_sounds["reject"] = _wav(reject)
 
 	# fire_t1 — short punchy NES hit: single square A4 (440 Hz), 65 ms
 	_sounds["fire_t1"] = _wav(_tone(440.0, 0.065, 0.44, "square"))

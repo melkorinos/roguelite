@@ -4,6 +4,8 @@ var _inv_slot_nodes: Array = []
 var _battle_slot_nodes: Array = []
 var _tooltip: TooltipCard
 var _pause_overlay: PauseOverlay
+var _starting_pick_overlay: StartingPickOverlay
+var _add_elem_panel: PanelContainer = null
 
 
 func _ready() -> void:
@@ -20,10 +22,25 @@ func _ready() -> void:
 
 	_apply_theme()
 
+	_starting_pick_overlay = StartingPickOverlay.new()
+	add_child(_starting_pick_overlay)
+	_starting_pick_overlay.picked.connect(_on_starting_pick)
+
 	var s: Dictionary = GameManager.state
 	var all_null: bool = (s["shop_items"] as Array).all(func(x: Variant) -> bool: return x == null)
 	if all_null:
 		GameManager.state = ShopSystem.reroll_shop(s, true)
+	_render()
+
+	# Run-start choice: offer three T1s, the chosen one buffed ×2 (once per run).
+	if not (GameManager.state["starting_pick_done"] as bool):
+		_starting_pick_overlay.show_options(StartSystem.starting_options())
+
+
+func _on_starting_pick(element_id: String) -> void:
+	AudioManager.play("buy")
+	GameManager.state = StartSystem.apply_starting_pick(GameManager.state, element_id)
+	_starting_pick_overlay.hide_overlay()
 	_render()
 
 
@@ -115,6 +132,7 @@ func _render() -> void:
 	$VBox/TopBar/HPLabel.text = "❤ %d/30   💰 %dg" % [s["player_hp"], s["gold"]]
 	$VBox/TopBar/LivesLabel.text = "Life: %d  Wins: %d/10" % [s["lives"], s["wins"]]
 	$VBox/DebugRow/TierLabel.text = "Shop T%d" % s["shop_tier"]
+	($VBox/MainArea/LeftPanel/SellZone/SellZoneVBox/ShopHeaderRow/RerollButton as Button).text = "Reroll — %dg" % ShopSystem.reroll_cost(s)
 	$VBox/TopBar/UndoButton.disabled = GameManager.undo_state == null
 	_rebuild_shop_grid(s)
 	_rebuild_inventory(s)
@@ -307,12 +325,33 @@ func _on_sell_zone_sold(from_type: String, from_index: int) -> void:
 	_render()
 
 
+# ── Shop intake ───────────────────────────────────────────────────────────────
+
+# Routes a drag-drop / buy through ShopSystem.resolve_drop and returns the outcome
+# ("bought" | "merged" | "swapped" | "rejected"). Captures undo for the actions
+# that change holdings (buys and merges), matching the previous per-branch undo
+# behavior. The caller maps the outcome to a sound.
+func _apply_drop(from_loc: Dictionary, to_loc: Dictionary) -> String:
+	var before: Dictionary = GameManager.state
+	var result: Dictionary = ShopSystem.resolve_drop(before, from_loc, to_loc)
+	var outcome: String = result["outcome"] as String
+	if outcome == "bought" or outcome == "merged":
+		GameManager.undo_state = before.duplicate(true)
+	GameManager.state = result["state"] as Dictionary
+	return outcome
+
+
+func _buy_sound(outcome: String) -> void:
+	match outcome:
+		"bought":   AudioManager.play("buy")
+		"merged":   AudioManager.play("upgrade")
+		_:          AudioManager.play("reject")
+
+
 # ── Buy ───────────────────────────────────────────────────────────────────────
 
 func _on_buy_pressed(_element_id: String, shop_slot: int) -> void:
-	AudioManager.play("buy")
-	GameManager.save_undo()
-	GameManager.state = ShopSystem.transfer(GameManager.state, {"zone": "shop", "slot": shop_slot}, {"zone": "inventory", "slot": -1})
+	_buy_sound(_apply_drop({"zone": "shop", "slot": shop_slot}, {"zone": "inventory", "slot": -1}))
 	_render()
 
 
@@ -326,22 +365,14 @@ func _on_reroll_pressed() -> void:
 # ── Buy → empty inventory slot (no dialog) ───────────────────────────────────
 
 func _on_shop_buy_to_slot_requested(_element_id: String, to_inv_index: int, shop_slot: int) -> void:
-	AudioManager.play("buy")
-	GameManager.save_undo()
-	GameManager.state = ShopSystem.transfer(GameManager.state, {"zone": "shop", "slot": shop_slot}, {"zone": "inventory", "slot": to_inv_index})
+	_buy_sound(_apply_drop({"zone": "shop", "slot": shop_slot}, {"zone": "inventory", "slot": to_inv_index}))
 	_render()
 
 
 # ── Buy + level-up combo (no confirmation — undo covers it) ──────────────────
 
 func _on_shop_buy_upgrade_requested(_element_id: String, to_inv_index: int, shop_slot: int) -> void:
-	AudioManager.play("buy")
-	GameManager.save_undo()
-	GameManager.state = ShopSystem.transfer(
-		GameManager.state,
-		{"zone": "shop", "slot": shop_slot},
-		{"zone": "inventory", "slot": to_inv_index}
-	)
+	_buy_sound(_apply_drop({"zone": "shop", "slot": shop_slot}, {"zone": "inventory", "slot": to_inv_index}))
 	_render()
 
 
@@ -406,38 +437,18 @@ func _fire_achievement(event: String) -> void:
 # ── Inventory → inventory: level-up ──────────────────────────────────────────
 
 func _on_inv_slot_received_drop(from_type: String, from_index: int, to_inv_index: int) -> void:
-	if from_type == "inventory":
-		GameManager.save_undo()
-		GameManager.state = ForgeSystem.level_up(GameManager.state, from_index, to_inv_index)
-	elif from_type == "grid":
-		GameManager.state = ShopSystem.transfer(GameManager.state, {"zone": "grid", "slot": from_index}, {"zone": "inventory", "slot": to_inv_index})
+	var outcome: String = _apply_drop({"zone": from_type, "slot": from_index}, {"zone": "inventory", "slot": to_inv_index})
+	if outcome == "merged":
+		AudioManager.play("upgrade")
 	_render()
 
 
 # ── Battle grid drag-and-drop ─────────────────────────────────────────────────
 
 func _on_grid_slot_received_drop(from_type: String, from_index: int, to_grid_index: int) -> void:
-	if from_type == "shop":
-		GameManager.save_undo()
-		GameManager.state = ShopSystem.transfer(GameManager.state, {"zone": "shop", "slot": from_index}, {"zone": "grid", "slot": to_grid_index})
-	elif from_type == "inventory":
-		GameManager.state = ShopSystem.transfer(GameManager.state, {"zone": "inventory", "slot": from_index}, {"zone": "grid", "slot": to_grid_index})
-	elif from_type == "grid":
-		var grid: Array = GameManager.state["battle_grid"] as Array
-		var fa: Variant = grid[from_index]
-		var tb: Variant = grid[to_grid_index]
-		if fa != null and tb != null:
-			var da: Dictionary = fa as Dictionary
-			var db: Dictionary = tb as Dictionary
-			var same_elem: bool = da.get("element_id", "") == db.get("element_id", "")
-			var same_level: bool = (da["level"] as int) == (db["level"] as int)
-			if same_elem and same_level:
-				GameManager.save_undo()
-				GameManager.state = ForgeSystem.level_up_grid(GameManager.state, from_index, to_grid_index)
-			else:
-				GameManager.state = ShopSystem.transfer(GameManager.state, {"zone": "grid", "slot": from_index}, {"zone": "grid", "slot": to_grid_index})
-		else:
-			GameManager.state = ShopSystem.transfer(GameManager.state, {"zone": "grid", "slot": from_index}, {"zone": "grid", "slot": to_grid_index})
+	var outcome: String = _apply_drop({"zone": from_type, "slot": from_index}, {"zone": "grid", "slot": to_grid_index})
+	if outcome == "merged":
+		AudioManager.play("upgrade")
 	_render()
 
 
@@ -474,6 +485,95 @@ func _on_tier_up_pressed() -> void:
 		s["shop_tier"] = tier + 1
 	GameManager.state = s
 	_render()
+
+
+func _on_add_elem_pressed() -> void:
+	if _add_elem_panel != null:
+		_add_elem_panel.queue_free()
+		_add_elem_panel = null
+		return
+	_add_elem_panel = _build_add_elem_panel()
+	add_child(_add_elem_panel)
+
+
+func _build_add_elem_panel() -> PanelContainer:
+	var panel := PanelContainer.new()
+	panel.custom_minimum_size = Vector2(300, 420)
+	panel.position = Vector2(4, 44)
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.07, 0.07, 0.12, 0.97)
+	style.set_border_width_all(1)
+	style.border_color = Color(1.0, 0.4, 0.4, 0.8)
+	style.set_corner_radius_all(6)
+	panel.add_theme_stylebox_override("panel", style)
+
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 8)
+	margin.add_theme_constant_override("margin_right", 8)
+	margin.add_theme_constant_override("margin_top", 6)
+	margin.add_theme_constant_override("margin_bottom", 6)
+	panel.add_child(margin)
+
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 3)
+	margin.add_child(vbox)
+
+	var title := Label.new()
+	title.text = "Add element to inventory"
+	title.modulate = Color(1.0, 0.55, 0.55)
+	UIScale.apply(title, UIScale.TOOLTIP_STAT)
+	vbox.add_child(title)
+	vbox.add_child(HSeparator.new())
+
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(280, 360)
+	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	vbox.add_child(scroll)
+
+	var inner := VBoxContainer.new()
+	inner.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	inner.add_theme_constant_override("separation", 2)
+	scroll.add_child(inner)
+
+	var current_tier: int = -1
+	for elem: Dictionary in ElementData.all_elements():
+		var tier: int = elem["tier"] as int
+		if tier != current_tier:
+			current_tier = tier
+			var tier_lbl := Label.new()
+			tier_lbl.text = "T%d" % tier
+			tier_lbl.modulate = Color(0.5, 0.5, 0.6)
+			UIScale.apply(tier_lbl, UIScale.TOOLTIP_SECTION)
+			inner.add_child(tier_lbl)
+		var btn := Button.new()
+		var emoji: String = elem.get("emoji", "") as String
+		var elem_name: String = elem.get("name", "") as String
+		btn.text = "%s  %s" % [emoji, elem_name]
+		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		UIScale.apply(btn, UIScale.TOOLTIP_STAT)
+		var eid: String = elem["id"] as String
+		btn.pressed.connect(_debug_add_element.bind(eid))
+		inner.add_child(btn)
+
+	return panel
+
+
+func _debug_add_element(element_id: String) -> void:
+	var elem_def: Dictionary = ElementData.find(element_id)
+	if elem_def.is_empty():
+		return
+	var s: Dictionary = GameManager.state.duplicate(true)
+	var inv: Array = s["inventory"] as Array
+	for i: int in inv.size():
+		if inv[i] == null:
+			var instance: Dictionary = elem_def.duplicate()
+			instance["element_id"] = element_id
+			instance["level"] = 1
+			s["inventory"][i] = instance
+			GameManager.state = s
+			_render()
+			return
 
 
 func _on_fight_pressed() -> void:

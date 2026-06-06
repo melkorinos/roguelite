@@ -165,6 +165,9 @@ func _trigger_label(ability: Dictionary) -> String:
 			label = "Every %ss" % seconds_text
 		"on_status_applied":
 			label = "On [%s]" % (ability.get("status", "") as String)
+		"on_activate":
+			var every_n: int = ability.get("every_n", 1) as int
+			label = ("Every %d activations" % every_n) if every_n > 1 else "On activation"
 		_:
 			label = TRIGGER_LABELS.get(trigger, trigger) as String
 	var multicast: int = ability.get("multicast", 0) as int

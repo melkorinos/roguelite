@@ -104,8 +104,12 @@ Early examples:
 | Decrease cooldown for earth-related elements | Setup passive modifier |
 
 **Trigger**:
-The condition that activates an Ability: `combat_start` (once at battle begin), `periodic` (every N deciseconds), `passive` (always-on modifier queried at the relevant calculation site), or a reactive `on_*` event (e.g. `on_burn_applied`, `on_leech`).
+The condition that activates an Ability: `combat_start` (once at battle begin), `periodic` (every N deciseconds), `passive` (always-on modifier queried at the relevant calculation site), `on_activate` (each time the element fires — the Ability-tier sibling of the single-status Action; carries a compound effects list and an optional **every Nth activation** gate), or a reactive `on_*` event (e.g. `on_burn_applied`, `on_leech`).
 _Avoid_: hook, event handler, condition
+
+**Every Nth Activation**:
+A deterministic gate on an `on_activate` Ability (`every_n`) that fires its effects only on every Nth time the element activates, counted from the element's running fire tally. Chosen over a per-hit random chance so combat stays reproducible (the basis for Replay). E.g. Shrapnel applies `[shock]` every 3rd activation.
+_Avoid_: proc, chance, RNG roll
 
 **Reactive Trigger**:
 A Trigger that fires in response to an in-combat event emitted by another piece. Bound by the **depth-1 rule**: a reactively-activated Ability may deal damage and apply Statuses, but its own output emits no further reactive events, and it never Multicasts. Caps every synergy chain at one hop.
@@ -169,13 +173,21 @@ _Avoid_: grade, quality — "tier" is acceptable shorthand
 
 ### UI overlays
 
+**Element Card**:
+The permanent UI tile that represents one element in a Board slot, inventory slot, or shop row. Always visible — no hover required. Portrait layout: icon area top-center; Tier badge top-right; three stats (Cooldown, Base Dmg, Eff. Dmg) in a row below the icon; Abilities Panel spanning the full width at the bottom; Price badge bottom-right. Level is conveyed through background color saturation rather than a numeric label. Identical layout in shop, inventory, and Battlegrid contexts.
+_Avoid_: item card, slot tile, info card, hover card
+
 **Item Tooltip**:
-A stats card that appears next to the cursor after hovering over an element for 0.3 seconds. Contains two sections: a stats section (tier, level, cooldown, damage, effective damage, price) and an Abilities Panel below it. Appears in the Shop and during active Battle.
-_Avoid_: stat card, hover card, popup, preview
+A floating overlay that appears on hover during the active battle phase only. Repurposed from the old stats-on-hover card: now shows live combat statistics per element (total fires, damage dealt, effects applied, HP healed). Not shown in the shop.
+_Avoid_: stat card, popup, preview — "Item Tooltip" refers only to the live-battle hover overlay going forward
 
 **Abilities Panel**:
-The lower section of the Item Tooltip reserved for an element's Ability descriptions. Currently a placeholder.
-_Avoid_: info section, details panel, ability card
+The bottom section of an Element Card showing the element's Ability description as a live RichTextLabel. Keywords such as [weaken] and [shock] are rendered as hoverable links that surface a Keyword Tooltip inline.
+_Avoid_: info section, details panel, ability text
+
+**Keyword Tooltip**:
+A small secondary overlay that appears when the player hovers a highlighted keyword (e.g. [weaken], [shock]) inside an Abilities Panel. Contains a one-line glossary definition. Does not require Shift or any modifier key.
+_Avoid_: glossary card, definition popup, shift card
 
 ### Async PvP
 

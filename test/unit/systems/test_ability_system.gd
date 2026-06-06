@@ -312,6 +312,40 @@ func test_periodic_fires_at_interval() -> void:
 	assert_eq(((b["opponent_statuses"] as Dictionary)["shock"] as Dictionary)["n"] as int, 1)
 
 
+# ── apply_on_activate (on_activate trigger + every_n gating) ──────────────────
+
+func test_on_activate_applies_compound_effects() -> void:
+	var ability: Dictionary = { "trigger": "on_activate", "effects": [
+		{ "kind": "apply_status", "status": "poison", "amount": 1, "target": "opponent" },
+		{ "kind": "apply_status", "status": "weaken", "amount": 1, "target": "opponent" }] }
+	var st: Dictionary = _with_ability("player", 0, ability)
+	AbilitySystem.apply_on_activate(st, ability, "player", 0, 1)
+	assert_eq(((st["opponent_statuses"] as Dictionary)["poison"] as Dictionary)["stacks"] as int, 1)
+	assert_eq(((st["opponent_statuses"] as Dictionary)["weaken"] as Dictionary)["stacks"] as int, 1)
+
+
+func test_on_activate_ignores_non_on_activate_ability() -> void:
+	var ability: Dictionary = { "trigger": "combat_start",
+		"effects": [{ "kind": "apply_status", "status": "poison", "amount": 1, "target": "opponent" }] }
+	var st: Dictionary = _with_ability("player", 0, ability)
+	AbilitySystem.apply_on_activate(st, ability, "player", 0, 1)
+	assert_eq(((st["opponent_statuses"] as Dictionary)["poison"] as Dictionary)["stacks"] as int, 0)
+
+
+func test_on_activate_every_n_gates_on_fire_count() -> void:
+	# Shrapnel pattern: fire its [shock] only on every 3rd activation (deterministic).
+	var ability: Dictionary = { "trigger": "on_activate", "every_n": 3,
+		"effects": [{ "kind": "apply_status", "status": "shock", "amount": 1, "target": "opponent" }] }
+	var st: Dictionary = _with_ability("player", 0, ability)
+	AbilitySystem.apply_on_activate(st, ability, "player", 0, 1)
+	AbilitySystem.apply_on_activate(st, ability, "player", 0, 2)
+	assert_eq(((st["opponent_statuses"] as Dictionary)["shock"] as Dictionary)["n"] as int, 0, "no shock before the 3rd activation")
+	AbilitySystem.apply_on_activate(st, ability, "player", 0, 3)
+	assert_eq(((st["opponent_statuses"] as Dictionary)["shock"] as Dictionary)["n"] as int, 1, "shock on the 3rd activation")
+	AbilitySystem.apply_on_activate(st, ability, "player", 0, 6)
+	assert_eq(((st["opponent_statuses"] as Dictionary)["shock"] as Dictionary)["n"] as int, 2, "shock again on the 6th")
+
+
 # ── on_hit_status_chances ─────────────────────────────────────────────────────
 
 func test_on_hit_status_chances_aggregates_passive_on_hit() -> void:

@@ -1,5 +1,15 @@
 # Development Log
 
+## 2026-06-05 — Run-loop kickoff: escalating reroll + starting pick
+- **Escalating reroll**: `ShopSystem.reroll_cost` = `2 + reroll_count`; paid rerolls increment, `advance_round` resets, Shop button shows live cost. Free rerolls exempt.
+- **Starting pick**: `systems/StartSystem.gd` (`starting_options`/`apply_starting_pick`) — run-start offers 3 T1s, chosen one buffed ×2 via `damage_multiplier` field read in `effective_damage`; `StartingPickOverlay` shown in `Shop._ready` (round 1, gated by `starting_pick_done`). Overlay needs an F5 eyeball.
+- First two items of the consolidated `handoff-run-loop.md`. **422/422 green**, boot exit 0. Next: /grill the forge-gated shop pool.
+
+## 2026-06-05 — Last 10 abilities landed + `on_activate` trigger (ADR 0006)
+- New **`on_activate`** trigger (`AbilitySystem.apply_on_activate`, hooked in `_fire_element_once`): compound on-fire payloads the single-string `effect` field can't express. Optional **`every_n`** gates effects to every Nth activation off the existing `fires` tally — deterministic, no new state, no RNG (Shrapnel: `[shock]` every 3rd fire).
+- Filled the final 10 stubbed abilities — T2 shrapnel/rootrot/gore/rot/moldsteel (gore = `effect:"leech"` lifesteal + on_activate weaken); T3 rainbow/plant/ash/ancientgrove/voidrift (ash redesigned → `on_burn_applied`). ADR 0006 + CONTEXT "Every Nth Activation" term.
+- Designed via /grill-with-docs after the 5 landed arch candidates (CombatState / ElementCard / resolve_drop / CombatSide / one-effect-engine). **407/407 green**, boot exit 0. Deferred (agreed): grid growth, Innate/Replay UI, T4 fill.
+
 ## 2026-06-04 — Abilities live: flags default-on + tooltip/Compendium wiring
 - `FeatureFlags` all default **true** (early-state: ship everything on; only `status_effects` is code-read). Abilities now apply in combat. 341/341 still green.
 - TooltipCard + Compendium card now render `AbilityData.get_ability(id).description`. Handoff doc updated with impl status + remaining work (glossary hover, ~23 skipped abilities, adjacency, T4).

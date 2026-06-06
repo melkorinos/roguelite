@@ -87,6 +87,30 @@ horizontal_alignment = 2
 text = "☠️ OPP HP: 20"
 theme_override_font_sizes/font_size = 22
 
+[node name="HpBarRow" type="HBoxContainer" parent="VBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="PlayerHpBar" type="ProgressBar" parent="VBox/HpBarRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+custom_minimum_size = Vector2(0, 14)
+max_value = 30.0
+value = 30.0
+show_percentage = false
+
+[node name="HpBarSpacer" type="Control" parent="VBox/HpBarRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(32, 0)
+
+[node name="OppHpBar" type="ProgressBar" parent="VBox/HpBarRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+custom_minimum_size = Vector2(0, 14)
+max_value = 30.0
+value = 30.0
+show_percentage = false
+
 [node name="Separator2" type="HSeparator" parent="VBox"]
 layout_mode = 2
 
@@ -182,10 +206,10 @@ layout_mode = 2
 size_flags_vertical = 3
 visible = false
 
-[node name="SummaryVBox" type="VBoxContainer" parent="VBox/SummaryPanel"]
+[node name="SummaryVBox" type="HBoxContainer" parent="VBox/SummaryPanel"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 4
+theme_override_constants/separation = 0
 
 [connection signal="pressed" from="VBox/ControlsRow/PauseButton" to="." method="_on_pause_pressed"]
 [connection signal="pressed" from="VBox/ControlsRow/Speed1xButton" to="." method="_on_speed_1x_pressed"]

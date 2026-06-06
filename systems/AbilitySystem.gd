@@ -8,6 +8,7 @@ class_name AbilitySystem
 # Ability shape:
 #   { "trigger": String, "effects": Array[Dictionary],
 #     "interval_deciseconds": int (periodic only), "multicast": int (extra fires),
+#     "every_n": int (on_activate only — fire effects every Nth activation),
 #     "adjacency_upgrade": bool, "description": String }
 #
 # Atomic effect kinds (each a Dictionary in "effects"):
@@ -132,6 +133,26 @@ static func _apply_atom(state: Dictionary, effect: Dictionary, source_side: Stri
 			else:
 				status_dict[field] = (status_dict[field] as int) + (value as int)
 			return {}
+		"haste_timers":
+			# Air/Gust on-fire: shave every own cooldown timer by the per-application
+			# Haste amount plus any reduction_bonus (set by Gust). Always own side.
+			var keys: Dictionary = _side_keys(source_side)
+			var haste: Dictionary = (state[keys["statuses"]] as Dictionary)["haste"] as Dictionary
+			var haste_seconds: float = float(StatusSystem.HASTE_REDUCTION_DECISECONDS + (haste["reduction_bonus_deciseconds"] as int)) / 10.0
+			var timers: Array = state[keys["timers"]] as Array
+			for j: int in timers.size():
+				timers[j] = maxf(0.0, (timers[j] as float) - haste_seconds)
+			return {}
+		"leech_heal":
+			# Blood/Pulse/Ichor on-fire: heal own HP by this fire's damage plus the
+			# leech.bonus, doubled when leech.double is set. amount = damage landed.
+			var keys: Dictionary = _side_keys(source_side)
+			var leech: Dictionary = (state[keys["statuses"]] as Dictionary)["leech"] as Dictionary
+			var heal: int = (effect["amount"] as int) + (leech["bonus"] as int)
+			if leech["double"] as bool:
+				heal *= 2
+			state[keys["hp"]] = (state[keys["hp"]] as int) + heal
+			return { "leech": 1 }
 	return {}
 
 
@@ -164,6 +185,52 @@ static func _record_effects(state: Dictionary, side: String, slot: int, applied:
 		total += n
 	row["effects_by_status"] = by_status
 	row["effects"] = (row.get("effects", 0) as int) + total
+
+
+# ── on-fire Action (T1 element effect) ────────────────────────────────────────
+
+# Applies a T1 element's on-fire Action through the same atomic-effect vocabulary
+# as Abilities, so there is one applier rather than a parallel dispatcher in
+# BattleSystem. Routes through _apply_effects, which also records the Battle
+# Summary tally for source_slot. dmg_dealt is this fire's landed damage (leech).
+static func apply_on_fire(state: Dictionary, effect: String, source_side: String, source_slot: int, dmg_dealt: int) -> void:
+	_apply_effects(state, _on_fire_effects(effect, dmg_dealt), source_side, source_slot)
+
+
+# Maps an on-fire effect string to its atomic effect list. Buffs (haste, heal,
+# cleanse, leech) act on the firing side; every other effect lands on the opponent.
+static func _on_fire_effects(effect: String, dmg_dealt: int) -> Array:
+	match effect:
+		"haste":
+			return [{ "kind": "apply_status", "status": "haste", "amount": 1, "target": "own" },
+				{ "kind": "haste_timers" }]
+		"heal":
+			return [{ "kind": "apply_status", "status": "heal", "amount": 1, "target": "own" }]
+		"cleanse":
+			return [{ "kind": "apply_status", "status": "cleanse", "amount": 1, "target": "own" }]
+		"leech":
+			return [{ "kind": "leech_heal", "amount": dmg_dealt }]
+	return [{ "kind": "apply_status", "status": effect, "amount": 1, "target": "opponent" }]
+
+
+# ── on-activate ability (the ability-tier sibling of the on-fire Action) ──────
+
+# Applies an element's on_activate ability after it fires, through the same atomic
+# vocabulary as every other ability. Where the legacy single-string "effect" field
+# can only apply one status per fire, on_activate carries a compound effects array
+# (e.g. Rootrot: [poison] + [weaken] every fire). Optional "every_n" gates the
+# effects to every Nth activation, counted deterministically from the slot's fire
+# tally (no RNG, no new state) — Shrapnel fires its [shock] every 3rd activation.
+# fire_count is this slot's running fire count, already incremented for this fire.
+# Like all non-fire-event abilities, the applied statuses emit no reactive events
+# (depth-1). No-ops for any element whose ability is not on_activate.
+static func apply_on_activate(state: Dictionary, ability: Dictionary, source_side: String, source_slot: int, fire_count: int) -> void:
+	if (ability.get("trigger", "") as String) != "on_activate":
+		return
+	var every_n: int = ability.get("every_n", 1) as int
+	if every_n > 1 and fire_count % every_n != 0:
+		return
+	_apply_effects(state, ability.get("effects", []) as Array, source_side, source_slot)
 
 
 # ── conditions (the "when" guard on any effect) ───────────────────────────────

@@ -16,6 +16,20 @@ static func get_ability(element_id: String) -> Dictionary:
 
 
 const ABILITIES: Dictionary = {
+	# ── T1 ───────────────────────────────────────────────────────────────────
+	"water":     { "description": "On fire, apply 1 [cleanse] to your side." },
+	"fire":      { "description": "On fire, apply 1 [burn] to the opponent." },
+	"air":       { "description": "On fire, apply 1 [haste] to your side." },
+	"earth":     { "description": "On fire, apply 1 [armor] to your side." },
+	"lightning": { "description": "On fire, apply 1 [shock] to the opponent." },
+	"nature":    { "description": "On fire, apply 1 [heal] to your side." },
+	"light":     { "description": "On fire, apply 1 [blind] to the opponent." },
+	"dark":      { "description": "On fire, apply 1 [curse] to the opponent." },
+	"metal":     { "description": "On fire, apply 1 [plating] to your side." },
+	"fungus":    { "description": "On fire, apply 1 [poison] to the opponent." },
+	"blood":     { "description": "On fire, apply 1 [leech] to your side." },
+	"frost":     { "description": "On fire, apply 1 [weaken] to the opponent." },
+
 	# ── T2 — Original cross ──────────────────────────────────────────────────
 	"steam": { "trigger": "on_burn_applied", "description": "When [burn] is applied, deal 1 bonus damage to the opponent.",
 		"effects": [{ "kind": "deal_damage", "amount": 1, "target": "opponent" }] },
@@ -103,12 +117,17 @@ const ABILITIES: Dictionary = {
 			{ "kind": "set_status_field", "status": "curse", "field": "damage_amplifier", "value": 1, "target": "opponent" }] },
 
 	# ── T2 — Metal family ────────────────────────────────────────────────────
+	"shrapnel": { "trigger": "on_activate", "every_n": 3, "description": "Every 3rd activation, apply 1 [shock] to the opponent.",
+		"effects": [{ "kind": "apply_status", "status": "shock", "amount": 1, "target": "opponent" }] },
 	"molten": { "trigger": "periodic", "interval_deciseconds": 60, "description": "Every 6s, apply 2 [burn] to the opponent.",
 		"effects": [{ "kind": "apply_status", "status": "burn", "amount": 2, "target": "opponent" }] },
 	"flint": { "trigger": "passive_on_hit", "description": "25% chance to apply 1 [shock] on any damage hit.",
 		"effects": [{ "status": "shock", "chance": 25, "target": "opponent" }] },
 
 	# ── T2 — Fungus family ───────────────────────────────────────────────────
+	"rootrot": { "trigger": "on_activate", "description": "On activation, apply 1 [poison] + 1 [weaken] to the opponent.",
+		"effects": [{ "kind": "apply_status", "status": "poison", "amount": 1, "target": "opponent" },
+			{ "kind": "apply_status", "status": "weaken", "amount": 1, "target": "opponent" }] },
 	"sporeflow": { "trigger": "periodic", "interval_deciseconds": 50, "description": "Every 5s, apply 2 [poison]; if the opponent has [weaken], apply +1 [poison].",
 		"effects": [{ "kind": "apply_status", "status": "poison", "amount": 2, "target": "opponent" },
 			{ "kind": "apply_status", "status": "poison", "amount": 1, "target": "opponent",
@@ -120,6 +139,8 @@ const ABILITIES: Dictionary = {
 			{ "kind": "apply_status", "status": "blind", "amount": 1, "target": "opponent" }] },
 
 	# ── T2 — Blood cross ─────────────────────────────────────────────────────
+	"gore": { "trigger": "on_activate", "description": "On activation, lifesteal for the damage dealt and apply 1 [weaken] to the opponent.",
+		"effects": [{ "kind": "apply_status", "status": "weaken", "amount": 1, "target": "opponent" }] },
 	"fever": { "trigger": "combat_start", "description": "Apply 1 [poison] + 1 [weaken] to the opponent.",
 		"effects": [{ "kind": "apply_status", "status": "poison", "amount": 1, "target": "opponent" },
 			{ "kind": "apply_status", "status": "weaken", "amount": 1, "target": "opponent" }] },
@@ -170,6 +191,12 @@ const ABILITIES: Dictionary = {
 			{ "kind": "apply_status", "status": "weaken", "amount": 1, "target": "opponent" }] },
 
 	# ── T2 — Extended-to-extended ────────────────────────────────────────────
+	"rot": { "trigger": "on_activate", "description": "On activation, apply 1 [poison] + 1 [shock] to the opponent.",
+		"effects": [{ "kind": "apply_status", "status": "poison", "amount": 1, "target": "opponent" },
+			{ "kind": "apply_status", "status": "shock", "amount": 1, "target": "opponent" }] },
+	"moldsteel": { "trigger": "on_activate", "description": "On activation, gain 1 [plating] and apply 1 [poison] to the opponent.",
+		"effects": [{ "kind": "apply_status", "status": "plating", "amount": 1, "target": "own" },
+			{ "kind": "apply_status", "status": "poison", "amount": 1, "target": "opponent" }] },
 	"murk": { "trigger": "on_status_applied", "status": "poison", "description": "When [poison] is applied, also apply 1 [blind] to the opponent.",
 		"effects": [{ "kind": "apply_status", "status": "blind", "amount": 1, "target": "opponent" }] },
 	"voltspore": { "trigger": "passive", "multicast": 1, "description": "Fires twice per cooldown.",
@@ -272,6 +299,28 @@ const ABILITIES: Dictionary = {
 		"effects": [{ "kind": "deal_damage", "amount": 5, "target": "opponent" },
 			{ "kind": "apply_status", "status": "armor", "amount": 2, "target": "own" },
 			{ "kind": "apply_status", "status": "plating", "amount": 1, "target": "own" }] },
+
+	# ── T3 — designed 2026-06-05 (previously stubbed) ────────────────────────
+	"rainbow": { "trigger": "periodic", "interval_deciseconds": 50, "description": "Every 5s, apply 1 [armor], [heal] 3, 1 [cleanse], and 1 [haste] to your side.",
+		"effects": [{ "kind": "apply_status", "status": "armor", "amount": 1, "target": "own" },
+			{ "kind": "apply_status", "status": "heal", "amount": 3, "target": "own" },
+			{ "kind": "apply_status", "status": "cleanse", "amount": 1, "target": "own" },
+			{ "kind": "apply_status", "status": "haste", "amount": 1, "target": "own" },
+			{ "kind": "haste_timers" }] },
+	"plant": { "trigger": "periodic", "interval_deciseconds": 60, "description": "Every 6s, [heal] your side for 4 and apply 1 [cleanse].",
+		"effects": [{ "kind": "apply_status", "status": "heal", "amount": 4, "target": "own" },
+			{ "kind": "apply_status", "status": "cleanse", "amount": 1, "target": "own" }] },
+	"ash": { "trigger": "on_burn_applied", "description": "When [burn] is applied, apply 1 [blind] + 1 [weaken] to the opponent.",
+		"effects": [{ "kind": "apply_status", "status": "blind", "amount": 1, "target": "opponent" },
+			{ "kind": "apply_status", "status": "weaken", "amount": 1, "target": "opponent" }] },
+	"ancientgrove": { "trigger": "periodic", "interval_deciseconds": 80, "description": "Every 8s, [heal] your side for 4 and apply 1 [armor].",
+		"effects": [{ "kind": "apply_status", "status": "heal", "amount": 4, "target": "own" },
+			{ "kind": "apply_status", "status": "armor", "amount": 1, "target": "own" }] },
+	"voidrift": { "trigger": "combat_start", "description": "Apply a permanent [curse] + 2 [blind] to the opponent; all opponent cooldowns +0.5s.",
+		"effects": [{ "kind": "apply_status", "status": "curse", "amount": 1, "target": "opponent" },
+			{ "kind": "set_status_field", "status": "curse", "field": "is_permanent", "value": true, "target": "opponent" },
+			{ "kind": "apply_status", "status": "blind", "amount": 2, "target": "opponent" },
+			{ "kind": "modify_cooldown", "deciseconds": 5, "target": "opponent" }] },
 
 	# ── Passive-modifier abilities (review #2, candidate 1) ──────────────────
 	"gust": { "trigger": "passive", "description": "[haste] reduces cooldowns by 0.5s instead of 0.3s.",

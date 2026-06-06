@@ -10,6 +10,8 @@ var _pause_overlay: PauseOverlay
 var _combat_accumulator: float = 0.0
 const MAX_FLOAT_LABELS: int = 40  # cap concurrent combat labels so heavy multicast can't flood the renderer
 var _active_float_labels: int = 0
+var _player_hp_bar: ProgressBar
+var _opp_hp_bar: ProgressBar
 
 
 func _ready() -> void:
@@ -28,6 +30,11 @@ func _ready() -> void:
 	($VBox/BattleRow/PlayerSide/PlayerLabel as Label).add_theme_color_override("font_color", ThemeData.COLOR_PLAYER_SIDE)
 	($VBox/BattleRow/OppSide/OppLabel as Label).add_theme_color_override("font_color", ThemeData.COLOR_OPP_SIDE)
 	($VBox/TimerRow/TimerLabel as Label).add_theme_color_override("font_color", ThemeData.COLOR_ROUND_LABEL)
+
+	_player_hp_bar = $VBox/HpBarRow/PlayerHpBar as ProgressBar
+	_opp_hp_bar = $VBox/HpBarRow/OppHpBar as ProgressBar
+	_style_hp_bar(_player_hp_bar)
+	_style_hp_bar(_opp_hp_bar)
 
 	_build_grids()
 	_render()
@@ -60,6 +67,19 @@ func _process(delta: float) -> void:
 		_process_fire_events(GameManager.state)
 	_update_progress_bars(GameManager.state)
 	_render()
+
+
+func _style_hp_bar(bar: ProgressBar) -> void:
+	var bg := StyleBoxFlat.new()
+	bg.bg_color = ThemeData.HP_BAR_BG
+	bg.set_border_width_all(2)
+	bg.border_color = ThemeData.HP_BAR_BORDER
+	bg.set_corner_radius_all(4)
+	bar.add_theme_stylebox_override("background", bg)
+	var fill := StyleBoxFlat.new()
+	fill.bg_color = ThemeData.HP_BAR_FILL
+	fill.set_corner_radius_all(3)
+	bar.add_theme_stylebox_override("fill", fill)
 
 
 func _build_grids() -> void:
@@ -189,6 +209,8 @@ func _render() -> void:
 	$VBox/Header.text = "BATTLE — Round %d  |  Life: %d  Wins: %d/10" % [s["round"], s["lives"], s["wins"]]
 	$VBox/HpRow/PlayerHPLabel.text = "❤️ YOUR HP: %d" % s["player_hp"]
 	$VBox/HpRow/OppHPLabel.text = "☠️ OPP HP: %d" % s["opponent_hp"]
+	_player_hp_bar.value = s["player_hp"] as int
+	_opp_hp_bar.value = s["opponent_hp"] as int
 	var remaining: float = maxf(0.0, BattleSystem.BATTLE_TIME_LIMIT - (s["battle_timer"] as float))
 	$VBox/TimerRow/TimerLabel.text = "⏱ %.1fs" % remaining
 
@@ -244,93 +266,162 @@ func _on_summary_pressed() -> void:
 
 
 func _build_summary() -> void:
-	var vbox: Node = $VBox/SummaryPanel/SummaryVBox
-	for child: Node in vbox.get_children():
+	var container: Node = $VBox/SummaryPanel/SummaryVBox
+	for child: Node in container.get_children():
 		child.queue_free()
 
 	var s: Dictionary = GameManager.state
 	var battle_time: float = maxf(s["battle_timer"] as float, 0.001)
 	var bstats: Dictionary = s["battle_stats"] as Dictionary
 
-	_add_summary_header(vbox, "YOUR ELEMENTS", ThemeData.COLOR_PLAYER_SIDE)
-	_add_summary_rows(vbox, s["battle_grid"] as Array, bstats["player"] as Array, battle_time)
+	var player_panel := _build_side_table(
+		"YOU", ThemeData.COLOR_PLAYER_SIDE,
+		s["battle_grid"] as Array, bstats["player"] as Array, battle_time
+	)
+	player_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	container.add_child(player_panel)
 
-	var sep := HSeparator.new()
-	vbox.add_child(sep)
+	var gap := Control.new()
+	gap.custom_minimum_size = Vector2(10, 0)
+	container.add_child(gap)
 
-	_add_summary_header(vbox, "OPPONENT", ThemeData.COLOR_OPP_SIDE)
-	_add_summary_rows(vbox, s["opponent_grid"] as Array, bstats["opponent"] as Array, battle_time)
-
-
-func _add_summary_header(parent: Node, title: String, color: Color) -> void:
-	var lbl := Label.new()
-	lbl.text = title
-	lbl.modulate = color
-	UIScale.apply(lbl, UIScale.SUMMARY_HEADER)
-	parent.add_child(lbl)
+	var opp_panel := _build_side_table(
+		"OPPONENT", ThemeData.COLOR_OPP_SIDE,
+		s["opponent_grid"] as Array, bstats["opponent"] as Array, battle_time
+	)
+	opp_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	container.add_child(opp_panel)
 
 
-func _add_summary_rows(parent: Node, grid: Array, stats: Array, battle_time: float) -> void:
-	var any: bool = false
+func _build_side_table(title: String, accent: Color, grid: Array, stats: Array, battle_time: float) -> PanelContainer:
+	var panel := PanelContainer.new()
+	var outer := StyleBoxFlat.new()
+	outer.bg_color = Color(0.06, 0.04, 0.09, 0.95)
+	outer.set_border_width_all(2)
+	outer.border_color = accent.lerp(Color(0.15, 0.08, 0.22, 1.0), 0.55)
+	outer.set_corner_radius_all(6)
+	outer.content_margin_left = 0.0
+	outer.content_margin_right = 0.0
+	outer.content_margin_top = 0.0
+	outer.content_margin_bottom = 0.0
+	panel.add_theme_stylebox_override("panel", outer)
+
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 0)
+	panel.add_child(vbox)
+
+	var hdr_bg: Color = accent.lerp(Color(0.04, 0.03, 0.07, 1.0), 0.72)
+	vbox.add_child(_summary_row(
+		[title, "Fires", "Dmg", "Effects", "DPS"],
+		[accent, Color(0.72, 0.72, 0.72), Color(0.72, 0.72, 0.72), Color(0.72, 0.72, 0.72), Color(0.72, 0.72, 0.72)],
+		hdr_bg, true
+	))
+
+	var any_elem: bool = false
 	for i: int in 4:
 		if grid[i] == null:
 			continue
-		any = true
+		any_elem = true
 		var elem: Dictionary = grid[i] as Dictionary
 		var st: Dictionary = stats[i] as Dictionary
 		var fires: int = st["fires"] as int
 		var dmg: int = st["damage"] as int
 		var fx_map: Dictionary = st.get("effects_by_status", {}) as Dictionary
-		var fx_text: String = ""
+		var fx_text: String = _format_effects(elem, st)
+		var dps: float = float(dmg) / battle_time
+
+		vbox.add_child(_summary_row(
+			["%s %s L%d" % [elem["emoji"], elem["name"], elem["level"] as int],
+			 "%d×" % fires, "%d" % dmg, fx_text, "%.1f" % dps],
+			[Color.WHITE, Color(0.78, 0.78, 0.78), Color(1.0, 0.75, 0.4), Color(0.7, 0.95, 0.7), Color(0.6, 0.85, 1.0)],
+			Color(0.0, 0.0, 0.0, 0.0), false
+		))
+
+	if not any_elem:
+		vbox.add_child(_summary_row(
+			["(no elements)", "", "", "", ""],
+			[Color(0.5, 0.5, 0.5), Color.WHITE, Color.WHITE, Color.WHITE, Color.WHITE],
+			Color(0.0, 0.0, 0.0, 0.0), false
+		))
+
+	return panel
+
+
+func _summary_row(texts: Array, colors: Array, bg: Color, is_header: bool) -> PanelContainer:
+	var pc := PanelContainer.new()
+	var style := StyleBoxFlat.new()
+	style.bg_color = bg
+	if not is_header:
+		style.border_width_top = 1
+		style.border_color = Color(0.25, 0.18, 0.32, 0.55)
+	style.content_margin_left = 8.0
+	style.content_margin_right = 8.0
+	style.content_margin_top = 5.0
+	style.content_margin_bottom = 5.0
+	pc.add_theme_stylebox_override("panel", style)
+
+	var hbox := HBoxContainer.new()
+	hbox.add_theme_constant_override("separation", 8)
+	pc.add_child(hbox)
+
+	var name_lbl := Label.new()
+	name_lbl.text = texts[0] if texts.size() > 0 else ""
+	name_lbl.add_theme_color_override("font_color", colors[0] if colors.size() > 0 else Color.WHITE)
+	UIScale.apply(name_lbl, UIScale.SUMMARY_HEADER if is_header else UIScale.SUMMARY_ROW)
+	name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	name_lbl.clip_text = true
+	hbox.add_child(name_lbl)
+
+	var col_widths: Array = [40, 38, 120, 44]
+	for j: int in range(1, mini(texts.size(), 5)):
+		var lbl := Label.new()
+		lbl.text = texts[j]
+		lbl.add_theme_color_override("font_color", colors[j] if j < colors.size() else Color.WHITE)
+		UIScale.apply(lbl, UIScale.SUMMARY_ROW)
+		lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER if is_header else HORIZONTAL_ALIGNMENT_RIGHT
+		lbl.custom_minimum_size = Vector2(col_widths[j - 1], 0)
+		hbox.add_child(lbl)
+
+	return pc
+
+
+# ── Effects formatting ────────────────────────────────────────────────────────
+
+func _format_effects(elem: Dictionary, st: Dictionary) -> String:
+	var fx_map: Dictionary = st.get("effects_by_status", {}) as Dictionary
+	if fx_map.is_empty():
+		return "—"
+	var tier: int = elem.get("tier", 1) as int
+	var result: String = ""
+	if tier == 1:
 		for status: Variant in fx_map:
-			if fx_text != "":
-				fx_text += ", "
-			fx_text += "%d %s" % [fx_map[status] as int, status as String]
-		if fx_text == "":
-			fx_text = "—"
-		var dps: float = dmg / battle_time
+			if result != "":
+				result += "  "
+			var s: String = status as String
+			result += "Apply %d %s" % [fx_map[status] as int, s.substr(0, 1).to_upper() + s.substr(1)]
+	else:
+		var ability: Dictionary = AbilityData.get_ability(elem.get("id", "") as String)
+		var tlabel: String = _trigger_label(ability.get("trigger", "") as String)
+		for status: Variant in fx_map:
+			if result != "":
+				result += "  "
+			var s: String = status as String
+			var cap: String = s.substr(0, 1).to_upper() + s.substr(1)
+			result += "%d %s (%s)" % [fx_map[status] as int, cap, tlabel] if tlabel != "" else "%d %s" % [fx_map[status] as int, cap]
+	return result
 
-		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 16)
 
-		var name_lbl := Label.new()
-		name_lbl.text = "%s  %s Lv%d" % [elem["emoji"], elem["name"], elem["level"] as int]
-		UIScale.apply(name_lbl, UIScale.SUMMARY_ROW)
-		name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		row.add_child(name_lbl)
-
-		var fires_lbl := Label.new()
-		fires_lbl.text = "fired %d×" % fires
-		UIScale.apply(fires_lbl, UIScale.SUMMARY_ROW)
-		fires_lbl.modulate = Color(0.8, 0.8, 0.8)
-		row.add_child(fires_lbl)
-
-		var dmg_lbl := Label.new()
-		dmg_lbl.text = "%d dmg" % dmg
-		UIScale.apply(dmg_lbl, UIScale.SUMMARY_ROW)
-		dmg_lbl.modulate = Color(1.0, 0.75, 0.4)
-		row.add_child(dmg_lbl)
-
-		var effects_lbl := Label.new()
-		effects_lbl.text = fx_text
-		UIScale.apply(effects_lbl, UIScale.SUMMARY_ROW)
-		effects_lbl.modulate = Color(0.7, 0.95, 0.7)
-		row.add_child(effects_lbl)
-
-		var dps_lbl := Label.new()
-		dps_lbl.text = "%.1f dps" % dps
-		UIScale.apply(dps_lbl, UIScale.SUMMARY_ROW)
-		dps_lbl.modulate = Color(0.6, 0.85, 1.0)
-		row.add_child(dps_lbl)
-
-		parent.add_child(row)
-
-	if not any:
-		var empty := Label.new()
-		empty.text = "  (no elements)"
-		empty.modulate = Color(0.5, 0.5, 0.5)
-		UIScale.apply(empty, UIScale.SUMMARY_EMPTY)
-		parent.add_child(empty)
+func _trigger_label(trigger: String) -> String:
+	match trigger:
+		"combat_start":      return "on start"
+		"periodic":          return "periodic"
+		"passive":           return "on hit"
+		"on_burn_tick":      return "on burn"
+		"on_poison_tick":    return "on poison"
+		"on_armor_stripped": return "on armor"
+		"on_haste_applied":  return "on haste"
+		"on_status_applied": return "on status"
+	return ""
 
 
 # ── Item Tooltip ─────────────────────────────────────────────────────────────

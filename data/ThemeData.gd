@@ -41,6 +41,11 @@ const BATTLE_SLOT_BORDER_EMPTY := Color(0.30, 0.18, 0.24, 0.65)
 const BATTLE_PROGRESS_BG       := Color(0.08, 0.06, 0.10, 0.80)
 const BATTLE_PROGRESS_FILL     := Color(0.30, 0.65, 1.00, 0.90)
 
+# ── HP bars (battle screen) ───────────────────────────────────────────────────
+const HP_BAR_FILL   := Color(0.85, 0.15, 0.15, 1.00)  # red health fill
+const HP_BAR_BG     := Color(0.07, 0.03, 0.03, 1.00)  # near-black tray
+const HP_BAR_BORDER := Color(0.50, 0.18, 0.18, 0.90)  # dark-red border
+
 # ── Forge slot ────────────────────────────────────────────────────────────────
 const FORGE_SLOT_BG     := Color(0.12, 0.06, 0.22, 0.95)
 const FORGE_SLOT_BORDER := Color(0.65, 0.28, 0.95, 0.92)
