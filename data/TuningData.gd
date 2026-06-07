@@ -41,7 +41,7 @@ const SHOP_HIGHER_TIER_SLOT_PERCENT: int = 30
 const STARTING_LIFE: int = 100
 const WIN_THRESHOLD: int = 10
 const MAX_LIFE_LOSS: int = 30             # lives_lost = round(opp_hp_ratio * MAX_LIFE_LOSS)
-const BASE_PLAYER_HP: int = 100
+const BASE_PLAYER_HP: int = 200
 const HP_PER_ROUND: int = 3               # hp = BASE + (round-1)*HP_PER_ROUND + hp_bonus
 # Placeholder opponent HP in a fresh GameState, before the first battle replaces it
 # with the board-derived value (BattleSystem.compute_opponent_hp in PhaseSystem.to_battle).
@@ -50,6 +50,7 @@ const INITIAL_OPPONENT_HP: int = 20
 
 # ── Combat ───────────────────────────────────────────────────────────────────
 const BATTLE_TIME_LIMIT: float = 30.0
+const OPPONENT_BASE_HP: int = 200         # flat base, mirrors BASE_PLAYER_HP; board damage adds on top
 const OPPONENT_HP_PER_DAMAGE: int = 5
 const OPPONENT_HP_MIN: int = 15
 const OPPONENT_TIER_ROUND_BREAKS: Array = [2, 4, 6]   # ≤2→T1, ≤4→T2, ≤6→T3, else T4

@@ -20,27 +20,29 @@ func _state_with_player_element(element_id: String) -> Dictionary:
 
 # ── compute_opponent_hp ───────────────────────────────────────────────────────
 
-func test_compute_opponent_hp_has_minimum_of_15() -> void:
+func test_compute_opponent_hp_empty_grid_is_base() -> void:
 	var grid: Array = [null, null, null, null]
-	assert_eq(BattleSystem.compute_opponent_hp(grid), 15)
+	assert_eq(BattleSystem.compute_opponent_hp(grid), TuningData.OPPONENT_BASE_HP)
 
 
-func test_compute_opponent_hp_enforces_minimum_for_low_damage() -> void:
-	# fire damage=2, so 1 element → 2*5=10 < 15 → clamped to 15
+func test_compute_opponent_hp_adds_board_damage_to_base() -> void:
+	# fire damage=2, so 1 element → base + 2*5
 	var elem: Dictionary = ElementData.find("fire").duplicate()
 	elem["element_id"] = "fire"
 	elem["level"] = 1
 	var grid: Array = [elem, null, null, null]
-	assert_eq(BattleSystem.compute_opponent_hp(grid), 15)
+	var expected: int = TuningData.OPPONENT_BASE_HP + 2 * TuningData.OPPONENT_HP_PER_DAMAGE
+	assert_eq(BattleSystem.compute_opponent_hp(grid), expected)
 
 
 func test_compute_opponent_hp_sums_damage_across_all_elements() -> void:
-	# lava damage=3; 4 slots → 4*3*5=60
+	# lava damage=3; 4 slots → base + 4*3*5
 	var lava: Dictionary = ElementData.find("lava").duplicate()
 	lava["element_id"] = "lava"
 	lava["level"] = 1
 	var grid: Array = [lava, lava.duplicate(), lava.duplicate(), lava.duplicate()]
-	assert_eq(BattleSystem.compute_opponent_hp(grid), 60)
+	var expected: int = TuningData.OPPONENT_BASE_HP + 4 * 3 * TuningData.OPPONENT_HP_PER_DAMAGE
+	assert_eq(BattleSystem.compute_opponent_hp(grid), expected)
 
 
 # ── tick_battle ───────────────────────────────────────────────────────────────
@@ -364,22 +366,31 @@ func test_command_fires_only_once() -> void:
 
 # ── compute_result ────────────────────────────────────────────────────────────
 
-func test_compute_result_player_wins_when_opponent_hp_lower() -> void:
+func test_compute_result_player_wins_when_opponent_eliminated() -> void:
 	var state := _make_state()
 	state["player_hp"] = 20
-	state["opponent_hp"] = 5
+	state["opponent_hp"] = 0
 	assert_eq(BattleSystem.compute_result(state), "player_wins")
 
 
-func test_compute_result_opponent_wins_when_player_hp_lower() -> void:
+# Regression: an opponent still alive at the end is a LOSS even with a big HP lead
+# (a 30 s timeout). Win = opponent eliminated, not the higher HP bar.
+func test_compute_result_opponent_wins_when_opponent_survives_despite_hp_lead() -> void:
 	var state := _make_state()
-	state["player_hp"] = 5
+	state["player_hp"] = 20
+	state["opponent_hp"] = 5
+	assert_eq(BattleSystem.compute_result(state), "opponent_wins")
+
+
+func test_compute_result_opponent_wins_when_player_eliminated() -> void:
+	var state := _make_state()
+	state["player_hp"] = 0
 	state["opponent_hp"] = 20
 	assert_eq(BattleSystem.compute_result(state), "opponent_wins")
 
 
-func test_compute_result_draw_on_equal_hp() -> void:
+func test_compute_result_draw_on_mutual_elimination() -> void:
 	var state := _make_state()
-	state["player_hp"] = 10
-	state["opponent_hp"] = 10
+	state["player_hp"] = 0
+	state["opponent_hp"] = 0
 	assert_eq(BattleSystem.compute_result(state), "draw")

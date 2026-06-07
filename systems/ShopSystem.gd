@@ -116,9 +116,9 @@ static func transfer(state: Dictionary, from_loc: Dictionary, to_loc: Dictionary
 			return state
 
 	if from_zone == "shop" and to_zone == "inventory":
-		return _buy(state, from_slot, to_slot)
+		return _buy_into(state, from_slot, "inventory", to_slot)
 	if from_zone == "shop" and to_zone == "grid":
-		return _buy_to_grid(state, from_slot, to_slot)
+		return _buy_into(state, from_slot, "battle_grid", to_slot)
 	if from_zone == "inventory" and to_zone == "grid":
 		return _swap_arrays(state, "inventory", from_slot, "battle_grid", to_slot)
 	if from_zone == "grid" and to_zone == "inventory":
@@ -211,26 +211,11 @@ static func can_transfer(state: Dictionary, from_loc: Dictionary, to_loc: Dictio
 		var elem: Dictionary = item as Dictionary
 		if (state["gold"] as int) < (elem["price"] as int):
 			return false
+		var elem_id: String = elem["id"] as String
 		if to_zone == "inventory":
-			var inv: Array = state["inventory"] as Array
-			if to_slot >= 0 and to_slot < inv.size():
-				var existing: Variant = inv[to_slot]
-				if existing != null:
-					var target: Dictionary = existing as Dictionary
-					if (target["element_id"] as String) != (elem["id"] as String):
-						return false
-					if (target["level"] as int) != 1:
-						return false
-		elif to_zone == "grid":
-			var grid: Array = state["battle_grid"] as Array
-			if to_slot >= 0 and to_slot < grid.size():
-				var existing: Variant = grid[to_slot]
-				if existing != null:
-					var target: Dictionary = existing as Dictionary
-					if (target.get("element_id", "") as String) != (elem["id"] as String):
-						return false
-					if (target["level"] as int) != 1:
-						return false
+			return _shop_target_ok(state["inventory"] as Array, to_slot, elem_id)
+		if to_zone == "grid":
+			return _shop_target_ok(state["battle_grid"] as Array, to_slot, elem_id)
 		return true
 
 	if from_zone == "inventory" and to_zone == "inventory":
@@ -337,7 +322,11 @@ static func reroll_shop(state: Dictionary, is_free: bool = false) -> Dictionary:
 	return s
 
 
-static func _buy(state: Dictionary, shop_slot: int, inv_slot: int) -> Dictionary:
+# Buys a shop element into one destination array (inventory or battle_grid), keyed
+# by dest_key. An empty slot takes a fresh level-1 instance; a matching level-1 slot
+# levels up to 2. One body for both destinations — the inventory/grid buy paths used
+# to be copied verbatim and differed only by which array they wrote.
+static func _buy_into(state: Dictionary, shop_slot: int, dest_key: String, dest_slot: int) -> Dictionary:
 	var shop_items: Array = state["shop_items"]
 	if shop_slot < 0 or shop_slot >= shop_items.size():
 		return state
@@ -349,72 +338,31 @@ static func _buy(state: Dictionary, shop_slot: int, inv_slot: int) -> Dictionary
 	var gold: int = state["gold"] as int
 	if gold < price:
 		return state
-	var inv: Array = state["inventory"]
-	if inv_slot < 0 or inv_slot >= inv.size():
+	var dest: Array = state[dest_key]
+	if dest_slot < 0 or dest_slot >= dest.size():
 		return state
-	var existing: Variant = inv[inv_slot]
+	var existing: Variant = dest[dest_slot]
 	if existing == null:
 		var s: Dictionary = state.duplicate(true)
 		var instance: Dictionary = elem_def.duplicate()
 		instance["element_id"] = elem_def["id"] as String
 		instance["level"] = 1
-		s["inventory"][inv_slot] = instance
+		s[dest_key][dest_slot] = instance
 		s["gold"] = gold - price
 		s["shop_items"][shop_slot] = null
 		return s
-	else:
-		var target: Dictionary = existing as Dictionary
-		if (target["element_id"] as String) != (elem_def["id"] as String):
-			return state
-		if (target["level"] as int) != 1:
-			return state
-		var s: Dictionary = state.duplicate(true)
-		var upgraded: Dictionary = (s["inventory"][inv_slot] as Dictionary).duplicate()
-		upgraded["level"] = 2
-		s["inventory"][inv_slot] = upgraded
-		s["gold"] = gold - price
-		s["shop_items"][shop_slot] = null
-		return s
-
-
-static func _buy_to_grid(state: Dictionary, shop_slot: int, grid_slot: int) -> Dictionary:
-	var shop_items: Array = state["shop_items"]
-	if shop_slot < 0 or shop_slot >= shop_items.size():
+	var target: Dictionary = existing as Dictionary
+	if (target.get("element_id", "") as String) != (elem_def["id"] as String):
 		return state
-	var item: Variant = shop_items[shop_slot]
-	if item == null:
+	if (target["level"] as int) != 1:
 		return state
-	var elem_def: Dictionary = item as Dictionary
-	var price: int = elem_def["price"] as int
-	var gold: int = state["gold"] as int
-	if gold < price:
-		return state
-	var grid: Array = state["battle_grid"]
-	if grid_slot < 0 or grid_slot >= grid.size():
-		return state
-	var existing: Variant = grid[grid_slot]
-	if existing == null:
-		var s: Dictionary = state.duplicate(true)
-		var instance: Dictionary = elem_def.duplicate()
-		instance["element_id"] = elem_def["id"] as String
-		instance["level"] = 1
-		s["battle_grid"][grid_slot] = instance
-		s["gold"] = gold - price
-		s["shop_items"][shop_slot] = null
-		return s
-	else:
-		var target: Dictionary = existing as Dictionary
-		if (target.get("element_id", "") as String) != (elem_def["id"] as String):
-			return state
-		if (target["level"] as int) != 1:
-			return state
-		var s: Dictionary = state.duplicate(true)
-		var upgraded: Dictionary = (s["battle_grid"][grid_slot] as Dictionary).duplicate()
-		upgraded["level"] = 2
-		s["battle_grid"][grid_slot] = upgraded
-		s["gold"] = gold - price
-		s["shop_items"][shop_slot] = null
-		return s
+	var s: Dictionary = state.duplicate(true)
+	var upgraded: Dictionary = (s[dest_key][dest_slot] as Dictionary).duplicate()
+	upgraded["level"] = 2
+	s[dest_key][dest_slot] = upgraded
+	s["gold"] = gold - price
+	s["shop_items"][shop_slot] = null
+	return s
 
 
 static func _swap_arrays(state: Dictionary, from_key: String, from_slot: int, to_key: String, to_slot: int) -> Dictionary:
@@ -423,6 +371,21 @@ static func _swap_arrays(state: Dictionary, from_key: String, from_slot: int, to
 	s[from_key][from_slot] = s[to_key][to_slot]
 	s[to_key][to_slot] = temp
 	return s
+
+
+# A shop buy into `dest_slot` is allowed when the slot is empty/out-of-range, or holds
+# a matching element still at level 1 (a buy-and-level-up). Shared by the inventory
+# and grid shop branches of can_transfer.
+static func _shop_target_ok(dest: Array, to_slot: int, elem_id: String) -> bool:
+	if to_slot < 0 or to_slot >= dest.size():
+		return true
+	var existing: Variant = dest[to_slot]
+	if existing == null:
+		return true
+	var target: Dictionary = existing as Dictionary
+	if (target.get("element_id", "") as String) != elem_id:
+		return false
+	return (target["level"] as int) == 1
 
 
 static func _first_empty_slot(arr: Array) -> int:

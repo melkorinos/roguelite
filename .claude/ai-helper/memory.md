@@ -15,6 +15,7 @@ Static class, `static var` (not `const`) so flags flip at runtime. **All default
 - **Player HP**: in-battle only. Recomputed in `to_battle()` = `BASE_PLAYER_HP + (round-1)*HP_PER_ROUND + hp_bonus` (scales with round + reward bonus). Not a match resource.
 - **Life**: starts 100; loss = `round(clamp(opp_hp_ratio,0,1) * MAX_LIFE_LOSS)` — proportional to margin, no buckets, no floor. 0=eliminated.
 - **Win condition**: `WIN_THRESHOLD` (10) wins = victory. Draw = player win (opponent async). Both end match → MainMenu.
+- **Round win rule (canonical, settled 2026-06-07)**: a Round is won iff the **opponent is eliminated** (`opponent_hp ≤ 0`) — NOT an HP comparison. A 30 s timeout with the opponent alive is a **loss** scaled by remaining opp HP; mutual KO = draw = win. The single resolver is `PhaseSystem.resolve_round(state)` → `{outcome,is_win,wins_after,lives_*,is_victory,is_eliminated,next_phase,event}`; `describe_result`/`advance_round`/Battle.gd all read it (no second win rule anywhere). `BattleSystem.compute_result` is the classification primitive.
 - **Balance knobs** live in `data/TuningData.gd` (economy, progression, run/match, combat, status magnitudes incl. ×1 placeholders for burn/poison/armor/plating). Engine/safety/UI constants stay local; a separate config-constants file is planned.
 - **Gold income**: +5g per round via `advance_round()`. No streak/interest yet.
 - **Rounds unbounded**: match ends at 10 wins OR 0 Life.

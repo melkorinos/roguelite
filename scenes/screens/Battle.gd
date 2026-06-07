@@ -490,17 +490,11 @@ func _on_pause_menu() -> void:
 func _on_next_round_pressed() -> void:
 	AudioManager.play("click")
 	var pre: Dictionary = GameManager.state
+	# One resolver decides the Round; advance_round reads the same one internally, so
+	# the achievement event can never disagree with how the Run progresses.
+	var event: String = PhaseSystem.resolve_round(pre)["event"] as String
 	GameManager.state = PhaseSystem.advance_round(pre)
 	var phase: String = GameManager.state["phase"] as String
-
-	var event: String
-	match phase:
-		"victory":
-			event = "match_win"
-		"eliminated":
-			event = "match_eliminated"
-		_:
-			event = "round_win" if (pre["opponent_hp"] as int) <= 0 else "round_loss"
 
 	var ach: Dictionary = AchievementSystem.check(pre, PlayerProfile.to_dict(), event)
 	PlayerProfile.from_dict(ach["profile"] as Dictionary)

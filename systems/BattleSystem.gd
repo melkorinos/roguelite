@@ -21,7 +21,7 @@ static func simulate_battle(state: Dictionary) -> Dictionary:
 
 
 static func compute_opponent_hp(opp_grid: Array) -> int:
-	var total: int = 0
+	var total: int = TuningData.OPPONENT_BASE_HP
 	for slot: Variant in opp_grid:
 		if slot != null:
 			total += (slot as Dictionary).get("damage", 1) as int * TuningData.OPPONENT_HP_PER_DAMAGE
@@ -219,11 +219,17 @@ static func _tally_effect(slot_stats: Dictionary, status: String) -> void:
 	by_status[status] = (by_status.get(status, 0) as int) + 1
 
 
+# Canonical win rule: a Round is won when the OPPONENT is eliminated (opponent_hp
+# reaches 0). A timeout with the opponent still alive is a loss scaled by their
+# remaining HP (see PhaseSystem._lives_lost) — NOT an HP comparison. The old
+# HP-comparison rule disagreed with how the Run actually advances, so the result
+# shown could contradict the result applied. Mutual elimination in one tick is a
+# draw, which counts as a win.
 static func compute_result(state: Dictionary) -> String:
-	var player_hp: int = state["player_hp"]
-	var opp_hp: int = state["opponent_hp"]
-	if player_hp > opp_hp:
+	var player_hp: int = state["player_hp"] as int
+	var opp_hp: int = state["opponent_hp"] as int
+	if opp_hp <= 0 and player_hp <= 0:
+		return "draw"
+	if opp_hp <= 0:
 		return "player_wins"
-	elif opp_hp > player_hp:
-		return "opponent_wins"
-	return "draw"
+	return "opponent_wins"

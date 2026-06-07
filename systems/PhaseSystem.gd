@@ -37,7 +37,58 @@ static func to_battle(state: Dictionary, opponent_snapshot: Dictionary) -> Dicti
 	return s
 
 
+# Single source of truth for how a finished combat resolves into a Round outcome.
+# describe_result (the result screen), advance_round (Run progression), and Battle.gd
+# (the achievement event) all read THIS — so the win rule and the Life/wins math live
+# in exactly one place and can't drift apart. Pure: never mutates `state`.
+#
+# Returns:
+#   outcome       "player_wins" | "opponent_wins" | "draw"
+#   is_win        bool — win or draw (Run-positive); a draw counts as a win
+#   wins_after    int  — wins after this Round
+#   lives_lost    int  — Life lost this Round (0 on a win/draw)
+#   lives_after   int  — Life after this Round
+#   is_victory    bool — wins_after reached WIN_THRESHOLD
+#   is_eliminated bool — a loss that drove Life to 0
+#   next_phase    "shop" | "victory" | "eliminated"
+#   event         "round_win" | "round_loss" | "match_win" | "match_eliminated"
+static func resolve_round(state: Dictionary) -> Dictionary:
+	var outcome: String = BattleSystem.compute_result(state)
+	var is_win: bool = outcome == "player_wins" or outcome == "draw"
+	var wins: int = state["wins"] as int
+	var lives: int = state["lives"] as int
+	var lives_lost: int = 0
+	if not is_win:
+		var opp_hp: int = state["opponent_hp"] as int
+		var opp_start: int = state["opponent_starting_hp"] as int
+		lives_lost = _lives_lost(float(opp_hp) / float(maxi(opp_start, 1)))
+	var wins_after: int = wins + (1 if is_win else 0)
+	var lives_after: int = lives - lives_lost
+	var is_victory: bool = wins_after >= TuningData.WIN_THRESHOLD
+	var is_eliminated: bool = (not is_win) and lives_after <= 0
+	var next_phase: String = "shop"
+	var event: String = "round_win" if is_win else "round_loss"
+	if is_victory:
+		next_phase = "victory"
+		event = "match_win"
+	elif is_eliminated:
+		next_phase = "eliminated"
+		event = "match_eliminated"
+	return {
+		"outcome": outcome,
+		"is_win": is_win,
+		"wins_after": wins_after,
+		"lives_lost": lives_lost,
+		"lives_after": lives_after,
+		"is_victory": is_victory,
+		"is_eliminated": is_eliminated,
+		"next_phase": next_phase,
+		"event": event,
+	}
+
+
 static func advance_round(state: Dictionary) -> Dictionary:
+	var outcome: Dictionary = resolve_round(state)
 	var s: Dictionary = state.duplicate(true)
 	s["round"] = (s["round"] as int) + 1
 	s["gold"] = (s["gold"] as int) + TuningData.GOLD_PER_ROUND
@@ -48,49 +99,16 @@ static func advance_round(state: Dictionary) -> Dictionary:
 	s["battle_events"] = []
 	s["shop_items"] = CombatState.empty_slots(TuningData.SHOP_SLOT_COUNT)
 	s["reroll_count"] = 0  # reroll cost escalates within a phase; reset each round
-
-	var opp_hp: int = s["opponent_hp"] as int
-	var opp_start: int = s["opponent_starting_hp"] as int
-
-	var player_wins: bool = opp_hp <= 0
-	if player_wins:
-		s["wins"] = (s["wins"] as int) + 1
-		if (s["wins"] as int) >= TuningData.WIN_THRESHOLD:
-			s["phase"] = "victory"
-			return s
-	else:
-		var ratio: float = float(opp_hp) / float(maxi(opp_start, 1))
-		s["lives"] = (s["lives"] as int) - _lives_lost(ratio)
-		if (s["lives"] as int) <= 0:
-			s["phase"] = "eliminated"
-			return s
-
-	s["phase"] = "shop"
+	s["wins"] = outcome["wins_after"] as int
+	s["lives"] = outcome["lives_after"] as int
+	s["phase"] = outcome["next_phase"] as String
 	return s
 
 
+# Render-facing view of the Round outcome — the result screen reads these keys.
+# A superset shape (resolve_round) is fine; the view picks the fields it needs.
 static func describe_result(state: Dictionary) -> Dictionary:
-	var outcome: String = BattleSystem.compute_result(state)
-	var wins: int = state["wins"] as int
-	var lives: int = state["lives"] as int
-	var opp_hp: int = state["opponent_hp"] as int
-	var opp_start: int = state["opponent_starting_hp"] as int
-	var lives_lost: int = 0
-	var wins_after: int = wins
-	if outcome == "player_wins" or outcome == "draw":
-		wins_after = wins + 1
-	else:
-		var ratio: float = float(opp_hp) / float(maxi(opp_start, 1))
-		lives_lost = _lives_lost(ratio)
-	var lives_after: int = lives - lives_lost
-	return {
-		"outcome": outcome,
-		"wins_after": wins_after,
-		"lives_lost": lives_lost,
-		"lives_after": lives_after,
-		"is_victory": wins_after >= TuningData.WIN_THRESHOLD,
-		"is_eliminated": lives_after <= 0 and outcome == "opponent_wins",
-	}
+	return resolve_round(state)
 
 
 static func forfeit(state: Dictionary) -> Dictionary:

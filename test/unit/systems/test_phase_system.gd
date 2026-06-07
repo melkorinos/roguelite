@@ -272,6 +272,52 @@ func test_to_battle_reads_grid_from_snapshot() -> void:
 					(snap_grid[i] as Dictionary)["element_id"])
 
 
+# ── resolve_round (the single Round-outcome resolver) ─────────────────────────
+
+# Regression: opponent alive at the end is a loss even with a big HP lead, so the
+# result shown matches the Run progression (no shown-vs-applied split at timeout).
+func test_resolve_round_timeout_with_hp_lead_is_a_loss() -> void:
+	var r := PhaseSystem.resolve_round(_result_state(25, 5, 30))
+	assert_eq(r["outcome"], "opponent_wins")
+	assert_false(r["is_win"] as bool)
+	assert_eq(r["event"], "round_loss")
+	assert_eq(r["next_phase"], "shop")
+
+
+func test_resolve_round_win_event_and_phase() -> void:
+	var r := PhaseSystem.resolve_round(_result_state(10, 0, 20))
+	assert_true(r["is_win"] as bool)
+	assert_eq(r["event"], "round_win")
+	assert_eq(r["next_phase"], "shop")
+
+
+func test_resolve_round_draw_counts_as_win() -> void:
+	var r := PhaseSystem.resolve_round(_result_state(0, 0, 20))
+	assert_eq(r["outcome"], "draw")
+	assert_true(r["is_win"] as bool)
+	assert_eq(r["event"], "round_win")
+
+
+func test_resolve_round_victory_event_at_threshold() -> void:
+	var r := PhaseSystem.resolve_round(_result_state(10, 0, 20, TuningData.WIN_THRESHOLD - 1))
+	assert_eq(r["event"], "match_win")
+	assert_eq(r["next_phase"], "victory")
+	assert_true(r["is_victory"] as bool)
+
+
+func test_resolve_round_eliminated_event_on_fatal_loss() -> void:
+	var r := PhaseSystem.resolve_round(_result_state(0, 20, 20, 0, TuningData.MAX_LIFE_LOSS))
+	assert_eq(r["event"], "match_eliminated")
+	assert_eq(r["next_phase"], "eliminated")
+	assert_true(r["is_eliminated"] as bool)
+
+
+func test_resolve_round_does_not_mutate_state() -> void:
+	var s := _result_state(0, 14, 20)
+	PhaseSystem.resolve_round(s)
+	assert_eq(s["lives"] as int, 100)
+
+
 # ── describe_result ───────────────────────────────────────────────────────────
 
 func _result_state(player_hp: int, opp_hp: int, opp_start: int, wins: int = 0, lives: int = 100) -> Dictionary:

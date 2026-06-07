@@ -1,5 +1,11 @@
 # Development Log
 
+## 2026-06-07 — Arch review #2: unify Round resolution + collapse Shop intake
+- Review `reviews/architecture-review-20260607-b.html` (4 candidates). Implemented **1 & 2**.
+- **#1 Round resolution (bug fix):** who-won was decided in three places with **two win rules** — `BattleSystem.compute_result` (HP comparison, drove the result screen) vs `advance_round` (`opp_hp≤0`, moves the Run). At a 30 s timeout these disagreed (shown WIN, applied LOSS). New single `PhaseSystem.resolve_round(state)` (outcome/is_win/wins_after/lives_*/is_victory/is_eliminated/next_phase/event); `describe_result` + `advance_round` + Battle.gd all read it. **Canonical win rule = opponent eliminated** (`opp_hp≤0`); timeout-with-opp-alive is a loss scaled by remaining HP; mutual KO = draw = win. `compute_result` rewritten to match; its 3 HP-comparison tests corrected.
+- **#2 Shop intake:** twin `_buy`/`_buy_to_grid` → one `_buy_into(state, shop_slot, dest_key, dest_slot)`; `can_transfer` shop branch → one `_shop_target_ok` helper. `resolve_drop` stays the scene's single verb; `transfer`/`can_transfer` kept public (test contract).
+- **441/441 green** (+7), boot 0. Win-rule change is gameplay-facing — flagged to player.
+
 ## 2026-06-07 — Deepen Forge: one `attempt(op)` / `preview(op)` interface (arch review #1)
 - `ForgeSystem`'s 9 functions / 3 return shapes → two verbs over an op vocabulary {merge, forge_pair, forge_bench, to_bench, from_bench}, uniform `{state, outcome}`. Granular mutators are now private. Callers updated (`ShopSystem.resolve_drop`, `Shop.gd` forge handlers); forge tests rewritten against the interface + added forge_bench-outcome / unknown-op coverage.
 - Implements the top recommendation of `reviews/architecture-review-20260607.html`; the queued loop concerns (leveled forge inputs, recipe discoverability) now land in one module. **434/434 green**, boot 0.
@@ -105,14 +111,7 @@
 - T3: T2+T2 only rule; convergence mechanic (2–3 pairs per T3); 17 new elements incl. Glacier, Blizzard, Inferno. Legacy T1+T2 recipes redesigned.
 - T4: T3+T3 only, 16g, "Phenomena" tier; 10 elements (Ice Age, Maelstrom, Supernova…).
 
-## 2026-06-03 — Status Effects + housekeeping
-- `StatusSystem.gd` NEW (empty_statuses/apply_effect/tick/compute_incoming_damage/slow_pct); Sound→Fungus, Blood+Frost added; BattleSystem integrated (shock CD, blind, pipeline). 279/279. `ideas.md`/`elements-reference.html`/`FeatureFlags.gd` NEW; tests → `test/unit/{data,systems,autoloads}/`.
-
-## 2026-06-02 — Foundation (Steam seams, shop, battle, elements)
-- `OpponentProvider`/`AchievementSystem`/`PlayerProfile`/`GhostFixtures` NEW; 5 achievements. `ShopSystem.transfer()` API, `ElementData.effective_damage`, `UIScale`. Shop: drag-drop/forge/undo/sell/reroll. Battle: timers/Summary/pause/speed. ItemData→ElementData. Match: Life 100, 10 wins, +5g/round.
-
-## 2026-06-01 — Godot migration + core loop
-- Phaser3/TS → Godot 4.6/GDScript. Boot→MainMenu→Shop→Battle loop. Strict typing, GUT, CI.
-
-## 2026-05-30 — Genre pivot
-- Extraction roguelite → auto-battler. Ability Chain combat, 8-player async PvP, Merge+Forge, Steam desktop.
+## 2026-06-03 → 05-30 — Foundations (collapsed)
+- **06-03 Status Effects:** `StatusSystem.gd` NEW (empty_statuses/apply_effect/tick/compute_incoming_damage/slow_pct); Sound→Fungus, Blood+Frost; BattleSystem integrated. Tests → `test/unit/{data,systems,autoloads}/`.
+- **06-02 Foundation:** `OpponentProvider`/`AchievementSystem`/`PlayerProfile`/`GhostFixtures` NEW; `ShopSystem.transfer()`, `ElementData.effective_damage`, `UIScale`; drag-drop/forge/undo/sell/reroll; Life 100 / 10 wins / +5g per round.
+- **06-01 Godot migration:** Phaser3/TS → Godot 4.6/GDScript; Boot→MainMenu→Shop→Battle loop; strict typing, GUT, CI. **05-30 Genre pivot:** extraction roguelite → auto-battler.
