@@ -24,12 +24,16 @@ const SHOP_BATTLEGRID_BG   := Color(0.13, 0.08, 0.04, 0.68)  # warm red-amber �
 const SHOP_BATTLEGRID_BORDER:= Color(0.48, 0.28, 0.08, 0.42)
 
 # ── Item tier colors ──────────────────────────────────────────────────────────
-const TIER_1_BG     := Color(0.08, 0.11, 0.09, 0.97)  # common — dark green
-const TIER_1_BORDER := Color(0.40, 0.65, 0.40, 0.90)
-const TIER_2_BG     := Color(0.07, 0.09, 0.16, 0.97)  # uncommon — blue
-const TIER_2_BORDER := Color(0.30, 0.52, 0.92, 0.90)
-const TIER_3_BG     := Color(0.12, 0.09, 0.04, 0.97)  # rare — gold
-const TIER_3_BORDER := Color(0.92, 0.68, 0.14, 0.90)
+# Backgrounds are saturated enough to read the tier at a glance (the old near-black
+# fills all looked identical); borders stay bright for the accent.
+const TIER_1_BG     := Color(0.10, 0.22, 0.13, 0.97)  # common — green
+const TIER_1_BORDER := Color(0.45, 0.80, 0.45, 0.95)
+const TIER_2_BG     := Color(0.09, 0.16, 0.30, 0.97)  # uncommon — blue
+const TIER_2_BORDER := Color(0.35, 0.60, 0.98, 0.95)
+const TIER_3_BG     := Color(0.18, 0.10, 0.28, 0.97)  # epic — purple
+const TIER_3_BORDER := Color(0.72, 0.42, 1.00, 0.95)
+const TIER_4_BG     := Color(0.24, 0.17, 0.04, 0.97)  # legendary — gold
+const TIER_4_BORDER := Color(0.98, 0.74, 0.20, 0.95)
 
 # ── Slot / tile empty state ───────────────────────────────────────────────────
 const SLOT_BG_EMPTY     := Color(0.10, 0.10, 0.14, 0.85)
@@ -47,8 +51,16 @@ const HP_BAR_BG     := Color(0.07, 0.03, 0.03, 1.00)  # near-black tray
 const HP_BAR_BORDER := Color(0.50, 0.18, 0.18, 0.90)  # dark-red border
 
 # ── Forge slot ────────────────────────────────────────────────────────────────
+# Empty forge slots use the neutral empty-slot look; once an item is dropped the
+# slot shows that item's tier color (see ForgeSlot.set_item), so the purple is gone.
 const FORGE_SLOT_BG     := Color(0.12, 0.06, 0.22, 0.95)
 const FORGE_SLOT_BORDER := Color(0.65, 0.28, 0.95, 0.92)
+
+# ── Forge button (red action button — distinct from tier/forge purples) ─────────
+const FORGE_BUTTON_BG          := Color(0.55, 0.13, 0.13, 1.0)
+const FORGE_BUTTON_BG_HOVER    := Color(0.70, 0.18, 0.18, 1.0)
+const FORGE_BUTTON_BG_DISABLED := Color(0.22, 0.12, 0.12, 0.85)
+const FORGE_BUTTON_BORDER      := Color(0.92, 0.36, 0.32, 0.95)
 
 # ── Sell zone (drag-to-sell drop target, overlaps FOR SALE section) ──────────
 const SELL_BG           := Color(0.10, 0.08, 0.05, 0.70)  # matches SHOP_FORSALE_BG
@@ -71,9 +83,10 @@ const COLOR_HEADER_BATTLE    := Color(1.00, 0.42, 0.45)  # BATTLE header
 const COLOR_PLAYER_SIDE      := Color(0.38, 0.92, 0.55)  # YOU
 const COLOR_OPP_SIDE         := Color(1.00, 0.38, 0.38)  # OPPONENT
 const COLOR_ROUND_LABEL      := Color(0.78, 0.78, 1.00)  # round / timer text
-const COLOR_COMP_HEADER_T1   := Color(0.45, 0.72, 0.45)  # compendium tier 1
-const COLOR_COMP_HEADER_T2   := Color(0.40, 0.60, 0.95)  # compendium tier 2
-const COLOR_COMP_HEADER_T3   := Color(0.92, 0.68, 0.18)  # compendium tier 3
+const COLOR_COMP_HEADER_T1   := Color(0.45, 0.72, 0.45)  # compendium tier 1 — green
+const COLOR_COMP_HEADER_T2   := Color(0.40, 0.60, 0.95)  # compendium tier 2 — blue
+const COLOR_COMP_HEADER_T3   := Color(0.78, 0.50, 1.00)  # compendium tier 3 — epic purple
+const COLOR_COMP_HEADER_T4   := Color(0.95, 0.72, 0.20)  # compendium tier 4 — legendary gold
 const COLOR_COMP_TRIGGER     := Color(0.55, 0.85, 0.95)  # compendium ability trigger line
 const COLOR_COMP_ABILITY     := Color(0.78, 0.82, 0.95)  # compendium ability description
 
@@ -83,6 +96,7 @@ static func tier_bg(tier: int) -> Color:
 		1: return TIER_1_BG
 		2: return TIER_2_BG
 		3: return TIER_3_BG
+		4: return TIER_4_BG
 		_: return TIER_1_BG
 
 
@@ -91,6 +105,7 @@ static func tier_border(tier: int) -> Color:
 		1: return TIER_1_BORDER
 		2: return TIER_2_BORDER
 		3: return TIER_3_BORDER
+		4: return TIER_4_BORDER
 		_: return TIER_1_BORDER
 
 
@@ -99,4 +114,5 @@ static func comp_tier_color(tier: int) -> Color:
 		1: return COLOR_COMP_HEADER_T1
 		2: return COLOR_COMP_HEADER_T2
 		3: return COLOR_COMP_HEADER_T3
+		4: return COLOR_COMP_HEADER_T4
 		_: return COLOR_COMP_HEADER_T1

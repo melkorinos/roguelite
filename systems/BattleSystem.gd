@@ -1,6 +1,7 @@
 class_name BattleSystem
 
-const BATTLE_TIME_LIMIT: float = 30.0
+# Balance values (battle time limit, opponent HP) live in TuningData. COMBAT_STEP
+# stays here: it's a determinism/correctness constant, not a balance knob.
 # Fixed combat step (aligns with decisecond granularity). Combat advances in these
 # chunks regardless of frame rate, so work and determinism don't depend on FPS.
 const COMBAT_STEP_SECONDS: float = 0.1
@@ -11,7 +12,7 @@ const COMBAT_STEP_SECONDS: float = 0.1
 # non-terminating edge case (combat also self-terminates at BATTLE_TIME_LIMIT).
 static func simulate_battle(state: Dictionary) -> Dictionary:
 	var s: Dictionary = state
-	var max_steps: int = int(BATTLE_TIME_LIMIT / COMBAT_STEP_SECONDS) + 50
+	var max_steps: int = int(TuningData.BATTLE_TIME_LIMIT / COMBAT_STEP_SECONDS) + 50
 	var steps: int = 0
 	while (s["phase"] as String) != "result" and steps < max_steps:
 		s = tick_battle(s, COMBAT_STEP_SECONDS)
@@ -23,8 +24,8 @@ static func compute_opponent_hp(opp_grid: Array) -> int:
 	var total: int = 0
 	for slot: Variant in opp_grid:
 		if slot != null:
-			total += (slot as Dictionary).get("damage", 1) as int * 5
-	return maxi(total, 15)
+			total += (slot as Dictionary).get("damage", 1) as int * TuningData.OPPONENT_HP_PER_DAMAGE
+	return maxi(total, TuningData.OPPONENT_HP_MIN)
 
 
 static func tick_battle(state: Dictionary, delta: float) -> Dictionary:
@@ -78,7 +79,7 @@ static func tick_battle(state: Dictionary, delta: float) -> Dictionary:
 	# clock reaches their moment.
 	s = _drain_commands(s, timer)
 
-	if (s["player_hp"] as int) <= 0 or (s["opponent_hp"] as int) <= 0 or timer >= BATTLE_TIME_LIMIT:
+	if (s["player_hp"] as int) <= 0 or (s["opponent_hp"] as int) <= 0 or timer >= TuningData.BATTLE_TIME_LIMIT:
 		s["phase"] = "result"
 
 	return s

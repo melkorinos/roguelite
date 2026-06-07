@@ -44,6 +44,19 @@ func _on_starting_pick(element_id: String) -> void:
 	_render()
 
 
+func _forge_button_style(bg: Color) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = bg
+	sb.set_border_width_all(2)
+	sb.border_color = ThemeData.FORGE_BUTTON_BORDER
+	sb.set_corner_radius_all(6)
+	sb.content_margin_left = 10.0
+	sb.content_margin_right = 10.0
+	sb.content_margin_top = 6.0
+	sb.content_margin_bottom = 6.0
+	return sb
+
+
 func _apply_theme() -> void:
 	# Forge bench: purple panel background via Container's built-in "panel" stylebox
 	var forge_style := StyleBoxFlat.new()
@@ -56,6 +69,15 @@ func _apply_theme() -> void:
 	forge_style.content_margin_top = 8.0
 	forge_style.content_margin_bottom = 8.0
 	$VBox/MainArea/RightPanel.add_theme_stylebox_override("panel", forge_style)
+
+	# Forge button — red action button, distinct from the forge/tier purples.
+	var forge_btn: Button = $VBox/MainArea/RightPanel/ForgeButton
+	forge_btn.add_theme_stylebox_override("normal", _forge_button_style(ThemeData.FORGE_BUTTON_BG))
+	forge_btn.add_theme_stylebox_override("hover", _forge_button_style(ThemeData.FORGE_BUTTON_BG_HOVER))
+	forge_btn.add_theme_stylebox_override("pressed", _forge_button_style(ThemeData.FORGE_BUTTON_BG_HOVER))
+	forge_btn.add_theme_stylebox_override("disabled", _forge_button_style(ThemeData.FORGE_BUTTON_BG_DISABLED))
+	forge_btn.add_theme_color_override("font_color", Color.WHITE)
+	UIScale.apply(forge_btn, UIScale.FORGE_BUTTON)
 
 	# FOR SALE section — warm amber tint (applied directly to SellZone panel)
 	var forsale_style := StyleBoxFlat.new()
@@ -129,9 +151,10 @@ func _render() -> void:
 	var s: Dictionary = GameManager.state
 	$VBox/TopBar/RoundLabel.text = "Round %d" % s["round"]
 	$VBox/TopBar/GoldLabel.text = ""
-	$VBox/TopBar/HPLabel.text = "❤ %d/30   💰 %dg" % [s["player_hp"], s["gold"]]
+	$VBox/TopBar/HPLabel.text = "❤ %d/%d   💰 %dg" % [s["player_hp"], s["player_starting_hp"], s["gold"]]
 	$VBox/TopBar/LivesLabel.text = "Life: %d  Wins: %d/10" % [s["lives"], s["wins"]]
-	$VBox/DebugRow/TierLabel.text = "Shop T%d" % s["shop_tier"]
+	var unlocked: Array[int] = ShopSystem.unlocked_tiers(s["run_discoveries"] as Array)
+	$VBox/DebugRow/TierLabel.text = "Shop T1–T%d  (%d forged)" % [unlocked[unlocked.size() - 1], (s["run_discoveries"] as Array).size()]
 	($VBox/MainArea/LeftPanel/SellZone/SellZoneVBox/ShopHeaderRow/RerollButton as Button).text = "Reroll — %dg" % ShopSystem.reroll_cost(s)
 	$VBox/TopBar/UndoButton.disabled = GameManager.undo_state == null
 	_rebuild_shop_grid(s)
@@ -273,8 +296,14 @@ func _update_forge_info(s: Dictionary) -> void:
 		info.text = "%s %s in slot 2 — add first item" % [db["emoji"], db["name"]]
 		forge_btn.disabled = true
 	else:
-		info.text = ForgeSystem.preview_bench(s)
-		forge_btn.disabled = false
+		# Both items present — show the resulting element prominently so the player can
+		# decide before committing. preview_bench returns "→ …" on a hit, "✗ …" on a miss.
+		var preview_text: String = ForgeSystem.preview(s, {"kind": "forge_bench"})
+		var has_recipe: bool = preview_text.begins_with("→")
+		info.text = "Forge result:"
+		result.text = preview_text
+		result.add_theme_color_override("font_color", ThemeData.COLOR_PLAYER_SIDE if has_recipe else ThemeData.COLOR_OPP_SIDE)
+		forge_btn.disabled = not has_recipe
 
 
 # ── Item Tooltip ─────────────────────────────────────────────────────────────
@@ -379,17 +408,19 @@ func _on_shop_buy_upgrade_requested(_element_id: String, to_inv_index: int, shop
 # ── Forge bench ───────────────────────────────────────────────────────────────
 
 func _on_forge_slot_item_placed(forge_slot_idx: int, from_inv_idx: int) -> void:
-	GameManager.state = ForgeSystem.move_to_forge_slot(GameManager.state, forge_slot_idx, from_inv_idx)
+	GameManager.state = ForgeSystem.attempt(GameManager.state,
+		{"kind": "to_bench", "forge_slot": forge_slot_idx, "from": {"zone": "inventory", "slot": from_inv_idx}})["state"]
 	_render()
 
 
 func _on_forge_quick_slot(inv_slot_index: int) -> void:
-	GameManager.state = ForgeSystem.forge_quick_slot(GameManager.state, inv_slot_index)
+	GameManager.state = ForgeSystem.attempt(GameManager.state,
+		{"kind": "to_bench", "forge_slot": -1, "from": {"zone": "inventory", "slot": inv_slot_index}})["state"]
 	_render()
 
 
 func _on_forge_slot_item_removed(forge_slot_idx: int) -> void:
-	GameManager.state = ForgeSystem.remove_from_forge_slot(GameManager.state, forge_slot_idx)
+	GameManager.state = ForgeSystem.attempt(GameManager.state, {"kind": "from_bench", "forge_slot": forge_slot_idx})["state"]
 	_render()
 
 
@@ -400,7 +431,7 @@ func _on_forge_button_pressed() -> void:
 func _execute_forge() -> void:
 	GameManager.save_undo()
 	var pre_recipe_count: int = (GameManager.state["discovered_recipes"] as Array).size()
-	var result: Dictionary = ForgeSystem.forge_from_bench(GameManager.state)
+	var result: Dictionary = ForgeSystem.attempt(GameManager.state, {"kind": "forge_bench"})
 	GameManager.state = result["state"] as Dictionary
 	var outcome: String = result["outcome"] as String
 	var level_mismatch: bool = result["level_mismatch"] as bool
@@ -453,7 +484,8 @@ func _on_grid_slot_received_drop(from_type: String, from_index: int, to_grid_ind
 
 
 func _on_forge_quick_slot_grid(grid_slot: int) -> void:
-	GameManager.state = ForgeSystem.forge_quick_slot_from_grid(GameManager.state, grid_slot)
+	GameManager.state = ForgeSystem.attempt(GameManager.state,
+		{"kind": "to_bench", "forge_slot": -1, "from": {"zone": "grid", "slot": grid_slot}})["state"]
 	_render()
 
 
@@ -479,10 +511,21 @@ func _on_add_gold_pressed() -> void:
 
 
 func _on_tier_up_pressed() -> void:
+	# Dev: unlock the next locked tier by injecting enough distinct forge discoveries.
 	var s: Dictionary = GameManager.state.duplicate(true)
-	var tier: int = s["shop_tier"] as int
-	if tier < 5:
-		s["shop_tier"] = tier + 1
+	var run_disc: Array = s["run_discoveries"]
+	var unlocked: Array[int] = ShopSystem.unlocked_tiers(run_disc)
+	for tier: int in [2, 3, 4]:
+		if unlocked.has(tier):
+			continue
+		var needed: int = TuningData.TIER_UNLOCK_THRESHOLDS[tier] as int
+		for elem: Dictionary in ElementData.all_elements():
+			if needed <= 0:
+				break
+			if (elem["tier"] as int) == tier and not run_disc.has(elem["id"]):
+				run_disc.append(elem["id"])
+				needed -= 1
+		break
 	GameManager.state = s
 	_render()
 
@@ -584,7 +627,6 @@ func _on_fight_pressed() -> void:
 	var context: Dictionary = {
 		"day": day_key,
 		"round": s["round"] as int,
-		"shop_tier": s["shop_tier"] as int,
 	}
 	var snapshot: Dictionary = OpponentProvider.get_opponent(context)
 	GameManager.state = PhaseSystem.to_battle(s, snapshot)

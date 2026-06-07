@@ -12,9 +12,10 @@ Static class, `static var` (not `const`) so flags flip at runtime. **All default
 
 ## Match structure
 8 players, last standing wins. Each round: Shop phase → combat phase. Mixed PvP + PvE (fixed schedule).
-- **Player HP**: in-battle only. Resets to 30 in `to_battle()`. Not a match resource.
-- **Life**: starts 100; hard loss (opp HP≥70%)→–30, medium (30–70%)→–20, close (<30%)→–10. 0=eliminated.
-- **Win condition**: 10 wins = victory. Draw = player win (opponent async). Both end match → MainMenu.
+- **Player HP**: in-battle only. Recomputed in `to_battle()` = `BASE_PLAYER_HP + (round-1)*HP_PER_ROUND + hp_bonus` (scales with round + reward bonus). Not a match resource.
+- **Life**: starts 100; loss = `round(clamp(opp_hp_ratio,0,1) * MAX_LIFE_LOSS)` — proportional to margin, no buckets, no floor. 0=eliminated.
+- **Win condition**: `WIN_THRESHOLD` (10) wins = victory. Draw = player win (opponent async). Both end match → MainMenu.
+- **Balance knobs** live in `data/TuningData.gd` (economy, progression, run/match, combat, status magnitudes incl. ×1 placeholders for burn/poison/armor/plating). Engine/safety/UI constants stay local; a separate config-constants file is planned.
 - **Gold income**: +5g per round via `advance_round()`. No streak/interest yet.
 - **Rounds unbounded**: match ends at 10 wins OR 0 Life.
 

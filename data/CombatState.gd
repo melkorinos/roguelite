@@ -13,7 +13,7 @@ class_name CombatState
 # Board slot count. The combat backend is grid-agnostic (it derives the grid
 # shape from the slot array via GridSystem), so this is the single place the
 # live board size is declared.
-const SLOT_COUNT: int = 4
+const SLOT_COUNT: int = TuningData.GRID_SIZE
 
 
 # A fresh array of `count` zero floats — for timers and frozen-seconds.

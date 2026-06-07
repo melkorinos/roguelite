@@ -41,11 +41,19 @@ func test_advance_round_increments_round() -> void:
 	assert_eq(s["round"], 4)
 
 
-func test_advance_round_resets_player_hp_to_30() -> void:
+func test_advance_round_scales_player_hp_with_round() -> void:
 	var state := _make_state()
 	state["player_hp"] = 12
 	var s := PhaseSystem.advance_round(state)
-	assert_eq(s["player_hp"], 30)
+	var expected: int = TuningData.BASE_PLAYER_HP + ((s["round"] as int) - 1) * TuningData.HP_PER_ROUND
+	assert_eq(s["player_hp"] as int, expected)
+
+
+# Regression: the HP-bar max (player_starting_hp) must track the round-scaled HP, so
+# the shop never shows current > max (the "33/30 after round 1" bug).
+func test_advance_round_keeps_starting_hp_in_step_with_player_hp() -> void:
+	var s := PhaseSystem.advance_round(_make_state())
+	assert_eq(s["player_starting_hp"] as int, s["player_hp"] as int)
 
 
 func test_advance_round_sets_phase_to_shop() -> void:
@@ -175,51 +183,34 @@ func test_advance_round_does_not_increment_wins_on_loss() -> void:
 
 # ── advance_round: Lives deduction ───────────────────────────────────────────
 
-func test_advance_round_deducts_30_life_on_hard_loss() -> void:
-	# opponent has 70% of starting HP remaining → hard loss
-	var state := _make_state()
-	state["player_hp"] = 0
-	state["opponent_hp"] = 14
-	state["opponent_starting_hp"] = 20
-	var s := PhaseSystem.advance_round(state)
-	assert_eq(s["lives"], 70)
-
-
-func test_advance_round_deducts_20_life_on_medium_loss() -> void:
-	# opponent has exactly 50% remaining → medium loss
-	var state := _make_state()
-	state["player_hp"] = 0
-	state["opponent_hp"] = 10
-	state["opponent_starting_hp"] = 20
-	var s := PhaseSystem.advance_round(state)
-	assert_eq(s["lives"], 80)
-
-
-func test_advance_round_deducts_10_life_on_close_loss() -> void:
-	# opponent has 25% remaining → close loss
-	var state := _make_state()
-	state["player_hp"] = 0
-	state["opponent_hp"] = 5
-	state["opponent_starting_hp"] = 20
-	var s := PhaseSystem.advance_round(state)
-	assert_eq(s["lives"], 90)
+func test_advance_round_life_loss_scales_with_opponent_hp_left() -> void:
+	# Loss is proportional to opponent HP remaining (no buckets): round(ratio × MAX).
+	for case: Array in [[14, 20], [10, 20], [5, 20]]:
+		var state := _make_state()
+		state["player_hp"] = 0
+		state["opponent_hp"] = case[0]
+		state["opponent_starting_hp"] = case[1]
+		var s := PhaseSystem.advance_round(state)
+		var ratio: float = float(case[0] as int) / float(case[1] as int)
+		var expected_loss: int = int(round(ratio * float(TuningData.MAX_LIFE_LOSS)))
+		assert_eq(s["lives"] as int, 100 - expected_loss, "ratio %.2f" % ratio)
 
 
 func test_advance_round_sets_eliminated_when_life_reaches_0() -> void:
 	var state := _make_state()
-	state["lives"] = 30
+	state["lives"] = TuningData.MAX_LIFE_LOSS
 	state["player_hp"] = 0
-	state["opponent_hp"] = 14   # hard loss → –30
+	state["opponent_hp"] = 20   # opponent at full → ratio 1.0 → max life loss
 	state["opponent_starting_hp"] = 20
 	var s := PhaseSystem.advance_round(state)
-	assert_eq(s["lives"], 0)
+	assert_lte(s["lives"] as int, 0)
 	assert_eq(s["phase"], "eliminated")
 
 
 func test_advance_round_sets_shop_phase_on_surviving_loss() -> void:
 	var state := _make_state()
 	state["player_hp"] = 0
-	state["opponent_hp"] = 5    # close loss → –1
+	state["opponent_hp"] = 5    # narrow loss → small life loss, survives
 	state["opponent_starting_hp"] = 20
 	var s := PhaseSystem.advance_round(state)
 	assert_eq(s["phase"], "shop")
@@ -242,11 +233,21 @@ func test_to_battle_stores_opponent_starting_hp() -> void:
 	assert_eq(s["opponent_starting_hp"] as int, s["opponent_hp"] as int)
 
 
-func test_to_battle_resets_player_hp_to_30() -> void:
+func test_to_battle_scales_player_hp_with_round() -> void:
 	var state := _make_state()
 	state["player_hp"] = 5
 	var s := PhaseSystem.to_battle(state, _fixture())
-	assert_eq(s["player_hp"], 30)
+	var expected: int = TuningData.BASE_PLAYER_HP + ((s["round"] as int) - 1) * TuningData.HP_PER_ROUND
+	assert_eq(s["player_hp"] as int, expected)
+	assert_eq(s["player_starting_hp"] as int, s["player_hp"] as int)
+
+
+func test_to_battle_adds_hp_bonus_reward() -> void:
+	var state := _make_state()
+	state["hp_bonus"] = 7
+	var s := PhaseSystem.to_battle(state, _fixture())
+	var expected: int = TuningData.BASE_PLAYER_HP + ((s["round"] as int) - 1) * TuningData.HP_PER_ROUND + 7
+	assert_eq(s["player_hp"] as int, expected)
 
 
 # ── to_battle: opponent_snapshot storage ─────────────────────────────────────
@@ -299,27 +300,15 @@ func test_describe_result_draw_increments_wins_after() -> void:
 	assert_eq(dr["wins_after"] as int, 1)
 
 
-func test_describe_result_hard_loss_life_lost_30() -> void:
-	# opp has 70% remaining → hard loss
-	var s := _result_state(0, 14, 20)
-	var dr := PhaseSystem.describe_result(s)
-	assert_eq(dr["outcome"], "opponent_wins")
-	assert_eq(dr["lives_lost"] as int, 30)
-	assert_eq(dr["lives_after"] as int, 70)
-
-
-func test_describe_result_medium_loss_life_lost_20() -> void:
-	# opp has 50% remaining → medium loss
-	var s := _result_state(0, 10, 20)
-	var dr := PhaseSystem.describe_result(s)
-	assert_eq(dr["lives_lost"] as int, 20)
-
-
-func test_describe_result_close_loss_life_lost_10() -> void:
-	# opp has 25% remaining → close loss
-	var s := _result_state(0, 5, 20)
-	var dr := PhaseSystem.describe_result(s)
-	assert_eq(dr["lives_lost"] as int, 10)
+func test_describe_result_loss_scales_with_opponent_hp_left() -> void:
+	for case: Array in [[14, 20], [10, 20], [5, 20]]:
+		var s := _result_state(0, case[0], case[1])
+		var dr := PhaseSystem.describe_result(s)
+		var ratio: float = float(case[0] as int) / float(case[1] as int)
+		var expected_loss: int = int(round(ratio * float(TuningData.MAX_LIFE_LOSS)))
+		assert_eq(dr["outcome"], "opponent_wins")
+		assert_eq(dr["lives_lost"] as int, expected_loss, "ratio %.2f" % ratio)
+		assert_eq(dr["lives_after"] as int, 100 - expected_loss)
 
 
 func test_describe_result_is_victory_at_9_wins_player_win() -> void:
@@ -336,10 +325,10 @@ func test_describe_result_is_not_victory_below_10() -> void:
 
 
 func test_describe_result_is_eliminated_when_life_reaches_0() -> void:
-	var s := _result_state(0, 14, 20, 0, 30)
+	var s := _result_state(0, 20, 20, 0, TuningData.MAX_LIFE_LOSS)  # full-margin loss wipes remaining Life
 	var dr := PhaseSystem.describe_result(s)
 	assert_true(dr["is_eliminated"] as bool)
-	assert_eq(dr["lives_after"] as int, 0)
+	assert_lte(dr["lives_after"] as int, 0)
 
 
 func test_describe_result_is_not_eliminated_on_win() -> void:

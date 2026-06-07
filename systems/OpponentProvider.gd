@@ -1,14 +1,16 @@
 class_name OpponentProvider
 
 
+# Opponent power now scales with the round, not the player's shop progress, so the
+# difficulty curve is predictable and independent of how fast the player forges.
 static func get_opponent(context: Dictionary) -> Dictionary:
 	var day: int = context["day"] as int
 	var round_num: int = context["round"] as int
-	var shop_tier: int = context["shop_tier"] as int
+	var max_tier: int = _max_tier_for_round(round_num)
 
-	var grid := _day_seeded_grid(day, round_num, shop_tier)
+	var grid := _day_seeded_grid(day, round_num, max_tier)
 	if _grid_is_empty(grid):
-		return GhostFixtures.get_fixture(shop_tier)
+		return GhostFixtures.get_fixture(max_tier)
 
 	return {
 		"player_id": "ghost_local",
@@ -20,10 +22,19 @@ static func get_opponent(context: Dictionary) -> Dictionary:
 	}
 
 
-static func _day_seeded_grid(day: int, round_num: int, shop_tier: int) -> Array:
+# Round → highest element tier the opponent may field (breakpoints in TuningData).
+static func _max_tier_for_round(round_num: int) -> int:
+	var tier: int = 1
+	for brk: int in TuningData.OPPONENT_TIER_ROUND_BREAKS:
+		if round_num > brk:
+			tier += 1
+	return tier
+
+
+static func _day_seeded_grid(day: int, round_num: int, max_tier: int) -> Array:
 	var pool: Array[Dictionary] = []
 	for elem: Dictionary in ElementData.all_elements():
-		if (elem["tier"] as int) <= shop_tier:
+		if (elem["tier"] as int) <= max_tier:
 			pool.append(elem)
 
 	if pool.is_empty():
@@ -54,11 +65,11 @@ static func _day_seeded_grid(day: int, round_num: int, shop_tier: int) -> Array:
 
 
 static func _max_slots_for_round(round_num: int) -> int:
-	if round_num <= 1:
-		return 2
-	if round_num <= 3:
-		return 3
-	return 4
+	var slots: int = TuningData.OPPONENT_SLOTS_BASE
+	for brk: int in TuningData.OPPONENT_SLOTS_ROUND_BREAKS:
+		if round_num > brk:
+			slots += 1
+	return slots
 
 
 static func _grid_is_empty(grid: Array) -> bool:

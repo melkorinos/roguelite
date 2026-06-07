@@ -1,5 +1,15 @@
 # Development Log
 
+## 2026-06-05 — Centralized balance knobs in `data/TuningData.gd`
+- New `TuningData.gd` holds all **balance knobs** (economy, progression, run/match, combat, status magnitudes); systems reference it directly (local dup consts removed: REROLL_BASE_COST, TIER_UNLOCK_THRESHOLDS, HASTE_REDUCTION_DECISECONDS, STARTING_*, BATTLE_TIME_LIMIT, opponent curve, sell/gold/HP/Life). Engine/safety (COMBAT_STEP, MAX_STACKS, MAX_REACTIONS) + UI/infra stay local → a future "config constants" file. `CombatState.SLOT_COUNT` re-exports `GRID_SIZE`. Element `price` field kept; tier-default table added.
+- Status scalars centralized incl. **×1 placeholders** (burn/poison/armor/plating per-stack/point) — no-ops now, tunable later.
+- **Behavior changes:** Life loss now proportional `round(clamp(ratio)×MAX_LIFE_LOSS)` (no buckets/floor); player HP scales `BASE+(round-1)×HP_PER_ROUND+hp_bonus` (new reward-hook field) + `player_starting_hp` for the HP-bar max (also fixed pre-existing opp-bar overflow). **427/427 green**, boot 0. CONTEXT Life/Player-HP terms updated.
+
+## 2026-06-05 — Forge-gated, family-filtered shop pool (ADR 0007)
+- **`shop_tier` retired.** A tier appears in the shop only after forging N distinct of it this run (`ShopSystem.TIER_UNLOCK_THRESHOLDS` 3/2/1); once unlocked, shows only that tier's elements from the **families** the player forged with (`eligible_for_tier`/`_families_for_tier` + `RecipeData.ingredients_of`). T1 = full pool always + guaranteed ≥1 T1 slot; higher slots spread across families (`_pick_spread`).
+- New per-run `run_discoveries` in `GameState` (forge-written; `discovered_recipes` unchanged). Opponent power now scales by **round** (`OpponentProvider._max_tier_for_round`), not shop_tier. Grilled via /grill-with-docs; CONTEXT terms (Run Discovery, Family, Starting Pick) added.
+- **430/430 green**, boot exit 0. Next run-loop item: the every-3-match event.
+
 ## 2026-06-05 — Run-loop kickoff: escalating reroll + starting pick
 - **Escalating reroll**: `ShopSystem.reroll_cost` = `2 + reroll_count`; paid rerolls increment, `advance_round` resets, Shop button shows live cost. Free rerolls exempt.
 - **Starting pick**: `systems/StartSystem.gd` (`starting_options`/`apply_starting_pick`) — run-start offers 3 T1s, chosen one buffed ×2 via `damage_multiplier` field read in `effective_damage`; `StartingPickOverlay` shown in `Shop._ready` (round 1, gated by `starting_pick_done`). Overlay needs an F5 eyeball.
@@ -91,21 +101,11 @@
 - T3: T2+T2 only rule; convergence mechanic (2–3 pairs per T3); 17 new elements incl. Glacier, Blizzard, Inferno. Legacy T1+T2 recipes redesigned.
 - T4: T3+T3 only, 16g, "Phenomena" tier; 10 elements (Ice Age, Maelstrom, Supernova…).
 
-## 2026-06-03 — Status Effects system (12 T1 elements, gated by FeatureFlags.status_effects)
-- Sound→Fungus🍄; Blood🩸+Frost🌨️ added. `StatusSystem.gd` NEW: `empty_statuses`, `apply_effect`, `tick`, `compute_incoming_damage`, `slow_pct`.
-- BattleSystem integrated: shock CD scaling, blind miss roll, full effect pipeline.
-- **279/279 passing (83 new tests).**
+## 2026-06-03 — Status Effects + housekeeping
+- `StatusSystem.gd` NEW (empty_statuses/apply_effect/tick/compute_incoming_damage/slow_pct); Sound→Fungus, Blood+Frost added; BattleSystem integrated (shock CD, blind, pipeline). 279/279. `ideas.md`/`elements-reference.html`/`FeatureFlags.gd` NEW; tests → `test/unit/{data,systems,autoloads}/`.
 
-## 2026-06-03 — Housekeeping + tooling
-- `ideas.md`, `elements-reference.html`, `FeatureFlags.gd` NEW. Tests moved to `test/unit/{data,systems,autoloads}/`.
-
-## 2026-06-02 — Foundation (Steam seams, shop, battle, element system)
-- `OpponentProvider`, `AchievementSystem`, `PlayerProfile`, `GhostFixtures` NEW. 5 Steam achievements wired.
-- `ShopSystem.transfer()` unified API. `ElementData.effective_damage` single source. `UIScale.gd` named constants.
-- Shop: drag-drop, SOLD placeholders, forge bench, undo (Ctrl+Z), sell zone, tier-weighted reroll.
-- Battle: cooldown timers, Summary panel (fires+dmg+DPS), pause, 1×/1.5×/2× speed, PauseOverlay.
-- ItemData→ElementData (29→105 elements). TooltipCard (CanvasLayer 100). Compendium scene.
-- Match: Life 100, 10 wins, +5g/round. PhaseSystem + BattleSystem pure static.
+## 2026-06-02 — Foundation (Steam seams, shop, battle, elements)
+- `OpponentProvider`/`AchievementSystem`/`PlayerProfile`/`GhostFixtures` NEW; 5 achievements. `ShopSystem.transfer()` API, `ElementData.effective_damage`, `UIScale`. Shop: drag-drop/forge/undo/sell/reroll. Battle: timers/Summary/pause/speed. ItemData→ElementData. Match: Life 100, 10 wins, +5g/round.
 
 ## 2026-06-01 — Godot migration + core loop
 - Phaser3/TS → Godot 4.6/GDScript. Boot→MainMenu→Shop→Battle loop. Strict typing, GUT, CI.

@@ -13,6 +13,12 @@ const INV_SLOT    := 22
 const SELL_HINT   := 20
 const SOLD_LABEL  := 16
 
+# ── Buttons ───────────────────────────────────────────────────────────────────
+const FORGE_BUTTON := 20
+
+# ── Combat ────────────────────────────────────────────────────────────────────
+const FLOAT_LABEL := 20  # floating combat damage / status numbers
+
 # ── Drag previews ─────────────────────────────────────────────────────────────
 const DRAG_SHOP   := 48
 const DRAG_SLOT   := 44

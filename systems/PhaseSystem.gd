@@ -1,12 +1,18 @@
 class_name PhaseSystem
 
 
+# Life lost on a defeat, proportional to how much opponent HP remained (0..1):
+# a blowout costs MAX_LIFE_LOSS, a razor-thin loss costs almost nothing. No floor.
+# Ratio is clamped so loss never exceeds MAX_LIFE_LOSS (defends against degenerate
+# opponent_starting_hp values).
 static func _lives_lost(ratio: float) -> int:
-	if ratio >= 0.70:
-		return 30
-	elif ratio >= 0.30:
-		return 20
-	return 10
+	return int(round(clampf(ratio, 0.0, 1.0) * float(TuningData.MAX_LIFE_LOSS)))
+
+
+# Player HP for a combat: a round-scaled base plus any reward bonus (hp_bonus).
+static func _scaled_player_hp(state: Dictionary) -> int:
+	var round_num: int = state["round"] as int
+	return TuningData.BASE_PLAYER_HP + (round_num - 1) * TuningData.HP_PER_ROUND + (state.get("hp_bonus", 0) as int)
 
 
 static func to_battle(state: Dictionary, opponent_snapshot: Dictionary) -> Dictionary:
@@ -15,7 +21,8 @@ static func to_battle(state: Dictionary, opponent_snapshot: Dictionary) -> Dicti
 	# pools, and the Battle Summary stat rows, all sized to the board.
 	s = CombatState.reset(s)
 	s["phase"] = "battle"
-	s["player_hp"] = 30
+	s["player_hp"] = _scaled_player_hp(s)
+	s["player_starting_hp"] = s["player_hp"]
 	s["opponent_snapshot"] = opponent_snapshot
 	s["opponent_grid"] = opponent_snapshot.get("grid", CombatState.empty_slots()) as Array
 	# Seed the combat RNG deterministically per round so Replay and async Ghost
@@ -33,10 +40,13 @@ static func to_battle(state: Dictionary, opponent_snapshot: Dictionary) -> Dicti
 static func advance_round(state: Dictionary) -> Dictionary:
 	var s: Dictionary = state.duplicate(true)
 	s["round"] = (s["round"] as int) + 1
-	s["gold"] = (s["gold"] as int) + 5
-	s["player_hp"] = 30
+	s["gold"] = (s["gold"] as int) + TuningData.GOLD_PER_ROUND
+	s["player_hp"] = _scaled_player_hp(s)
+	# Keep the HP-bar max in step with the (round-scaled) next-combat HP, so the shop
+	# never shows current > max (e.g. 33/30 after round 1). Re-set per combat in to_battle.
+	s["player_starting_hp"] = s["player_hp"]
 	s["battle_events"] = []
-	s["shop_items"] = [null, null, null, null, null]
+	s["shop_items"] = CombatState.empty_slots(TuningData.SHOP_SLOT_COUNT)
 	s["reroll_count"] = 0  # reroll cost escalates within a phase; reset each round
 
 	var opp_hp: int = s["opponent_hp"] as int
@@ -45,7 +55,7 @@ static func advance_round(state: Dictionary) -> Dictionary:
 	var player_wins: bool = opp_hp <= 0
 	if player_wins:
 		s["wins"] = (s["wins"] as int) + 1
-		if (s["wins"] as int) >= 10:
+		if (s["wins"] as int) >= TuningData.WIN_THRESHOLD:
 			s["phase"] = "victory"
 			return s
 	else:
@@ -78,7 +88,7 @@ static func describe_result(state: Dictionary) -> Dictionary:
 		"wins_after": wins_after,
 		"lives_lost": lives_lost,
 		"lives_after": lives_after,
-		"is_victory": wins_after >= 10,
+		"is_victory": wins_after >= TuningData.WIN_THRESHOLD,
 		"is_eliminated": lives_after <= 0 and outcome == "opponent_wins",
 	}
 

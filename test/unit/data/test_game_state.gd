@@ -18,8 +18,8 @@ func test_create_has_correct_starting_gold() -> void:
 
 func test_create_has_correct_starting_hp() -> void:
 	var state := GameState.create()
-	assert_eq(state["player_hp"], 30)
-	assert_eq(state["opponent_hp"], 20)
+	assert_eq(state["player_hp"], TuningData.BASE_PLAYER_HP)
+	assert_eq(state["opponent_hp"], TuningData.INITIAL_OPPONENT_HP)
 
 
 func test_create_inventory_has_six_empty_slots() -> void:

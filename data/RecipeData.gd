@@ -210,3 +210,18 @@ static func find_result(id_a: String, id_b: String) -> String:
 		if (ra == id_a and rb == id_b) or (ra == id_b and rb == id_a):
 			return recipe["result"]
 	return ""
+
+
+# The set of ingredient ids that can forge `result_id` — the union across every
+# recipe producing it (a result may have alternate paths). Used by the shop's
+# family filter to know which "families" a discovered element belongs to.
+static func ingredients_of(result_id: String) -> Array[String]:
+	var ingredients: Dictionary = {}
+	for recipe: Dictionary in all_recipes():
+		if (recipe["result"] as String) == result_id:
+			ingredients[recipe["a"] as String] = true
+			ingredients[recipe["b"] as String] = true
+	var result: Array[String] = []
+	for id: String in ingredients:
+		result.append(id)
+	return result

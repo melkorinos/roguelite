@@ -1,73 +1,105 @@
 class_name ForgeSystem
 
+# Deep interface: two verbs over an "op" vocabulary. Callers describe WHAT they want
+# (an op Dictionary) and read a uniform { state, outcome } back, instead of choosing
+# among nine entry points with three different return shapes.
+#
+#   attempt(state, op) -> { "state": Dictionary, "outcome": String, ... }
+#   preview(state, op) -> String
+#
+# op.kind:
+#   "merge"       { zone:"inventory"|"grid", a:int, b:int }   same element + level → level+1
+#   "forge_pair"  { a:int, b:int }                            two inventory slots via a recipe
+#   "forge_bench" { }                                         forge the two bench slots
+#   "to_bench"    { forge_slot:int (-1 = auto), from:{ zone:"inventory"|"grid", slot:int } }
+#   "from_bench"  { forge_slot:int }                          bench slot → first free inventory
+#
+# outcome ∈ "ok" | "no_op" | "no_recipe" | "incomplete" | "inv_full".
+# "forge_bench" additionally returns "level_mismatch": bool.
 
-# Same element × same level → level + 1. Element identity unchanged.
-static func level_up(state: Dictionary, slot_a: int, slot_b: int) -> Dictionary:
-	var inv: Array = state["inventory"]
-	var ea: Variant = inv[slot_a]
-	var eb: Variant = inv[slot_b]
+
+static func attempt(state: Dictionary, op: Dictionary) -> Dictionary:
+	match op.get("kind", "") as String:
+		"merge":       return _merge(state, op.get("zone", "inventory") as String, op["a"] as int, op["b"] as int)
+		"forge_pair":  return _forge_pair(state, op["a"] as int, op["b"] as int)
+		"forge_bench": return _forge_bench(state)
+		"to_bench":    return _to_bench(state, op.get("forge_slot", -1) as int, op["from"] as Dictionary)
+		"from_bench":  return _from_bench(state, op["forge_slot"] as int)
+	return _noop(state)
+
+
+static func preview(state: Dictionary, op: Dictionary) -> String:
+	match op.get("kind", "") as String:
+		"forge_bench": return _preview_bench(state)
+		"forge_pair":  return _preview_pair(state, op["a"] as int, op["b"] as int)
+	return ""
+
+
+static func _noop(state: Dictionary) -> Dictionary:
+	return { "state": state, "outcome": "no_op" }
+
+
+# ── merge (level-up): same element + same level → level+1, in inventory or grid ──
+static func _merge(state: Dictionary, zone: String, slot_a: int, slot_b: int) -> Dictionary:
+	var key: String = "inventory" if zone == "inventory" else "battle_grid"
+	var arr: Array = state[key]
+	var ea: Variant = arr[slot_a]
+	var eb: Variant = arr[slot_b]
 	if ea == null or eb == null:
-		return state
+		return _noop(state)
 	var da: Dictionary = ea as Dictionary
 	var db: Dictionary = eb as Dictionary
-	if da["element_id"] != db["element_id"]:
-		return state
+	if da.get("element_id", "") != db.get("element_id", ""):
+		return _noop(state)
 	if (da["level"] as int) != (db["level"] as int):
-		return state
+		return _noop(state)
 	var result_slot: int = mini(slot_a, slot_b)
 	var clear_slot: int = maxi(slot_a, slot_b)
 	var s: Dictionary = state.duplicate(true)
-	var upgraded: Dictionary = (s["inventory"][result_slot] as Dictionary).duplicate()
+	var upgraded: Dictionary = (s[key][result_slot] as Dictionary).duplicate()
 	upgraded["level"] = (da["level"] as int) + 1
-	s["inventory"][result_slot] = upgraded
-	s["inventory"][clear_slot] = null
-	return s
+	s[key][result_slot] = upgraded
+	s[key][clear_slot] = null
+	return { "state": s, "outcome": "ok" }
 
 
-# Combine two inventory slots via a recipe. Result level = min(level_a, level_b).
-static func forge(state: Dictionary, slot_a: int, slot_b: int) -> Dictionary:
+# ── forge a pair of inventory slots via a recipe. Result level = min(levels). ───
+static func _forge_pair(state: Dictionary, slot_a: int, slot_b: int) -> Dictionary:
 	var inv: Array = state["inventory"]
 	var ea: Variant = inv[slot_a]
 	var eb: Variant = inv[slot_b]
 	if ea == null or eb == null:
-		return state
+		return _noop(state)
 	var da: Dictionary = ea as Dictionary
 	var db: Dictionary = eb as Dictionary
 	var result_id: String = RecipeData.find_result(da["element_id"], db["element_id"])
 	if result_id.is_empty():
-		return state
+		return { "state": state, "outcome": "no_recipe" }
 	var result_def: Dictionary = ElementData.find(result_id)
 	if result_def.is_empty():
-		return state
-	var result_level: int = mini(da["level"] as int, db["level"] as int)
+		return { "state": state, "outcome": "no_recipe" }
 	var s: Dictionary = state.duplicate(true)
 	var instance: Dictionary = result_def.duplicate()
 	instance["element_id"] = result_id
-	instance["level"] = result_level
+	instance["level"] = mini(da["level"] as int, db["level"] as int)
 	s["inventory"][slot_a] = instance
 	s["inventory"][slot_b] = null
-	var discovered: Array = s["discovered_recipes"]
-	if not discovered.has(result_id):
-		discovered.append(result_id)
-	var result_tier: int = result_def["tier"] as int
-	if result_tier > (s["shop_tier"] as int):
-		s["shop_tier"] = result_tier
-	return s
+	_record_discovery(s, result_id)
+	return { "state": s, "outcome": "ok" }
 
 
-# Forge using items in forge_slots. Result lands in first free inventory slot.
-# Returns a Dictionary with keys "state" (new GameState) and "outcome" (String: "ok"|"no_recipe"|"inv_full").
-# Also sets "level_mismatch" bool key when inputs had different levels.
-static func forge_from_bench(state: Dictionary) -> Dictionary:
+# ── forge the two bench slots; result → first free inventory slot ───────────────
+static func _forge_bench(state: Dictionary) -> Dictionary:
 	var slots: Array = state["forge_slots"]
 	var ea: Variant = slots[0]
 	var eb: Variant = slots[1]
 	if ea == null or eb == null:
-		return {"state": state, "outcome": "incomplete", "level_mismatch": false}
+		return { "state": state, "outcome": "incomplete", "level_mismatch": false }
 	var da: Dictionary = ea as Dictionary
 	var db: Dictionary = eb as Dictionary
 	var result_id: String = RecipeData.find_result(da["element_id"], db["element_id"])
 	if result_id.is_empty():
+		# No recipe: return both ingredients to inventory and clear the bench.
 		var s_no: Dictionary = state.duplicate(true)
 		s_no["forge_slots"] = [null, null]
 		var inv_no: Array = s_no["inventory"]
@@ -75,34 +107,64 @@ static func forge_from_bench(state: Dictionary) -> Dictionary:
 			var empty: int = _first_empty_inv_slot(inv_no)
 			if empty >= 0:
 				inv_no[empty] = (item as Dictionary).duplicate()
-		return {"state": s_no, "outcome": "no_recipe", "level_mismatch": false}
+		return { "state": s_no, "outcome": "no_recipe", "level_mismatch": false }
 	var result_def: Dictionary = ElementData.find(result_id)
 	if result_def.is_empty():
-		return {"state": state, "outcome": "no_recipe", "level_mismatch": false}
+		return { "state": state, "outcome": "no_recipe", "level_mismatch": false }
 	var s: Dictionary = state.duplicate(true)
 	var free_slot: int = _first_empty_inv_slot(s["inventory"])
 	if free_slot < 0:
-		return {"state": state, "outcome": "inv_full", "level_mismatch": false}
+		return { "state": state, "outcome": "inv_full", "level_mismatch": false }
 	var level_a: int = da["level"] as int
 	var level_b: int = db["level"] as int
-	var result_level: int = mini(level_a, level_b)
-	var level_mismatch: bool = level_a != level_b
 	var instance: Dictionary = result_def.duplicate()
 	instance["element_id"] = result_id
-	instance["level"] = result_level
+	instance["level"] = mini(level_a, level_b)
 	s["inventory"][free_slot] = instance
 	s["forge_slots"] = [null, null]
-	var discovered: Array = s["discovered_recipes"]
-	if not discovered.has(result_id):
-		discovered.append(result_id)
-	var result_tier: int = result_def["tier"] as int
-	if result_tier > (s["shop_tier"] as int):
-		s["shop_tier"] = result_tier
-	return {"state": s, "outcome": "ok", "level_mismatch": level_mismatch}
+	_record_discovery(s, result_id)
+	return { "state": s, "outcome": "ok", "level_mismatch": level_a != level_b }
 
 
-# Preview string for a potential forge or level-up between two inventory slots.
-static func preview(state: Dictionary, slot_a: int, slot_b: int) -> String:
+# ── move an item (inventory or grid) into a bench slot ──────────────────────────
+# forge_slot -1 = auto-pick: first free bench slot, else slot 1 (displacing it).
+static func _to_bench(state: Dictionary, forge_slot: int, from: Dictionary) -> Dictionary:
+	var from_key: String = "inventory" if (from["zone"] as String) == "inventory" else "battle_grid"
+	var from_slot: int = from["slot"] as int
+	if (state[from_key] as Array)[from_slot] == null:
+		return _noop(state)
+	var slots: Array = state["forge_slots"]
+	var target: int = forge_slot
+	if target < 0:
+		target = 0 if slots[0] == null else 1
+	var s: Dictionary = state.duplicate(true)
+	var displaced: Variant = s["forge_slots"][target]
+	if displaced != null:
+		var free: int = _first_empty_inv_slot(s["inventory"])
+		if free >= 0:
+			s["inventory"][free] = (displaced as Dictionary).duplicate()
+	s["forge_slots"][target] = (s[from_key][from_slot] as Dictionary).duplicate()
+	s[from_key][from_slot] = null
+	return { "state": s, "outcome": "ok" }
+
+
+# ── move a bench item back to the first free inventory slot ─────────────────────
+static func _from_bench(state: Dictionary, forge_slot: int) -> Dictionary:
+	var item: Variant = state["forge_slots"][forge_slot]
+	if item == null:
+		return _noop(state)
+	var free: int = _first_empty_inv_slot(state["inventory"])
+	var s: Dictionary = state.duplicate(true)
+	if free >= 0:
+		s["inventory"][free] = (item as Dictionary).duplicate()
+	s["forge_slots"][forge_slot] = null
+	return { "state": s, "outcome": "ok" }
+
+
+# ── previews ────────────────────────────────────────────────────────────────────
+
+# A potential forge or level-up between two inventory slots.
+static func _preview_pair(state: Dictionary, slot_a: int, slot_b: int) -> String:
 	var inv: Array = state["inventory"]
 	var ea: Variant = inv[slot_a]
 	var eb: Variant = inv[slot_b]
@@ -121,8 +183,8 @@ static func preview(state: Dictionary, slot_a: int, slot_b: int) -> String:
 	return "No recipe"
 
 
-# Preview string for the two items currently sitting in the forge bench.
-static func preview_bench(state: Dictionary) -> String:
+# The two items currently sitting in the forge bench.
+static func _preview_bench(state: Dictionary) -> String:
 	var slots: Array = state["forge_slots"]
 	var ea: Variant = slots[0]
 	var eb: Variant = slots[1]
@@ -141,99 +203,18 @@ static func preview_bench(state: Dictionary) -> String:
 	return "✗ No recipe"
 
 
-static func move_to_forge_slot(state: Dictionary, forge_slot_idx: int, from_inv_idx: int) -> Dictionary:
-	var inv: Array = state["inventory"]
-	if inv[from_inv_idx] == null:
-		return state
-	var current_in_slot: Variant = state["forge_slots"][forge_slot_idx]
-	var s: Dictionary = state.duplicate(true)
-	if current_in_slot != null:
-		var free: int = _first_empty_inv_slot(s["inventory"])
-		if free >= 0:
-			s["inventory"][free] = (current_in_slot as Dictionary).duplicate()
-	s["forge_slots"][forge_slot_idx] = (s["inventory"][from_inv_idx] as Dictionary).duplicate()
-	s["inventory"][from_inv_idx] = null
-	return s
+# ── internals ───────────────────────────────────────────────────────────────────
 
-
-static func forge_quick_slot(state: Dictionary, inv_slot_index: int) -> Dictionary:
-	var inv: Array = state["inventory"]
-	if inv[inv_slot_index] == null:
-		return state
-	var slots: Array = state["forge_slots"]
-	var target_forge: int
-	if slots[0] == null:
-		target_forge = 0
-	elif slots[1] == null:
-		target_forge = 1
-	else:
-		target_forge = 1
-	var s: Dictionary = state.duplicate(true)
-	var displaced: Variant = s["forge_slots"][target_forge]
-	if displaced != null:
-		var free: int = _first_empty_inv_slot(s["inventory"])
-		if free >= 0:
-			s["inventory"][free] = (displaced as Dictionary).duplicate()
-	s["forge_slots"][target_forge] = (s["inventory"][inv_slot_index] as Dictionary).duplicate()
-	s["inventory"][inv_slot_index] = null
-	return s
-
-
-static func remove_from_forge_slot(state: Dictionary, forge_slot_idx: int) -> Dictionary:
-	var item: Variant = state["forge_slots"][forge_slot_idx]
-	if item == null:
-		return state
-	var free: int = _first_empty_inv_slot(state["inventory"])
-	var s: Dictionary = state.duplicate(true)
-	if free >= 0:
-		s["inventory"][free] = (item as Dictionary).duplicate()
-	s["forge_slots"][forge_slot_idx] = null
-	return s
-
-
-static func level_up_grid(state: Dictionary, slot_a: int, slot_b: int) -> Dictionary:
-	var grid: Array = state["battle_grid"]
-	var ea: Variant = grid[slot_a]
-	var eb: Variant = grid[slot_b]
-	if ea == null or eb == null:
-		return state
-	var da: Dictionary = ea as Dictionary
-	var db: Dictionary = eb as Dictionary
-	if da.get("element_id", "") != db.get("element_id", ""):
-		return state
-	if (da["level"] as int) != (db["level"] as int):
-		return state
-	var result_slot: int = mini(slot_a, slot_b)
-	var clear_slot: int = maxi(slot_a, slot_b)
-	var s: Dictionary = state.duplicate(true)
-	var upgraded: Dictionary = (s["battle_grid"][result_slot] as Dictionary).duplicate()
-	upgraded["level"] = (da["level"] as int) + 1
-	s["battle_grid"][result_slot] = upgraded
-	s["battle_grid"][clear_slot] = null
-	return s
-
-
-static func forge_quick_slot_from_grid(state: Dictionary, grid_slot: int) -> Dictionary:
-	var grid: Array = state["battle_grid"]
-	if grid[grid_slot] == null:
-		return state
-	var forge_slots: Array = state["forge_slots"]
-	var target_forge: int
-	if forge_slots[0] == null:
-		target_forge = 0
-	elif forge_slots[1] == null:
-		target_forge = 1
-	else:
-		target_forge = 1
-	var s: Dictionary = state.duplicate(true)
-	var displaced: Variant = s["forge_slots"][target_forge]
-	if displaced != null:
-		var free: int = _first_empty_inv_slot(s["inventory"])
-		if free >= 0:
-			s["inventory"][free] = (displaced as Dictionary).duplicate()
-	s["forge_slots"][target_forge] = (s["battle_grid"][grid_slot] as Dictionary).duplicate()
-	s["battle_grid"][grid_slot] = null
-	return s
+# Records a forged result into both the per-run discovery pool (drives the
+# discovery-gated shop) and the persistent cross-run record (Compendium /
+# achievements). Distinct results only.
+static func _record_discovery(s: Dictionary, result_id: String) -> void:
+	var discovered: Array = s["discovered_recipes"]
+	if not discovered.has(result_id):
+		discovered.append(result_id)
+	var run_disc: Array = s["run_discoveries"]
+	if not run_disc.has(result_id):
+		run_disc.append(result_id)
 
 
 static func _first_empty_inv_slot(inventory: Array) -> int:

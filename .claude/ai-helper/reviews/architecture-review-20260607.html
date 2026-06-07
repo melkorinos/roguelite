@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Architecture review — roguelite (auto-battler)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="module">
+      import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+      mermaid.initialize({ startOnLoad: true, theme: "neutral", securityLevel: "loose" });
+    </script>
+    <style>
+      .seam { stroke-dasharray: 6 5; }
+      .deep { background: linear-gradient(135deg, #0f172a, #1e293b); }
+      .iface-bar { background: #fecaca; }
+      .impl-bar { background: #1e293b; }
+      .chip { font-size: 0.65rem; letter-spacing: 0.08em; }
+    </style>
+  </head>
+  <body class="bg-stone-50 text-slate-900 font-sans">
+    <main class="max-w-5xl mx-auto px-6 py-12 space-y-12">
+
+      <header class="space-y-4">
+        <h1 class="text-4xl font-serif tracking-tight">Architecture review — <span class="text-indigo-700">roguelite</span></h1>
+        <p class="text-sm text-slate-500">2026-06-07 · end-of-session deepening pass · vocabulary: module · interface · implementation · depth · seam · adapter · leverage · locality</p>
+        <div class="flex flex-wrap gap-4 text-xs text-slate-600 border border-slate-200 rounded-lg p-3 bg-white">
+          <span class="flex items-center gap-2"><span class="inline-block w-5 h-3 border-2 border-slate-700"></span> module</span>
+          <span class="flex items-center gap-2"><svg width="34" height="8"><line x1="0" y1="4" x2="34" y2="4" stroke="#475569" stroke-width="2" class="seam"/></svg> seam</span>
+          <span class="flex items-center gap-2"><svg width="34" height="8"><line x1="0" y1="4" x2="34" y2="4" stroke="#dc2626" stroke-width="2"/></svg> leakage</span>
+          <span class="flex items-center gap-2"><span class="inline-block w-5 h-3 deep rounded-sm"></span> deep module</span>
+        </div>
+      </header>
+
+      <section id="candidates" class="space-y-12">
+
+        <!-- ─────────────────────────── CANDIDATE 1 ─────────────────────────── -->
+        <article class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-5">
+          <div class="flex items-start justify-between gap-4">
+            <h2 class="text-2xl font-serif">1 · Collapse the Forge surface into <code class="text-indigo-700">attempt</code> / <code class="text-indigo-700">preview</code></h2>
+            <span class="shrink-0 chip uppercase font-semibold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800">Strong</span>
+          </div>
+          <div class="flex gap-2 flex-wrap">
+            <span class="chip uppercase px-2 py-0.5 rounded bg-slate-100 text-slate-600">in-process</span>
+            <span class="chip uppercase px-2 py-0.5 rounded bg-slate-100 text-slate-600">domain: Forge</span>
+          </div>
+          <p class="font-mono text-sm text-slate-500">systems/ForgeSystem.gd · scenes/screens/Shop.gd · scenes/slots/ForgeSlot.gd</p>
+
+          <div class="grid md:grid-cols-2 gap-4">
+            <div class="rounded-lg border border-slate-200 p-4">
+              <p class="chip uppercase tracking-wider text-slate-400 mb-3">before — wide, shallow surface</p>
+              <div class="space-y-1.5 text-xs font-mono">
+                <div class="flex items-center gap-2"><span class="w-2 h-2 bg-rose-400 rounded-full"></span> forge → state</div>
+                <div class="flex items-center gap-2"><span class="w-2 h-2 bg-rose-400 rounded-full"></span> forge_from_bench → {state,outcome,level_mismatch}</div>
+                <div class="flex items-center gap-2"><span class="w-2 h-2 bg-rose-400 rounded-full"></span> level_up → state</div>
+                <div class="flex items-center gap-2"><span class="w-2 h-2 bg-rose-400 rounded-full"></span> level_up_grid → state</div>
+                <div class="flex items-center gap-2"><span class="w-2 h-2 bg-rose-400 rounded-full"></span> move_to_forge_slot → state</div>
+                <div class="flex items-center gap-2"><span class="w-2 h-2 bg-rose-400 rounded-full"></span> forge_quick_slot → state</div>
+                <div class="flex items-center gap-2"><span class="w-2 h-2 bg-rose-400 rounded-full"></span> forge_quick_slot_from_grid → state</div>
+                <div class="flex items-center gap-2"><span class="w-2 h-2 bg-rose-400 rounded-full"></span> remove_from_forge_slot → state</div>
+                <div class="flex items-center gap-2"><span class="w-2 h-2 bg-rose-400 rounded-full"></span> preview / preview_bench → String</div>
+              </div>
+              <p class="text-xs text-slate-500 mt-3">9 functions, 3 return shapes. The scene must know which to call and how to read each.</p>
+            </div>
+            <div class="rounded-lg border border-slate-300 p-4 deep text-slate-100">
+              <p class="chip uppercase tracking-wider text-slate-400 mb-3">after — deep, two-verb interface</p>
+              <div class="space-y-2 text-sm font-mono">
+                <div class="border border-slate-500 rounded px-3 py-2">attempt(state, op) → {state, outcome}</div>
+                <div class="border border-slate-500 rounded px-3 py-2">preview(state, op) → String</div>
+                <p class="text-xs text-slate-400 pt-1">op ∈ { bench, quick_slot, move_to_slot, remove, level_up } · all the bench/slot plumbing greyed out inside</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid sm:grid-cols-2 gap-x-8 gap-y-2 text-sm">
+            <p><span class="font-semibold text-slate-700">Problem.</span> Nine forge functions with three return shapes; the scene carries the mechanics.</p>
+            <p><span class="font-semibold text-slate-700">Solution.</span> One <code>attempt(state, op)</code> + one <code>preview(state, op)</code> over an op vocabulary; the slot plumbing moves inside.</p>
+          </div>
+          <ul class="grid sm:grid-cols-2 gap-x-8 gap-y-1 text-sm text-slate-700 list-disc pl-5">
+            <li>leverage: one interface, every forge path</li>
+            <li>locality: the two incoming loop concerns land here</li>
+            <li>interface shrinks; implementation absorbs the plumbing</li>
+            <li>tests hit one verb, not nine</li>
+          </ul>
+          <div class="text-sm bg-indigo-50 border border-indigo-200 text-indigo-900 rounded-lg px-4 py-2">
+            Both queued <strong>loop concerns</strong> — "Forge requires Level-≥2 inputs" and "recipe discoverability" — edit Forge behaviour. Deepening first concentrates that change in one module instead of nine entry points.
+          </div>
+        </article>
+
+        <!-- ─────────────────────────── CANDIDATE 2 ─────────────────────────── -->
+        <article class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-5">
+          <div class="flex items-start justify-between gap-4">
+            <h2 class="text-2xl font-serif">2 · Give drop-validation the same seam as drop-apply</h2>
+            <span class="shrink-0 chip uppercase font-semibold px-2.5 py-1 rounded-full bg-amber-100 text-amber-800">Worth exploring</span>
+          </div>
+          <div class="flex gap-2 flex-wrap">
+            <span class="chip uppercase px-2 py-0.5 rounded bg-slate-100 text-slate-600">in-process</span>
+            <span class="chip uppercase px-2 py-0.5 rounded bg-slate-100 text-slate-600">domain: Shop / Battlegrid</span>
+          </div>
+          <p class="font-mono text-sm text-slate-500">scenes/slots/{InventorySlot,BattleSlot,ShopItemTile,SellZone,ForgeSlot}.gd · systems/ShopSystem.gd</p>
+
+          <div class="grid md:grid-cols-2 gap-4">
+            <div class="rounded-lg border border-slate-200 bg-white p-4">
+              <p class="chip uppercase tracking-wider text-slate-400 mb-2">before — validation leaks into 5 slots</p>
+              <pre class="mermaid">
+flowchart TD
+  IS[InventorySlot._can_drop_data] -->|builds {zone,slot}| CT[ShopSystem.can_transfer]
+  BS[BattleSlot._can_drop_data] -->|builds {zone,slot}| CT
+  ST[ShopItemTile._can_drop_data] -.rule inline.-> X1[ ]
+  SZ[SellZone._can_drop_data] -.rule inline.-> X2[ ]
+  FS[ForgeSlot._can_drop_data] -.rule inline.-> X3[ ]
+  classDef leak stroke:#dc2626,stroke-width:2px;
+  class IS,BS,ST,SZ,FS leak
+  style X1 fill:#fff,stroke:#fff
+  style X2 fill:#fff,stroke:#fff
+  style X3 fill:#fff,stroke:#fff
+              </pre>
+              <p class="text-xs text-slate-500 mt-2">Apply already flows through <code>resolve_drop</code>; validation does not — a one-sided seam.</p>
+            </div>
+            <div class="rounded-lg border border-slate-300 bg-white p-4">
+              <p class="chip uppercase tracking-wider text-slate-400 mb-2">after — one drop seam, both sides</p>
+              <pre class="mermaid">
+flowchart TD
+  IS[InventorySlot] --> CR
+  BS[BattleSlot] --> CR
+  ST[ShopItemTile] --> CR
+  SZ[SellZone] --> CR
+  FS[ForgeSlot] --> CR
+  CR[["ShopSystem.can_resolve(from,to)"]] --- RD[["ShopSystem.resolve_drop(from,to)"]]
+  classDef deep fill:#0f172a,color:#e2e8f0,stroke:#334155;
+  class CR,RD deep
+              </pre>
+              <p class="text-xs text-slate-500 mt-2">Slots ask one question; the rule has one home next to its apply twin.</p>
+            </div>
+          </div>
+
+          <div class="grid sm:grid-cols-2 gap-x-8 gap-y-2 text-sm">
+            <p><span class="font-semibold text-slate-700">Problem.</span> Drop legality is re-derived in five slot scripts; only the apply path is consolidated.</p>
+            <p><span class="font-semibold text-slate-700">Solution.</span> Add <code>can_resolve(state, from, to)</code> beside <code>resolve_drop</code>; slots build a location and ask once.</p>
+          </div>
+          <ul class="grid sm:grid-cols-2 gap-x-8 gap-y-1 text-sm text-slate-700 list-disc pl-5">
+            <li>locality: one rule, not five copies</li>
+            <li>leverage: can &amp; apply share the seam</li>
+            <li>slots become thin adapters</li>
+            <li>the rule is testable without a SceneTree</li>
+          </ul>
+        </article>
+
+        <!-- ─────────────────────────── CANDIDATE 3 ─────────────────────────── -->
+        <article class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-5">
+          <div class="flex items-start justify-between gap-4">
+            <h2 class="text-2xl font-serif">3 · Make the status-modifier seam typed, not stringly</h2>
+            <span class="shrink-0 chip uppercase font-semibold px-2.5 py-1 rounded-full bg-amber-100 text-amber-800">Worth exploring</span>
+          </div>
+          <div class="flex gap-2 flex-wrap">
+            <span class="chip uppercase px-2 py-0.5 rounded bg-slate-100 text-slate-600">in-process</span>
+            <span class="chip uppercase px-2 py-0.5 rounded bg-slate-100 text-slate-600">domain: Status</span>
+          </div>
+          <p class="font-mono text-sm text-slate-500">data/EffectRegistry.gd · systems/StatusSystem.gd · systems/AbilitySystem.gd (set_status_field) · data/AbilityData.gd</p>
+
+          <div class="grid md:grid-cols-2 gap-4">
+            <div class="rounded-lg border border-slate-200 p-4">
+              <p class="chip uppercase tracking-wider text-slate-400 mb-3">before — one field, three scattered places</p>
+              <div class="space-y-3 text-xs">
+                <div class="border border-rose-300 rounded p-2"><span class="font-mono">AbilityData</span><br/>writes <span class="font-mono">set_status_field("burn","tick_damage_bonus",1)</span></div>
+                <div class="text-center text-rose-500">↓ string key, no checker</div>
+                <div class="border border-rose-300 rounded p-2"><span class="font-mono">EffectRegistry.status_shape</span><br/>declares the field exists (informally)</div>
+                <div class="text-center text-rose-500">↓ string key, no checker</div>
+                <div class="border border-rose-300 rounded p-2"><span class="font-mono">StatusSystem.tick</span><br/>reads <span class="font-mono">dict["tick_damage_bonus"]</span> at the calc site</div>
+              </div>
+            </div>
+            <div class="rounded-lg border border-slate-300 p-4 deep text-slate-100">
+              <p class="chip uppercase tracking-wider text-slate-400 mb-3">after — registry owns each modifier end-to-end</p>
+              <div class="text-sm space-y-2">
+                <div class="border border-slate-500 rounded px-3 py-2 font-mono text-xs">EffectRegistry: each modifier = {name, default, applies_at}</div>
+                <p class="text-xs text-slate-400">writer + reader both resolve through the registry entry; adding a modifier is one declaration, not a three-file hunt.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid sm:grid-cols-2 gap-x-8 gap-y-2 text-sm">
+            <p><span class="font-semibold text-slate-700">Problem.</span> A modifier's writer, declaration, and reader sit in three files joined only by a string; nothing fails when they drift.</p>
+            <p><span class="font-semibold text-slate-700">Solution.</span> Let <code>EffectRegistry</code> declare each modifier (name, default, where it's read), and route <code>set_status_field</code> + calc sites through it.</p>
+          </div>
+          <ul class="grid sm:grid-cols-2 gap-x-8 gap-y-1 text-sm text-slate-700 list-disc pl-5">
+            <li>locality: one declaration per modifier</li>
+            <li>a typo'd field name can be caught</li>
+            <li>the modifier set is discoverable in one place</li>
+            <li>leverage: future status tuning has one home</li>
+          </ul>
+          <div class="text-sm bg-amber-50 border border-amber-200 text-amber-900 rounded-lg px-4 py-2">
+            Lower urgency: the status engine is stable and the ×1 tuning placeholders just landed in <code>TuningData</code>. Worth it if status modifiers keep multiplying (T4, new keywords).
+          </div>
+        </article>
+
+        <!-- ─────────────────────────── CANDIDATE 4 ─────────────────────────── -->
+        <article class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-5">
+          <div class="flex items-start justify-between gap-4">
+            <h2 class="text-2xl font-serif">4 · Concentrate the GameState shape</h2>
+            <span class="shrink-0 chip uppercase font-semibold px-2.5 py-1 rounded-full bg-slate-200 text-slate-700">Speculative</span>
+          </div>
+          <div class="flex gap-2 flex-wrap">
+            <span class="chip uppercase px-2 py-0.5 rounded bg-slate-100 text-slate-600">in-process</span>
+            <span class="chip uppercase px-2 py-0.5 rounded bg-slate-100 text-slate-600">domain: Run / GameState</span>
+          </div>
+          <p class="font-mono text-sm text-slate-500">data/GameState.gd · data/CombatState.gd · every systems/*.gd and scenes/*.gd reader</p>
+
+          <div class="grid md:grid-cols-2 gap-4">
+            <div class="rounded-lg border border-slate-200 p-4">
+              <p class="chip uppercase tracking-wider text-slate-400 mb-3">before — the shape has no single home</p>
+              <div class="space-y-2 text-xs font-mono">
+                <div class="h-7 border-l-4 border-rose-400 pl-2 flex items-center bg-rose-50">GameState.create() — ~30 keys</div>
+                <div class="h-7 border-l-4 border-rose-400 pl-2 flex items-center bg-rose-50">CombatState.reset() — per-combat keys</div>
+                <div class="h-7 border-l-4 border-rose-400 pl-2 flex items-center bg-rose-50">readers everywhere: state["key"] as T</div>
+                <div class="h-7 border-l-4 border-rose-400 pl-2 flex items-center bg-rose-50">to_battle / advance_round add keys ad-hoc</div>
+              </div>
+              <p class="text-xs text-slate-500 mt-3">Interface to "the state" = memorise the string keys and their types. Knowledge is everywhere.</p>
+            </div>
+            <div class="rounded-lg border border-slate-300 p-4 deep text-slate-100">
+              <p class="chip uppercase tracking-wider text-slate-400 mb-3">after — typed accessors, one declared shape</p>
+              <div class="space-y-2 text-sm font-mono">
+                <div class="border border-slate-500 rounded px-3 py-2 text-xs">GameState.player_hp(s) · .run_discoveries(s) · …</div>
+                <div class="border border-slate-500 rounded px-3 py-2 text-xs">shape + types declared once; readers stop guessing keys</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid sm:grid-cols-2 gap-x-8 gap-y-2 text-sm">
+            <p><span class="font-semibold text-slate-700">Problem.</span> The run-state shape is split across three writers and read by raw string keys in every module — no locality for "what is the state."</p>
+            <p><span class="font-semibold text-slate-700">Solution.</span> A thin typed accessor module over the dict (keep the dict), so the shape and its types live in one place.</p>
+          </div>
+          <ul class="grid sm:grid-cols-2 gap-x-8 gap-y-1 text-sm text-slate-700 list-disc pl-5">
+            <li>locality: shape declared once</li>
+            <li>navigability: keys are discoverable, not folklore</li>
+            <li>typos surface at the accessor, not at runtime</li>
+            <li>keeps the pure-dict, return-new-dict model</li>
+          </ul>
+          <div class="text-sm bg-amber-50 border border-amber-200 text-amber-900 rounded-lg px-4 py-2">
+            ⚠ Brushes the settled "plain <code>Dictionary</code>, systems return a new dict" decision (memory.md). Accessors keep the dict, so it's compatible — but only worth doing if key-drift bugs start biting. Reopen deliberately, don't drift into it.
+          </div>
+        </article>
+
+      </section>
+
+      <!-- ─────────────────────────── TOP REC ─────────────────────────── -->
+      <section id="top-recommendation">
+        <div class="rounded-xl deep text-slate-100 p-7 space-y-3 shadow">
+          <p class="chip uppercase tracking-widest text-emerald-300">Top recommendation</p>
+          <h2 class="text-2xl font-serif">Start with #1 — collapse the Forge surface.</h2>
+          <p class="text-sm text-slate-300 max-w-3xl">It's the one deepening that pays off <em>immediately</em>: the two queued loop concerns (Level-gated forge inputs, recipe discoverability) both change Forge behaviour. Unifying the nine entry points into <code>attempt</code> / <code>preview</code> first means that work — and its tests — land in one deep module instead of being smeared across the scene and nine functions. <span class="text-slate-400">#2 is the clean follow-up; #3 and #4 wait for their pain to show up.</span></p>
+        </div>
+      </section>
+
+      <footer class="text-center text-xs text-slate-400 pt-4">roguelite · architecture review · 2026-06-07 · no code changed — candidates only</footer>
+
+    </main>
+  </body>
+</html>

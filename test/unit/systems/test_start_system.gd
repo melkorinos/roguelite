@@ -30,7 +30,7 @@ func test_apply_starting_pick_grants_buffed_element() -> void:
 	var s := StartSystem.apply_starting_pick(_state(), "fire")
 	var inv: Array = s["inventory"] as Array
 	assert_eq((inv[0] as Dictionary)["element_id"] as String, "fire")
-	assert_eq((inv[0] as Dictionary)["damage_multiplier"] as int, StartSystem.STARTING_BUFF_MULTIPLIER)
+	assert_eq((inv[0] as Dictionary)["damage_multiplier"] as int, TuningData.STARTING_BUFF_MULTIPLIER)
 	assert_true(s["starting_pick_done"] as bool)
 
 

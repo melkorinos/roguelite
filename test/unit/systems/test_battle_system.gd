@@ -84,7 +84,7 @@ func test_tick_battle_sets_result_when_player_hp_zero() -> void:
 
 func test_tick_battle_sets_result_at_time_limit() -> void:
 	var state := PhaseSystem.to_battle(_make_state(), _fixture())
-	var s := BattleSystem.tick_battle(state, BattleSystem.BATTLE_TIME_LIMIT + 0.1)
+	var s := BattleSystem.tick_battle(state, TuningData.BATTLE_TIME_LIMIT + 0.1)
 	assert_eq(s["phase"], "result")
 
 

@@ -7,13 +7,12 @@ class_name StartSystem
 #
 # (Future: the options will diversify beyond plain T1s — out of scope for now.)
 
-const STARTING_OPTION_COUNT: int = 3
-const STARTING_BUFF_MULTIPLIER: int = 2
+# Tuning lives in TuningData (STARTING_OPTION_COUNT, STARTING_BUFF_MULTIPLIER).
 
 
 # N distinct random T1 element definitions — the offered choices. Deterministic when
 # an rng is supplied (tests / future seeded runs); uses global randi otherwise.
-static func starting_options(count: int = STARTING_OPTION_COUNT, rng: RandomNumberGenerator = null) -> Array:
+static func starting_options(count: int = TuningData.STARTING_OPTION_COUNT, rng: RandomNumberGenerator = null) -> Array:
 	var pool: Array = []
 	for elem: Dictionary in ElementData.all_elements():
 		if (elem["tier"] as int) == 1:
@@ -42,7 +41,7 @@ static func apply_starting_pick(state: Dictionary, element_id: String) -> Dictio
 			var instance: Dictionary = def.duplicate()
 			instance["element_id"] = def["id"] as String
 			instance["level"] = 1
-			instance["damage_multiplier"] = STARTING_BUFF_MULTIPLIER
+			instance["damage_multiplier"] = TuningData.STARTING_BUFF_MULTIPLIER
 			inv[i] = instance
 			break
 	s["starting_pick_done"] = true

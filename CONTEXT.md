@@ -69,11 +69,11 @@ A Round where a player's Board fights an opponent's Board asynchronously. Losing
 _Avoid_: battle round, fight round
 
 **Player HP**:
-The in-battle resource representing how much damage a player's side can absorb before losing that Round. Resets to its full value at the start of every battle.
+The in-battle resource representing how much damage a player's side can absorb before losing that Round. Recomputed at the start of every battle and **scales with the round** plus any reward bonus: `BASE_PLAYER_HP + (round−1)×HP_PER_ROUND + hp_bonus` (`hp_bonus` is a persistent run modifier granted by rewards). Tuning values live in `data/TuningData.gd`.
 _Avoid_: health, hearts
 
 **Life**:
-The Run-level resource that tracks how close a player is to elimination. Starts at 100. Lost per defeat based on severity: hard loss (≥70% opponent HP remaining) = –30; medium (30–70%) = –20; close (<30%) = –10. A draw counts as a player win (opponent is async). Reaching 0 Life eliminates the player. The Run goal is 10 wins before Life runs out.
+The Run-level resource that tracks how close a player is to elimination. Starts at 100. Lost per defeat **proportionally to the margin** — `round(opponent_HP_remaining_ratio × MAX_LIFE_LOSS)` — so a blowout costs the full `MAX_LIFE_LOSS` and a razor-thin loss costs almost nothing (no floor). A draw counts as a player win (opponent is async). Reaching 0 Life eliminates the player. The Run goal is `WIN_THRESHOLD` wins before Life runs out. (Tuning values live in `data/TuningData.gd`.)
 _Avoid_: health, HP, hearts, lives
 
 ### Actions and statuses
@@ -160,8 +160,20 @@ _Avoid_: combat log, result screen, debrief
 ### Economy
 
 **Gold**:
-The currency spent in the shop phase to buy elements and reroll the shop. Not used for the draft.
+The currency spent in the shop phase to buy elements and reroll the shop. Not used for the draft. Reroll cost escalates within a shop phase (+1 per paid reroll) and resets each round.
 _Avoid_: coins, money
+
+**Run Discovery**:
+An element the player has **Forged** during the current Run, recorded in `run_discoveries`. The set of Run Discoveries gates which tiers the Shop offers (forge 3 distinct T2 / 2 distinct T3 / 1 T4 to unlock that tier) and filters them to the player's Families. Distinct from the persistent cross-run discovery record (`discovered_recipes`). See `docs/adr/0007`.
+_Avoid_: unlock, recipe (a recipe is the A+B→C rule; a discovery is the forged result)
+
+**Family**:
+All elements sharing a Tier-1 ingredient — a build archetype (e.g. the Lightning family). Once a tier unlocks, the Shop offers that tier's elements only from Families the player has Forged with. T1 stays the full pool (exploration + forge fuel).
+_Avoid_: tribe, type — and **not** Faction (the separate, future threshold-synergy concept)
+
+**Starting Pick**:
+A once-per-Run choice at the start of round 1: three Tier-1 elements are offered and the chosen one is granted to the player with doubled base damage.
+_Avoid_: draft (Draft is the separate free Item/Trinket selection)
 
 **Draft**:
 The free selection of Items and Trinkets offered each round. Separate from the gold shop.

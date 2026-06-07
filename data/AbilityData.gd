@@ -17,18 +17,18 @@ static func get_ability(element_id: String) -> Dictionary:
 
 const ABILITIES: Dictionary = {
 	# ── T1 ───────────────────────────────────────────────────────────────────
-	"water":     { "description": "On fire, apply 1 [cleanse] to your side." },
-	"fire":      { "description": "On fire, apply 1 [burn] to the opponent." },
-	"air":       { "description": "On fire, apply 1 [haste] to your side." },
-	"earth":     { "description": "On fire, apply 1 [armor] to your side." },
-	"lightning": { "description": "On fire, apply 1 [shock] to the opponent." },
-	"nature":    { "description": "On fire, apply 1 [heal] to your side." },
-	"light":     { "description": "On fire, apply 1 [blind] to the opponent." },
-	"dark":      { "description": "On fire, apply 1 [curse] to the opponent." },
-	"metal":     { "description": "On fire, apply 1 [plating] to your side." },
-	"fungus":    { "description": "On fire, apply 1 [poison] to the opponent." },
-	"blood":     { "description": "On fire, apply 1 [leech] to your side." },
-	"frost":     { "description": "On fire, apply 1 [weaken] to the opponent." },
+	"water":     { "description": "Apply 1 [cleanse] to your side." },
+	"fire":      { "description": "Apply 1 [burn] to the opponent." },
+	"air":       { "description": "Apply 1 [haste] to your side." },
+	"earth":     { "description": "Apply 1 [armor] to your side." },
+	"lightning": { "description": "Apply 1 [shock] to the opponent." },
+	"nature":    { "description": "Apply 1 [heal] to your side." },
+	"light":     { "description": "Apply 1 [blind] to the opponent." },
+	"dark":      { "description": "Apply 1 [curse] to the opponent." },
+	"metal":     { "description": "Apply 1 [plating] to your side." },
+	"fungus":    { "description": "Apply 1 [poison] to the opponent." },
+	"blood":     { "description": "Apply 1 [leech] to your side." },
+	"frost":     { "description": "Apply 1 [weaken] to the opponent." },
 
 	# ── T2 — Original cross ──────────────────────────────────────────────────
 	"steam": { "trigger": "on_burn_applied", "description": "When [burn] is applied, deal 1 bonus damage to the opponent.",

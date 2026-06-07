@@ -1,6 +1,9 @@
 extends Control
 
-const RESOLUTIONS := [Vector2i(1280, 720), Vector2i(1600, 900), Vector2i(1920, 1080)]
+const RESOLUTIONS := [
+	Vector2i(1280, 720), Vector2i(1600, 900), Vector2i(1920, 1080),
+	Vector2i(2560, 1440), Vector2i(3840, 2160),  # 2K, 4K — playtesting at high DPI
+]
 
 const CONTROL_ACTIONS: Array[String] = [
 	"ui_accept", "ui_cancel", "ui_up", "ui_down", "ui_left", "ui_right",

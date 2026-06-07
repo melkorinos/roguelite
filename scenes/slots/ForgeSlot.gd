@@ -15,6 +15,7 @@ var _item_dict: Dictionary = {}
 var _hover_timer: Timer
 var _emoji_lbl: Label
 var _name_lbl: Label
+var _style: StyleBoxFlat
 
 
 func _ready() -> void:
@@ -27,12 +28,12 @@ func _ready() -> void:
 	mouse_entered.connect(_on_mouse_entered_hover)
 	mouse_exited.connect(_on_mouse_exited_hover)
 
-	var style := StyleBoxFlat.new()
-	style.set_border_width_all(2)
-	style.border_color = ThemeData.FORGE_SLOT_BORDER
-	style.bg_color = ThemeData.FORGE_SLOT_BG
-	style.set_corner_radius_all(6)
-	add_theme_stylebox_override("panel", style)
+	_style = StyleBoxFlat.new()
+	_style.set_border_width_all(2)
+	_style.border_color = ThemeData.FORGE_SLOT_BORDER
+	_style.bg_color = ThemeData.FORGE_SLOT_BG
+	_style.set_corner_radius_all(6)
+	add_theme_stylebox_override("panel", _style)
 
 	var vbox := VBoxContainer.new()
 	vbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -64,6 +65,10 @@ func set_item(item: Variant) -> void:
 	var elem: Dictionary = item as Dictionary
 	_emoji_lbl.text = elem["emoji"]
 	_name_lbl.text = "%s L%d" % [elem["name"], elem["level"] as int]
+	# Show the item's own tier color in the bench (no more uniform forge purple).
+	var tier: int = elem.get("tier", 1) as int
+	_style.bg_color = ThemeData.tier_bg(tier)
+	_style.border_color = ThemeData.tier_border(tier)
 	modulate = Color.WHITE
 
 
@@ -71,6 +76,9 @@ func _apply_empty() -> void:
 	has_item = false
 	_emoji_lbl.text = "?"
 	_name_lbl.text = "drop here"
+	# Empty bench slot — neutral look (the tier color belongs to a real item).
+	_style.bg_color = ThemeData.SLOT_BG_EMPTY
+	_style.border_color = ThemeData.SLOT_BORDER_EMPTY
 	modulate = Color(0.65, 0.65, 0.65, 0.75)
 
 

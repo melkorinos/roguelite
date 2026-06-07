@@ -184,7 +184,7 @@ func _float_label(slot: BattleSlot, text: String, color: Color, y_nudge: float) 
 	var lbl := Label.new()
 	lbl.text = text
 	lbl.add_theme_color_override("font_color", color)
-	UIScale.apply(lbl, 17)
+	UIScale.apply(lbl, UIScale.FLOAT_LABEL)
 	lbl.z_index = 120
 	add_child(lbl)
 	# Position at top-centre of the slot in Battle scene local space
@@ -195,8 +195,9 @@ func _float_label(slot: BattleSlot, text: String, color: Color, y_nudge: float) 
 	lbl.position = Vector2(lx, ly)
 	var tween := create_tween()
 	tween.set_parallel(true)
-	tween.tween_property(lbl, "position:y", ly - 52.0, 0.85)
-	tween.tween_property(lbl, "modulate:a", 0.0, 0.85).set_delay(0.30)
+	# Rise + fade durations bumped ~20% so the numbers linger a touch longer.
+	tween.tween_property(lbl, "position:y", ly - 52.0, 1.02)
+	tween.tween_property(lbl, "modulate:a", 0.0, 1.02).set_delay(0.36)
 	tween.chain().tween_callback(func() -> void:
 		_active_float_labels -= 1
 		lbl.queue_free())
@@ -209,9 +210,11 @@ func _render() -> void:
 	$VBox/Header.text = "BATTLE — Round %d  |  Life: %d  Wins: %d/10" % [s["round"], s["lives"], s["wins"]]
 	$VBox/HpRow/PlayerHPLabel.text = "❤️ YOUR HP: %d" % s["player_hp"]
 	$VBox/HpRow/OppHPLabel.text = "☠️ OPP HP: %d" % s["opponent_hp"]
+	_player_hp_bar.max_value = maxi(1, s.get("player_starting_hp", TuningData.BASE_PLAYER_HP) as int)
 	_player_hp_bar.value = s["player_hp"] as int
+	_opp_hp_bar.max_value = maxi(1, s.get("opponent_starting_hp", 1) as int)
 	_opp_hp_bar.value = s["opponent_hp"] as int
-	var remaining: float = maxf(0.0, BattleSystem.BATTLE_TIME_LIMIT - (s["battle_timer"] as float))
+	var remaining: float = maxf(0.0, TuningData.BATTLE_TIME_LIMIT - (s["battle_timer"] as float))
 	$VBox/TimerRow/TimerLabel.text = "⏱ %.1fs" % remaining
 
 	($VBox/ControlsRow/PauseButton as Button).text = "▶ Resume" if _paused else "⏸ Pause"

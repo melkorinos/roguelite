@@ -138,7 +138,7 @@ static func _apply_atom(state: Dictionary, effect: Dictionary, source_side: Stri
 			# Haste amount plus any reduction_bonus (set by Gust). Always own side.
 			var keys: Dictionary = _side_keys(source_side)
 			var haste: Dictionary = (state[keys["statuses"]] as Dictionary)["haste"] as Dictionary
-			var haste_seconds: float = float(StatusSystem.HASTE_REDUCTION_DECISECONDS + (haste["reduction_bonus_deciseconds"] as int)) / 10.0
+			var haste_seconds: float = float(TuningData.HASTE_REDUCTION_DECISECONDS + (haste["reduction_bonus_deciseconds"] as int)) / 10.0
 			var timers: Array = state[keys["timers"]] as Array
 			for j: int in timers.size():
 				timers[j] = maxf(0.0, (timers[j] as float) - haste_seconds)

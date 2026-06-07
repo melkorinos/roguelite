@@ -289,14 +289,14 @@ func test_reroll_fails_without_enough_gold() -> void:
 # ── escalating reroll cost (resets each round) ────────────────────────────────
 
 func test_reroll_cost_starts_at_base() -> void:
-	assert_eq(ShopSystem.reroll_cost(_make_state()), ShopSystem.REROLL_BASE_COST)
+	assert_eq(ShopSystem.reroll_cost(_make_state()), TuningData.REROLL_BASE_COST)
 
 
 func test_paid_reroll_escalates_cost_by_one() -> void:
 	var state := _make_state()
 	var after_first := ShopSystem.reroll_shop(state)
 	assert_eq(after_first["reroll_count"] as int, 1)
-	assert_eq(ShopSystem.reroll_cost(after_first), ShopSystem.REROLL_BASE_COST + 1)
+	assert_eq(ShopSystem.reroll_cost(after_first), TuningData.REROLL_BASE_COST + 1)
 
 
 func test_second_paid_reroll_costs_one_more_gold() -> void:
@@ -304,7 +304,7 @@ func test_second_paid_reroll_costs_one_more_gold() -> void:
 	var a := ShopSystem.reroll_shop(state)          # costs base (2)
 	var gold_after_first: int = a["gold"] as int
 	var b := ShopSystem.reroll_shop(a)              # costs base+1 (3)
-	assert_eq(b["gold"] as int, gold_after_first - (ShopSystem.REROLL_BASE_COST + 1))
+	assert_eq(b["gold"] as int, gold_after_first - (TuningData.REROLL_BASE_COST + 1))
 
 
 func test_free_reroll_does_not_escalate_or_charge() -> void:
@@ -322,14 +322,6 @@ func test_advance_round_resets_reroll_count() -> void:
 	assert_eq(s["reroll_count"] as int, 0)
 
 
-func test_reroll_returns_only_tier1_at_default_shop_tier() -> void:
-	var s := ShopSystem.reroll_shop(_make_state(), true)
-	for item: Variant in s["shop_items"]:
-		if item == null:
-			continue
-		assert_eq((item as Dictionary)["tier"], 1)
-
-
 func test_reroll_fills_exactly_5_slots() -> void:
 	var s := ShopSystem.reroll_shop(_make_state(), true)
 	assert_eq(s["shop_items"].size(), 5)
@@ -337,37 +329,108 @@ func test_reroll_fills_exactly_5_slots() -> void:
 		assert_not_null(item)
 
 
-func test_reroll_t1_shop_never_returns_tier2() -> void:
-	# At shop_tier 1, every item must be tier 1 — run 20 rerolls to be sure.
-	var state := _make_state()
-	state["shop_tier"] = 1
+# ── discovery-gated shop pool (ADR 0007) ──────────────────────────────────────
+
+func test_unlocked_tiers_t1_only_when_no_discoveries() -> void:
+	assert_eq(ShopSystem.unlocked_tiers([]), [1] as Array[int])
+
+
+func test_t2_locked_below_three_distinct() -> void:
+	assert_false(ShopSystem.unlocked_tiers(["arc", "static"]).has(2))
+
+
+func test_t2_unlocked_at_three_distinct() -> void:
+	assert_true(ShopSystem.unlocked_tiers(["arc", "static", "surge"]).has(2))
+
+
+func test_t3_unlocked_at_two_distinct() -> void:
+	assert_true(ShopSystem.unlocked_tiers(["glacier", "blizzard"]).has(3))
+
+
+func test_eligible_tier1_is_full_pool() -> void:
+	assert_eq(ShopSystem.eligible_for_tier([], 1).size(), 12)
+
+
+func test_eligible_t2_limited_to_used_families() -> void:
+	# Discovered Lightning T2s → families {lightning, fire, air, water}.
+	var eligible: Array[Dictionary] = ShopSystem.eligible_for_tier(["arc", "static", "surge"], 2)
+	var ids: Dictionary = {}
+	for e: Dictionary in eligible:
+		ids[e["id"] as String] = true
+	assert_true(ids.has("arc"), "a discovered element is in its own family")
+	assert_false(ids.has("frostbite"), "blood+frost T2 shares no used family → excluded")
+
+
+func test_reroll_only_tier1_with_no_discoveries() -> void:
 	for _i: int in 20:
+		var s := ShopSystem.reroll_shop(_make_state(), true)
+		for item: Variant in s["shop_items"]:
+			if item != null:
+				assert_eq((item as Dictionary)["tier"], 1)
+
+
+func test_reroll_keeps_tier2_locked_below_threshold() -> void:
+	var state := _make_state()
+	state["run_discoveries"] = ["arc", "static"]  # only 2 distinct T2
+	for _i: int in 30:
 		var s := ShopSystem.reroll_shop(state, true)
 		for item: Variant in s["shop_items"]:
-			assert_eq((item as Dictionary)["tier"], 1)
+			if item != null:
+				assert_eq((item as Dictionary)["tier"], 1)
 
 
-func test_reroll_t2_shop_can_return_tier2_items() -> void:
-	# At shop_tier 2, at least one tier-2 item must appear across 40 rerolls.
+func test_reroll_shows_tier2_after_unlock() -> void:
 	var state := _make_state()
-	state["shop_tier"] = 2
+	state["run_discoveries"] = ["arc", "static", "surge"]
 	var found_t2: bool = false
 	for _i: int in 40:
 		var s := ShopSystem.reroll_shop(state, true)
 		for item: Variant in s["shop_items"]:
-			if (item as Dictionary)["tier"] == 2:
+			if item != null and (item as Dictionary)["tier"] == 2:
 				found_t2 = true
 	assert_true(found_t2)
 
 
-func test_reroll_t3_shop_can_return_tier3_items() -> void:
+func test_reroll_tier2_pool_stays_within_families() -> void:
 	var state := _make_state()
-	state["shop_tier"] = 3
+	state["run_discoveries"] = ["arc", "static", "surge"]
+	var eligible_ids: Dictionary = {}
+	for e: Dictionary in ShopSystem.eligible_for_tier(["arc", "static", "surge"], 2):
+		eligible_ids[e["id"] as String] = true
+	var seen_t2: bool = false
+	for _i: int in 30:
+		var s := ShopSystem.reroll_shop(state, true)
+		for item: Variant in s["shop_items"]:
+			if item != null and (item as Dictionary)["tier"] == 2:
+				seen_t2 = true
+				assert_true(eligible_ids.has((item as Dictionary)["id"] as String), "T2 shop item outside the family pool")
+	assert_true(seen_t2, "expected at least one T2 in the family-filtered shop")
+
+
+# Regression: with a higher tier unlocked the T1/higher mix must VARY across rerolls,
+# not lock to the old "always 1×T1 + 4×higher". Every slot rolls T1 ~70% independently.
+func test_reroll_mix_varies_after_unlock() -> void:
+	var state := _make_state()
+	state["run_discoveries"] = ["arc", "static", "surge"]
+	var seen_counts: Dictionary = {}
+	for _i: int in 60:
+		var s := ShopSystem.reroll_shop(state, true)
+		var t1: int = 0
+		for item: Variant in s["shop_items"]:
+			if item != null and (item as Dictionary)["tier"] == 1:
+				t1 += 1
+		seen_counts[t1] = true
+	assert_gt(seen_counts.size(), 1, "T1 count should vary round to round, not be fixed")
+
+
+func test_reroll_shows_tier3_after_unlock() -> void:
+	var state := _make_state()
+	state["run_discoveries"] = ["glacier", "blizzard"]  # 2 distinct T3
 	var found_t3: bool = false
 	for _i: int in 40:
 		var s := ShopSystem.reroll_shop(state, true)
 		for item: Variant in s["shop_items"]:
-			if (item as Dictionary)["tier"] == 3:
+			if item != null and (item as Dictionary)["tier"] == 3:
 				found_t3 = true
 	assert_true(found_t3)
 
