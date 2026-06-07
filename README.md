@@ -2,14 +2,12 @@
 
 Early-stage auto-battler built with **Godot 4 / GDScript**. Ability-chain combat, synergy-driven builds, async PvP.
 
-## Run
+## Install & run
 
-Open the project in Godot 4 and press **F5**.
-
-```bash
-# Command line (if godot is on PATH):
-godot --path .
-```
+1. Download **Godot 4** (standard, not .NET) from [godotengine.org](https://godotengine.org/download)
+2. Download or clone this repo
+3. Open Godot → **Import** → select `project.godot`
+4. Press **F5** to play
 
 ## Project structure
 
