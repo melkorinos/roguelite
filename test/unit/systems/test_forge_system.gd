@@ -78,7 +78,7 @@ func test_merge_grid_levels_up_in_place() -> void:
 		var elem: Dictionary = ElementData.find("fire").duplicate()
 		elem["element_id"] = "fire"; elem["level"] = 1
 		state["battle_grid"][slot] = elem
-	var s := ForgeSystem.attempt(state, {"kind": "merge", "zone": "grid", "a": 0, "b": 1})["state"]
+	var s: Dictionary = ForgeSystem.attempt(state, {"kind": "merge", "zone": "grid", "a": 0, "b": 1})["state"]
 	assert_eq((s["battle_grid"][0] as Dictionary)["level"], 2)
 	assert_null(s["battle_grid"][1])
 
@@ -314,7 +314,7 @@ func test_to_bench_from_grid_pulls_off_the_board() -> void:
 	var elem: Dictionary = ElementData.find("earth").duplicate()
 	elem["element_id"] = "earth"; elem["level"] = 1
 	state["battle_grid"][2] = elem
-	var s := ForgeSystem.attempt(state, {"kind": "to_bench", "forge_slot": -1, "from": {"zone": "grid", "slot": 2}})["state"]
+	var s: Dictionary = ForgeSystem.attempt(state, {"kind": "to_bench", "forge_slot": -1, "from": {"zone": "grid", "slot": 2}})["state"]
 	assert_null(s["battle_grid"][2])
 	assert_eq((s["forge_slots"][0] as Dictionary)["element_id"], "earth")
 

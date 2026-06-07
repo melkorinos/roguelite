@@ -1,5 +1,9 @@
 # Development Log
 
+## 2026-06-07 — Deepen Forge: one `attempt(op)` / `preview(op)` interface (arch review #1)
+- `ForgeSystem`'s 9 functions / 3 return shapes → two verbs over an op vocabulary {merge, forge_pair, forge_bench, to_bench, from_bench}, uniform `{state, outcome}`. Granular mutators are now private. Callers updated (`ShopSystem.resolve_drop`, `Shop.gd` forge handlers); forge tests rewritten against the interface + added forge_bench-outcome / unknown-op coverage.
+- Implements the top recommendation of `reviews/architecture-review-20260607.html`; the queued loop concerns (leveled forge inputs, recipe discoverability) now land in one module. **434/434 green**, boot 0.
+
 ## 2026-06-05 — Centralized balance knobs in `data/TuningData.gd`
 - New `TuningData.gd` holds all **balance knobs** (economy, progression, run/match, combat, status magnitudes); systems reference it directly (local dup consts removed: REROLL_BASE_COST, TIER_UNLOCK_THRESHOLDS, HASTE_REDUCTION_DECISECONDS, STARTING_*, BATTLE_TIME_LIMIT, opponent curve, sell/gold/HP/Life). Engine/safety (COMBAT_STEP, MAX_STACKS, MAX_REACTIONS) + UI/infra stay local → a future "config constants" file. `CombatState.SLOT_COUNT` re-exports `GRID_SIZE`. Element `price` field kept; tier-default table added.
 - Status scalars centralized incl. **×1 placeholders** (burn/poison/armor/plating per-stack/point) — no-ops now, tunable later.

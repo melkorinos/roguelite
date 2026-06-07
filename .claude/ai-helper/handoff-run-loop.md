@@ -48,7 +48,7 @@ Vocabulary (keep straight): **Merge** = same element + same level → level+1, n
 Today Forge accepts any inputs (result level = `min(inputs)`), so hitting the 3-distinct-T2 unlock is just buying 6 cheap Level-1 T1s. **Intent: require both Forge inputs to be Level ≥2** — forging two Level-1s is denied — so the player must Merge up before forging, coupling the two axes and making the tier climb deliberate. Merge stays unchanged (it produces the leveled ingredients).
 - **Grill:** threshold (Level ≥2 vs ≥3 → `TuningData`); result-level rule (still `min`?); clear denial feedback ("inputs must be Level 2+"); interaction with self-combo recipes (water+water→sea) and with `TIER_UNLOCK_THRESHOLDS` pacing; does the required level scale per tier?
 - **Parked side-effect:** this leaves Level 3 with little draw beyond stats — revisit a Level-3 incentive later.
-- **Tension:** coupling Merge→Forge can feel grindy; tune the level threshold against forge cost. Touchpoints: `ForgeSystem.forge` / `forge_from_bench` (add the level guard), `preview*`, and the bench UI.
+- **Tension:** coupling Merge→Forge can feel grindy; tune the level threshold against forge cost. Touchpoint: the unified `ForgeSystem.attempt` (2026-06-07) — add the Level guard inside `_forge_pair` / `_forge_bench` (or in `attempt`), one place; the bench UI reads `attempt`'s `outcome`.
 
 ### B. Forge-recipe discoverability (the forge is opaque)
 The player can't tell which pairs Forge into what — "no recipe" denials are silent. Recipes exist (`RecipeData`, shown in Compendium) but aren't surfaced where forging happens. **Player-proposed directions:**
@@ -62,7 +62,7 @@ The player can't tell which pairs Forge into what — "no recipe" denials are si
 ## Balance + architecture state (from retired balance handoff)
 
 - **BalanceSystem** (`systems/`, gated by `FeatureFlags.efficiency_scoring`; dev panel in Compendium; ADR 0002): DPS Score = `effective_damage/cooldown`; **Effect Score table is T1-only** — now that all T2/T3 abilities exist, extend the table (no BalanceSystem test coverage yet).
-- **Open architecture candidates** (still valid): **#3 Unify Forge interface** (10 fns / 3 return shapes → `attempt`/`preview`) — relevant if you touch forging; **#4** pull drag-validation out of slot components into `GameManager.can_drop()`. (**#5 consolidate battle-init constants — DONE** via `data/TuningData.gd`.)
+- **Open architecture candidates:** **#4** pull drag-validation out of slot components into `GameManager.can_drop()` (5 slot scripts re-derive `can_transfer`; apply already goes through `resolve_drop` — give validation the same seam). (**DONE:** #3 Unify Forge → `ForgeSystem.attempt`/`preview` 2026-06-07; #5 battle-init constants → `data/TuningData.gd`.) Full review: `reviews/architecture-review-20260607.html`.
 - **Infrastructure settled (don't touch):** OpponentProvider + LocalDaySeeded/GhostFixtures; AchievementSystem (pure `check()`); PlayerProfile (`user://profile.cfg`); PhaseSystem.to_battle. PlatformLayer/Steam still deferred (needs custom-engine-build decision).
 
 ---
