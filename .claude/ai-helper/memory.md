@@ -27,12 +27,16 @@ Status effects on fire via `_apply_element_effect()`; real-time tick via 1s `sta
 ## Innate + Replay
 Player fires one Innate Ability once per combat at a chosen moment. After loss: spend Replay token, retrigger with Innate at different moment. Tokens: finite per-match. Economy TBD.
 
-## Element system (132 elements, 169 recipes, 4 tiers)
+## Element system (132 elements, 191 recipes, 4 tiers)
+- **Data is indexed (arch #3, 2026-06-09):** `ElementData`/`RecipeData` hold `const ELEMENTS`/`const RECIPES` + lazy static indices; lookups are O(1). `ElementData.find()` and `recipes_*` return **SHARED, zero-copy** dicts/arrays — **`.duplicate()` before mutating** (every current caller does). Mirrors `AbilityData.ABILITIES`. Interface unchanged. Drop validation: slots → `ShopSystem.can_drop(state, drag, to_loc)`/`drag_to_loc`.
+- **No forward dead-ends (ADR 0010, 2026-06-07):** every element below T4 is an ingredient in ≥1 higher recipe (T4 apex exempt) → a forge path to T4 from anything. 22 recipes added, cluster-routed; locked by `test_no_non_apex_forward_dead_ends`. Family/economy rebalance deferred to G4.
 - **T1 (12, 5g):** Water💧Cleanse, Fire🔥Burn, Air🌬️Haste, Earth🌍Armor, Lightning⚡Shock, Nature🌿Heal, Light☀️Blind, Dark🌑Curse, Metal⚙️Plating, Fungus🍄Poison, Blood🩸Leech, Frost🌨️Weaken. *(Sound retired → Fungus)*
 - **T2 (78, 8g):** self-combos (12), originals cross (6), extended cross (24), Blood cross (11), Frost cross (10), extended-to-extended (15). 15 Group-G combos use placeholder names pending brainstorm.
 - **T3 (32, 12g):** **T2+T2 only** — no T1+T2 paths. 2–3 convergence paths per element.
 - **T4 (10, 16g):** **T3+T3 only**. 3 convergence paths. Compendium label: "Tier 4 — Phenomena".
-- `effective_damage = base_damage × level + tier`. Forge result level = `min(level_a, level_b)`.
+- `effective_damage = base_damage × level + tier`.
+- **Forge gating (ADR 0008, 2026-06-07):** both inputs must be Level ≥ `FORGE_MIN_INPUT_LEVEL` (2); result level = `max(1, min(inputs) − FORGE_RESULT_LEVEL_PENALTY(1))` (two Lv2 → Lv1 next tier). Merge before Forge; Merge ungated. Under-level → `level_too_low` (items stay staged). `FORGE_GOLD_COST=0` reserved. Knobs in `TuningData`.
+- **Forge discoverability (ADR 0009, 2026-06-07):** all recipes revealed (no gating; `hidden_recipes` inert seam). Bench hint (`Shop._update_forge_partner_hint`) shows **Made from** (`RecipeData.recipes_for(id)`, pair-preserving) + **Forges with** (`recipes_with(id)`, owned-first), each a hoverable chip → shared `TooltipCard.show_for` (no card dup). Item Tooltip also shows a MADE FROM line (`_render_made_from`, id-guarded). "📖 Compendium" button returns via `GameManager.compendium_return_scene`. **Open: forward dead-ends** (e.g. Tempered) — handoff concern C, eliminate.
 - **Merge**: same element ×2 same level → level+1. Drag-drop. No recipe needed.
 - `discovered_recipes[]` in GameState. All visible now; shadow TBD.
 
@@ -72,7 +76,7 @@ ESC in Shop or Battle → PauseOverlay (CanvasLayer 110). Resume, Settings, Forf
 `_ready()` fires on `add_child()`, not `.new()`. Set plain properties before `add_child`; call child-node methods only after.
 
 ## Board + synergies (partially TBD)
-Battlegrid size TBD (backend grid-agnostic, live grid 4 slots). **Reactive adjacency IS in combat** for `adjacency_upgrade` abilities (Ember, Photosynthesis) via `FeatureFlags.combat_adjacency` + `GridSystem.neighbors` — supersedes the old "adjacency at setup only" note. Faction threshold synergies still deferred — see `ideas.md`.
+Battlegrid size TBD (backend grid-agnostic, live grid 4 slots). **Reactive adjacency IS in combat** for `adjacency_upgrade` abilities (Ember, Photosynthesis) via `FeatureFlags.combat_adjacency` + `GridSystem.neighbors` — supersedes the old "adjacency at setup only" note. Faction threshold synergies still deferred (see Deferred/TBD below + the handoff).
 
 ## Steam + backend seams
 - **OpponentProvider** (`systems/`): `get_opponent(context)` → Ghost snapshot `{player_id, player_name, round, grid, acquired_day, source}`. LocalDaySeededAdapter + GhostFixtures fallback.
@@ -103,4 +107,4 @@ T1 mechanics: burn (ramp stacks, tick dmg), poison (permanent stacks), armor (ab
 - **Tooltip:** `show_for_battle` live-updates effective cooldown + weaken-adjusted damage each frame; `data/StatusGlossary.gd` + RichText `[url]` keyword links; hold Shift pins the card for keyword inspection.
 
 ## Deferred / TBD
-Backlog in `.claude/ai-helper/ideas.md`. Key: T2 placeholder names (8 Group-G combos remaining), T2/T3 action design, Level 2 Reward impl, Innate Ability economy, Faction synergy + grid adjacency, Draft system, Meta-progression shape, PlatformLayer, Battlegrid size. Code renames pending: `"effect"` field → `"action"`, `effect_score` → `action_score`.
+Run-loop backlog lives in `.claude/ai-helper/handoff-run-loop.md` (`ideas.md` retired). Key deferred: T2 placeholder names (Group-G combos), T2/T3 action design, Level 2 Reward impl, every-3 event (feature 4), Innate Ability economy + Replay UI, Faction synergy + grid adjacency, Draft system, Meta-progression shape, PlatformLayer, Battlegrid size, T4 ability fill. Code renames pending: `"effect"` field → `"action"`, `effect_score` → `action_score`.

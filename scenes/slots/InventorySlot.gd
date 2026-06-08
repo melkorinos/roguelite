@@ -114,23 +114,7 @@ func _get_drag_data(_at_position: Vector2) -> Variant:
 
 
 func _can_drop_data(_at_position: Vector2, data: Variant) -> bool:
-	if not data is Dictionary:
-		return false
-	var d: Dictionary = data as Dictionary
-	if not d.has("type"):
-		return false
-
-	if d["type"] == "inventory":
-		return ShopSystem.can_transfer(GameManager.state, {"zone": "inventory", "slot": d["slot"] as int}, {"zone": "inventory", "slot": slot_index})
-
-	if d["type"] == "shop":
-		var shop_slot: int = d.get("shop_slot", -1) as int
-		return ShopSystem.can_transfer(GameManager.state, {"zone": "shop", "slot": shop_slot}, {"zone": "inventory", "slot": slot_index})
-
-	if d["type"] == "grid":
-		return true
-
-	return false
+	return ShopSystem.can_drop(GameManager.state, data, {"zone": "inventory", "slot": slot_index})
 
 
 func _drop_data(_at_position: Vector2, data: Variant) -> void:

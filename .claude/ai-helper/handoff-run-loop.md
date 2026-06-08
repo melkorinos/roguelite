@@ -11,10 +11,10 @@ every 3 → win/loss**, with forging as the progression engine. Order the work a
 
 ## Status
 
-- **Tests: 428/428 green** (`godot --headless -s addons/gut/gut_cmdln.gd -gdir=res://test/unit/data/ -gdir=res://test/unit/systems/ -gdir=res://test/unit/autoloads/ -gprefix=test_ -gexit`). Boot exit 0. Don't pass a single parent `-gdir` (no recurse). Validate also with `godot --headless --import` then `--quit`.
+- **Tests: 469/469 green** (`godot --headless -s addons/gut/gut_cmdln.gd -gdir=res://test/unit/data/ -gdir=res://test/unit/systems/ -gdir=res://test/unit/autoloads/ -gprefix=test_ -gexit`). Boot exit 0. Don't pass a single parent `-gdir` (no recurse). Validate also with `godot --headless --import` then `--quit`.
 - **Combat content DONE** — all element abilities filled; `on_activate` trigger + `every_n` deterministic gate (ADR 0006); decisecond model (ADR 0003); ability engine (ADR 0004). Source of truth: `data/AbilityData.gd`. Magnitudes are first-pass and a fair game for the balance work below.
 - **Balance knobs centralized** in `data/TuningData.gd` (2026-06-05) — economy, progression, run/match, combat, status magnitudes (incl. ×1 placeholders). Tune here. Life loss is now proportional; player HP scales with round + `hp_bonus`. (A separate "config constants" file for engine/UI/infra is still planned.)
-- **Two open loop concerns block "final"** (from playtest) — Forge should require leveled-up inputs, and forge recipes need to be discoverable. See "Loop concerns to grill" below; grill before finalizing.
+- **Both loop concerns resolved** (from playtest) — A (Forge requires leveled-up inputs, ADR 0008) and B (forge discoverability, ADR 0009) **landed 2026-06-07**. The loop's mechanics are now complete + legible; what remains for "final" is the **every-3 event** (feature 4) and a **balance pass** (G4).
 
 ---
 
@@ -44,25 +44,25 @@ Backend is grid-agnostic via single knob `CombatState.SLOT_COUNT` (Candidate 01)
 
 Vocabulary (keep straight): **Merge** = same element + same level → level+1, no recipe; **Forge** = two elements via a `RecipeData` recipe → a new higher-tier element. **Level** (Merge axis) and **Tier** (Forge axis) are independent.
 
-### A. Forge should require leveled-up inputs (slow tier progression)
-Today Forge accepts any inputs (result level = `min(inputs)`), so hitting the 3-distinct-T2 unlock is just buying 6 cheap Level-1 T1s. **Intent: require both Forge inputs to be Level ≥2** — forging two Level-1s is denied — so the player must Merge up before forging, coupling the two axes and making the tier climb deliberate. Merge stays unchanged (it produces the leveled ingredients).
-- **Grill:** threshold (Level ≥2 vs ≥3 → `TuningData`); result-level rule (still `min`?); clear denial feedback ("inputs must be Level 2+"); interaction with self-combo recipes (water+water→sea) and with `TIER_UNLOCK_THRESHOLDS` pacing; does the required level scale per tier?
-- **Parked side-effect:** this leaves Level 3 with little draw beyond stats — revisit a Level-3 incentive later.
-- **Tension:** coupling Merge→Forge can feel grindy; tune the level threshold against forge cost. Touchpoint: the unified `ForgeSystem.attempt` (2026-06-07) — add the Level guard inside `_forge_pair` / `_forge_bench` (or in `attempt`), one place; the bench UI reads `attempt`'s `outcome`.
+### A. Forge should require leveled-up inputs — ✅ DONE 2026-06-07 (grilled; ADR 0008)
+Both Forge inputs must be **Level ≥ `TuningData.FORGE_MIN_INPUT_LEVEL` (2)**; result level = `max(1, min(inputs) − FORGE_RESULT_LEVEL_PENALTY(1))` (two Lv2 → Lv1 next tier — the **−1 penalty makes the Merge tax recur per tier**, chosen over "paid once at the base" for now, knob-tunable). Under-level forges return `level_too_low` and keep items staged (bench keeps them so the player can Merge up). Self-combos no exception. Forge gold-free (`FORGE_GOLD_COST=0` reserved). Guard + result-level helpers in `ForgeSystem._inputs_below_min_level` / `_forged_level`, applied in `_forge_pair`/`_forge_bench` + both previews; Shop.gd maps the new outcomes to messages. Merge ungated.
+- **Deferred to G4 balance:** each forge now represents far more investment, so `TIER_UNLOCK_THRESHOLDS` (3/2/1) and the −1 penalty likely need re-tuning together. Also: Level 3 now has little draw beyond stats (revisit a Level-3 incentive); evaluate penalty 0-vs-1.
 
-### B. Forge-recipe discoverability (the forge is opaque)
-The player can't tell which pairs Forge into what — "no recipe" denials are silent. Recipes exist (`RecipeData`, shown in Compendium) but aren't surfaced where forging happens. **Player-proposed directions:**
-- Make the **Compendium reachable** from the shop/forge.
-- Forge bench: when **one** element is placed, show **all elements it can forge with** + their results.
-- **Hover a T2+ element** → show its forging path(s), Compendium-style (e.g. "air + fire").
-- **Grill:** reveal all paths vs only discovered (`FeatureFlags.hidden_recipes`); where it lives (bench panel / tooltip / Compendium); how to compute "forgeable partners from my inventory" off `RecipeData`.
+### C. No element should "forge no further" — ✅ DONE 2026-06-07 (grilled; ADR 0010)
+Was: 24 T2 + 11 T3 **forward dead-ends** (e.g. Tempered) never used as a higher-recipe ingredient. Now: **invariant — every element below T4 is an ingredient in ≥1 higher recipe** (T4 apex exempt), so anything forges up to a Phenomenon. 22 recipes added (`RecipeData` 169→191), **cluster-routed** (frost/nature/storm/earth/blood/fungus/light-dark/metal) so connections stay thematic; mostly alt-paths, two dead-ends paired per recipe where possible. No prunes/no new elements (prism routed via the natural `prism+rain→rainbow`). Locked by `test_no_non_apex_forward_dead_ends` (+ `test_no_duplicate_recipe_pairs`).
+- **Deferred to G4:** the 22 recipes widen the shop family graph (ADR 0007) + shift forge economy (ADR 0008) — rebalance there. Specific pairings are first-pass; re-theme any in G4.
+
+### B. Forge-recipe discoverability — ✅ DONE 2026-06-07 (grilled; ADR 0009)
+**Reveal all** (no discovery gating; `hidden_recipes` stays the inert seam for a later layer). Surfaces: **(1) bench hint** (`Shop._update_forge_partner_hint`, shown when one bench slot is filled) — **Made from** (reverse, pair-preserving `RecipeData.recipes_for(id)`) + **Forges with** (forward, `RecipeData.recipes_with(id)`, owned inventory+grid partners first/highlighted, hidden when empty), each element a **hoverable chip** (`_make_element_chip`) that pops the shared Item Tooltip — no card duplication; warns if bench item < Lv2 (ADR 0008); no max-height (shows all). **(2) Item Tooltip** (`TooltipCard._render_made_from`) shows a "MADE FROM" line for any T2+ element (id-guarded against battle's per-frame refresh). **(3) Compendium-from-Shop** — "📖 Compendium" button; returns via `GameManager.compendium_return_scene`. `Compendium._recipes_for` now shares `RecipeData.recipes_for`.
+- **F5 eyeball:** bench hint layout (made-from + forges-with chips, hover→card), the Shop→Compendium→Shop round-trip, the Item Tooltip made-from line.
 
 ---
 
 ## Balance + architecture state (from retired balance handoff)
 
 - **BalanceSystem** (`systems/`, gated by `FeatureFlags.efficiency_scoring`; dev panel in Compendium; ADR 0002): DPS Score = `effective_damage/cooldown`; **Effect Score table is T1-only** — now that all T2/T3 abilities exist, extend the table (no BalanceSystem test coverage yet).
-- **Open architecture candidates:** **#4** pull drag-validation out of slot components into `GameManager.can_drop()` (5 slot scripts re-derive `can_transfer`; apply already goes through `resolve_drop` — give validation the same seam). (**DONE:** #3 Unify Forge → `ForgeSystem.attempt`/`preview` 2026-06-07; #5 battle-init constants → `data/TuningData.gd`.) Full review: `reviews/architecture-review-20260607.html`.
+- **Architecture reviews to date** (all in `reviews/`): `…20260604/05` and three on 06-07 — `…20260607.html` (#1 Forge-unify ✅), `…-b.html` (Round resolution ✅ + Shop-intake `_buy_into` ✅), `…-c.html` (7 candidates). **From -c: #1 data indexing ✅ + #2 drop seam ✅ (2026-06-09)** — `ElementData`/`RecipeData` are now `const` + lazy-indexed (zero-copy `find()`, `.duplicate()` before mutating); slots validate via `ShopSystem.can_drop`/`drag_to_loc`.
+- **⭐ DEFERRED — Candidate #3 (from -c): extract `ForgePanel` from the 794-line `Shop.gd`.** A cohesive ~280-line forge sub-UI (bench + hint + chips + made-from + ~12 handlers, owns `forge_slots`) → its own `scenes/slots/ForgePanel.{tscn,gd}`; Shop keeps orchestration, panel emits state-changed/forge-done signals + `tooltip_requested` (like the other slots). **Purely structural (zero behavior change) and NOT unit-testable** — do it in a session where you can **F5-verify** the forge wiring right after. Other open -c candidates: status-presentation table, `create()`→`CombatState.reset()` dedup, shared recipe-row renderer, Shop render-churn (all Worth-exploring/Speculative).
 - **Infrastructure settled (don't touch):** OpponentProvider + LocalDaySeeded/GhostFixtures; AchievementSystem (pure `check()`); PlayerProfile (`user://profile.cfg`); PhaseSystem.to_battle. PlatformLayer/Steam still deferred (needs custom-engine-build decision).
 
 ---
@@ -95,6 +95,8 @@ All balance numbers behind the above live in `data/TuningData.gd` (the single tu
 - **Forge-gated shop**: early shop is all T1; after forging 3 distinct T2, your families' T2s appear. Dev "Tier Up" button injects discoveries to jump a tier.
 - **Escalating reroll**: button shows rising cost (2,3,4…) within a phase, resets next round.
 - **Continuous Life loss**: a narrow loss costs little Life; a blowout costs ~`MAX_LIFE_LOSS`.
+- **Forge discoverability** (ADR 0009): one bench item shows "Made from" + "Forges with" chips; hovering a chip pops the element card; "📖 Compendium" button → Compendium → Back returns to Shop (state preserved).
+- **Leveled forge** (ADR 0008): forging two Lv1s shows "Inputs must be Level 2+"; Merge to Lv2 then forge → result one level below inputs.
 
 ---
 
@@ -105,11 +107,17 @@ All balance numbers behind the above live in `data/TuningData.gd` (the single tu
 - `systems/StartSystem.gd` + `scenes/shared/StartingPickOverlay.gd` — starting pick. `scenes/screens/Shop.gd` / `Battle.gd` — render + wiring.
 - `systems/OpponentProvider.gd` + `data/GhostFixtures.gd` — async opponent (scales by round, not `shop_tier`).
 - `data/AbilityData.gd` / `systems/AbilitySystem.gd` — combat content (done). `data/RecipeData.gd` — forge graph + `ingredients_of` (the family filter).
-- `CONTEXT.md` (vocabulary), `CLAUDE.md` → "Round lifecycle", `docs/adr/0002-0007`, `.claude/ai-helper/memory.md`.
+- `CONTEXT.md` (vocabulary), `CLAUDE.md` → "Round lifecycle", `docs/adr/0001-0010`, `.claude/ai-helper/memory.md`.
 
 ---
 
 ## Suggested skills
-- **`/grill-with-docs`** — three open grills: **(a)** the two "Loop concerns" above (forge-requires-leveled-inputs + forge-recipe discoverability — *resolve before the loop is final*); **(b)** feature 4, the every-3 event (reward framework, persistent vs one-shot modifiers, when it fires). Add CONTEXT.md terms as they settle (Event node, Run Modifier).
+- **`/grill-with-docs`** — the remaining open grill is **feature 4, the every-3 event** (reward framework, persistent vs one-shot modifiers, when it fires, PvE/PvP schedule). Add CONTEXT.md terms as they settle (Event node, Run Modifier). *(Loop concerns A/B/C all resolved 2026-06-07 — ADR 0008/0009/0010.)*
 - **`/tdd`** — build each feature test-first (this codebase is heavily tested).
-- **`/improve-architecture`** — Forge-unify (candidate #3); grid growth (feature 5).
+- **`/improve-architecture`** — candidate #3 ForgePanel extraction is deferred (see above, needs F5); grid growth (feature 5).
+
+## Next sessions (priority)
+1. **G4 balance pass** — magnitudes + re-tune `TIER_UNLOCK_THRESHOLDS` vs forge cost / the −1 penalty / the 22 new C-recipes; extend the Effect Score table to T2/T3.
+2. **Feature 4 — every-3 event** (north-star loop piece; grill first).
+3. **Candidate #3 ForgePanel extraction** — pair with an F5 pass.
+4. **F5 eyeball backlog** — starting-pick overlay, forge bench hint (made-from/forges-with chips, hover→card), Shop↔Compendium round-trip.

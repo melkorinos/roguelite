@@ -1,5 +1,13 @@
 # Goals
 
+## Current focus (2026-06-09) — live tracker is the handoff
+Phases 1–3 below are the historical foundation. **Active work is the run loop** — see
+`.claude/ai-helper/handoff-run-loop.md` for live status, priorities, and backlog. Since
+Phase 3: ability system + status effects (combat is real, not placeholder), forge-gated
+shop (ADR 0007), forge leveled inputs (0008), discoverability (0009), dead-end elimination
+(0010), Round-resolution unification, and an architecture pass (data indexing + drop seam).
+**Next:** G4 balance pass · every-3 event (feature 4) · ForgePanel extraction (needs F5).
+
 ## Phase 1 — Godot setup (COMPLETE — 2026-06-01)
 - [x] Migrate from Phaser 3 / TypeScript to Godot 4 / GDScript
 - [x] Project at repo root: `project.godot`, 1280×720, canvas_items stretch
@@ -31,13 +39,13 @@ Goal: player lands in a shop, buys items, clicks Fight, sandstorm resolves, sees
 - [x] GitHub Actions CI: validate job (import + boot check) + test job (GUT headless)
 - [x] CLAUDE.md updated with typing rules, theme rules, build check step
 
-## Deferred / open
-- Draft system (Items / Trinkets)
-- Ability Chain combat (real combat, not placeholder)
-- Innate Ability + Replay mechanic
-- Faction synergy system
-- Meta-progression layer
-- PvE Bosses (optional)
+## Deferred / open (status as of 2026-06-09)
+- Ability system + status effects — **DONE** (live combat). The sequenced *Ability Chain* model is still planned (CONTEXT: "Ability Chain").
+- Innate Ability + Replay — backend seam **DONE** (`pending_commands` + `queue_command`/`resolve_command`); in-combat UI + token economy pending.
+- Meta-progression layer — partly underway via the every-3 event (feature 4, handoff) + AchievementSystem/PlayerProfile; full shape TBD.
+- Draft system (Items / Trinkets) — not started.
+- Faction synergy system — not started (grid adjacency reactives exist; threshold synergies deferred).
+- PvE Bosses (optional) — not started.
 
 ## Steam + Backend — architecture settled 2026-06-02
 Five seams to build (all can be done without a backend):

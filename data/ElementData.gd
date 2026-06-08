@@ -1,8 +1,10 @@
 class_name ElementData
 
 
-static func all_elements() -> Array[Dictionary]:
-	return [
+# The element roster, built once at load and shared (zero-copy). The "duplicate
+# before mutating" contract holds — every caller that writes to a def .duplicate()s
+# it first. Mirrors AbilityData.ABILITIES (const data + O(1) lookup).
+const ELEMENTS: Array[Dictionary] = [
 		# ── Tier 1 ──────────────────────────────────────────────────────────────
 		{ "id": "water",     "name": "Water",     "emoji": "💧", "tier": 1, "price": 5, "cooldown_deciseconds": 30, "damage": 1, "effect": "cleanse"  },
 		{ "id": "fire",      "name": "Fire",      "emoji": "🔥", "tier": 1, "price": 5, "cooldown_deciseconds": 25, "damage": 2, "effect": "burn"     },
@@ -156,14 +158,19 @@ static func all_elements() -> Array[Dictionary]:
 	]
 
 
-# PERF (deferred 2026-06-04): all_elements() rebuilds 132 dicts per call and find()
-# scans linearly. A lazy static cache + id→dict index would remove that — deferred
-# while the element roster is in flux (brainstorming). Not in the combat hot path.
+static func all_elements() -> Array[Dictionary]:
+	return ELEMENTS
+
+
+# Lazy id→def index over the const ELEMENTS, built once on first lookup. Returns the
+# SHARED def (zero-copy) — callers that mutate must .duplicate() first.
+static var _by_id: Dictionary = {}
+
 static func find(element_id: String) -> Dictionary:
-	for elem: Dictionary in all_elements():
-		if elem["id"] == element_id:
-			return elem
-	return {}
+	if _by_id.is_empty() and not ELEMENTS.is_empty():
+		for elem: Dictionary in ELEMENTS:
+			_by_id[elem["id"] as String] = elem
+	return _by_id.get(element_id, {})
 
 
 # Effective damage = base_damage × level + tier. Applies universally (level-up and forge results).

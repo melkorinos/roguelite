@@ -1,9 +1,9 @@
 class_name RecipeData
 
-# 169 recipes across 4 tiers. Multiple recipes may share a result (alternate discovery paths).
+# 191 recipes across 4 tiers. Multiple recipes may share a result (alternate discovery paths).
 # All combinations are order-independent: a+b == b+a. Self-combos (a==b) are valid.
-static func all_recipes() -> Array[Dictionary]:
-	return [
+# The recipe graph, built once at load and shared (zero-copy, read-only to callers).
+const RECIPES: Array[Dictionary] = [
 		# ══ Tier 2 — original 4 × original 4 ════════════════════════════════════
 		{ "a": "water", "b": "fire",      "result": "steam"      },
 		{ "a": "water", "b": "air",       "result": "rain"       },
@@ -199,29 +199,110 @@ static func all_recipes() -> Array[Dictionary]:
 		{ "a": "eclipse",    "b": "meteorite",  "result": "aether"       },
 		{ "a": "eclipse",    "b": "rainforest", "result": "aether"       },
 		{ "a": "tempest",    "b": "voidrift",   "result": "aether"       },
+		# ══ Dead-end elimination (ADR 0010) ═══════════════════════════════════════
+		# Every former forward dead-end now feeds ≥1 higher recipe, routed up through
+		# its cluster (the audit test test_no_non_apex_forward_dead_ends locks this).
+		# T2 → T3
+		{ "a": "sporeflow",      "b": "voltspore",  "result": "plague"       },
+		{ "a": "lucent",         "b": "hemospore",  "result": "underrot"     },
+		{ "a": "fireshroom",     "b": "mycelium",   "result": "underrot"     },
+		{ "a": "magnet",         "b": "beacon",     "result": "meteorite"    },
+		{ "a": "tempered",       "b": "shrapnel",   "result": "meteorite"    },
+		{ "a": "rust",           "b": "hexcore",    "result": "meteorite"    },
+		{ "a": "whiteout",       "b": "frostbite",  "result": "blizzard"     },
+		{ "a": "frostburn",      "b": "freeze",     "result": "glacier"      },
+		{ "a": "photosynthesis", "b": "pollen",     "result": "rainforest"   },
+		{ "a": "bloomspark",     "b": "ironwood",   "result": "ancientgrove" },
+		{ "a": "hemogoblin",     "b": "nightveil",  "result": "carnage"      },
+		{ "a": "arcbeam",        "b": "aurora",     "result": "tempest"      },
+		{ "a": "crystal",        "b": "lodestone",  "result": "mountain"     },
+		{ "a": "prism",          "b": "rain",       "result": "rainbow"      },
+		# T3 → T4
+		{ "a": "cloud",          "b": "fog",        "result": "maelstrom"    },
+		{ "a": "sandstorm",      "b": "hurricane",  "result": "maelstrom"    },
+		{ "a": "geyser",         "b": "sand",       "result": "tectonic"     },
+		{ "a": "clay",           "b": "brick",      "result": "tectonic"     },
+		{ "a": "swamp",          "b": "tsunami",    "result": "primordial"   },
+		{ "a": "acid",           "b": "plague",     "result": "pandemic"     },
+		{ "a": "ash",            "b": "inferno",    "result": "supernova"    },
+		{ "a": "rainbow",        "b": "eclipse",    "result": "aether"       },
 	]
+
+
+static func all_recipes() -> Array[Dictionary]:
+	return RECIPES
+
+
+# ── lazy indices over the const RECIPES, built once on first lookup ────────────
+# Returned arrays/dicts are SHARED (zero-copy); callers read them, never mutate.
+static var _pair_to_result: Dictionary = {}     # "a|b" (sorted) → result id
+static var _by_ingredient: Dictionary = {}      # ingredient id → Array[{partner,result}]
+static var _by_result: Dictionary = {}          # result id → Array[{a,b}]
+static var _ingredients_index: Dictionary = {}  # result id → Array[String] (deduped)
+
+
+static func _ensure_indices() -> void:
+	if not _pair_to_result.is_empty() or RECIPES.is_empty():
+		return
+	for recipe: Dictionary in RECIPES:
+		var a: String = recipe["a"] as String
+		var b: String = recipe["b"] as String
+		var result: String = recipe["result"] as String
+		_pair_to_result[_pair_key(a, b)] = result
+		_add_partner(a, b, result)
+		if b != a:  # a self-combo contributes a single forward entry, matching the old scan
+			_add_partner(b, a, result)
+		_add_result(a, b, result)
+
+
+static func _pair_key(a: String, b: String) -> String:
+	return (a + "|" + b) if a <= b else (b + "|" + a)
+
+
+static func _add_partner(ingredient: String, partner: String, result: String) -> void:
+	if not _by_ingredient.has(ingredient):
+		_by_ingredient[ingredient] = [] as Array[Dictionary]
+	(_by_ingredient[ingredient] as Array[Dictionary]).append({ "partner": partner, "result": result })
+
+
+static func _add_result(a: String, b: String, result: String) -> void:
+	if not _by_result.has(result):
+		_by_result[result] = [] as Array[Dictionary]
+	(_by_result[result] as Array[Dictionary]).append({ "a": a, "b": b })
+	if not _ingredients_index.has(result):
+		_ingredients_index[result] = [] as Array[String]
+	var ingredients: Array[String] = _ingredients_index[result]
+	if not ingredients.has(a):
+		ingredients.append(a)
+	if not ingredients.has(b):
+		ingredients.append(b)
 
 
 # Returns the result element id, or "" if no recipe exists. Order-independent.
 static func find_result(id_a: String, id_b: String) -> String:
-	for recipe: Dictionary in all_recipes():
-		var ra: String = recipe["a"]
-		var rb: String = recipe["b"]
-		if (ra == id_a and rb == id_b) or (ra == id_b and rb == id_a):
-			return recipe["result"]
-	return ""
+	_ensure_indices()
+	return _pair_to_result.get(_pair_key(id_a, id_b), "") as String
 
 
-# The set of ingredient ids that can forge `result_id` — the union across every
-# recipe producing it (a result may have alternate paths). Used by the shop's
-# family filter to know which "families" a discovered element belongs to.
+# Every recipe the given ingredient participates in, as { "partner": id, "result": id }.
+# The forward counterpart of ingredients_of (the reverse: what forges INTO X). For a
+# self-combo (water + water → sea) the partner is the ingredient itself (one entry).
+# Drives the Forge bench's "this forges with…" discoverability hint (ADR 0009).
+static func recipes_with(ingredient_id: String) -> Array[Dictionary]:
+	_ensure_indices()
+	return _by_ingredient.get(ingredient_id, [] as Array[Dictionary]) as Array[Dictionary]
+
+
+# Every recipe that PRODUCES the given element, as { "a": id, "b": id } ingredient
+# pairs (alternate paths → multiple pairs). The pair-preserving counterpart of
+# ingredients_of. Drives the "Made from" display on the Item Tooltip + Forge hint (ADR 0009).
+static func recipes_for(result_id: String) -> Array[Dictionary]:
+	_ensure_indices()
+	return _by_result.get(result_id, [] as Array[Dictionary]) as Array[Dictionary]
+
+
+# The deduped set of ingredient ids that can forge `result_id` — the union across every
+# recipe producing it. Used by the shop's family filter (ADR 0007).
 static func ingredients_of(result_id: String) -> Array[String]:
-	var ingredients: Dictionary = {}
-	for recipe: Dictionary in all_recipes():
-		if (recipe["result"] as String) == result_id:
-			ingredients[recipe["a"] as String] = true
-			ingredients[recipe["b"] as String] = true
-	var result: Array[String] = []
-	for id: String in ingredients:
-		result.append(id)
-	return result
+	_ensure_indices()
+	return _ingredients_index.get(result_id, [] as Array[String]) as Array[String]

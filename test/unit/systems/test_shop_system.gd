@@ -599,3 +599,46 @@ func test_resolve_drop_inventory_non_mergeable_reports_rejected() -> void:
 	state["inventory"][1] = water
 	var r := ShopSystem.resolve_drop(state, {"zone": "inventory", "slot": 0}, {"zone": "inventory", "slot": 1})
 	assert_eq(r["outcome"], "rejected")
+
+
+# ── drag-drop intake seam: drag_to_loc + can_drop ─────────────────────────────
+
+func test_drag_to_loc_translates_shop_payload() -> void:
+	assert_eq(ShopSystem.drag_to_loc({"type": "shop", "shop_slot": 2}), {"zone": "shop", "slot": 2})
+
+
+func test_drag_to_loc_translates_grid_and_inventory() -> void:
+	assert_eq(ShopSystem.drag_to_loc({"type": "grid", "slot": 1}), {"zone": "grid", "slot": 1})
+	assert_eq(ShopSystem.drag_to_loc({"type": "inventory", "slot": 3}), {"zone": "inventory", "slot": 3})
+
+
+func test_drag_to_loc_empty_for_unknown_or_missing() -> void:
+	assert_true((ShopSystem.drag_to_loc({"type": "junk"})).is_empty())
+	assert_true((ShopSystem.drag_to_loc({"type": "grid"})).is_empty())  # no slot
+
+
+func test_can_drop_shop_to_inventory_with_gold() -> void:
+	var state := _state_with_shop_item(0, "water")
+	assert_true(ShopSystem.can_drop(state, {"type": "shop", "shop_slot": 0}, {"zone": "inventory", "slot": 0}))
+
+
+func test_can_drop_rejects_when_gold_insufficient() -> void:
+	var state := _state_with_shop_item(0, "water")
+	state["gold"] = 0
+	assert_false(ShopSystem.can_drop(state, {"type": "shop", "shop_slot": 0}, {"zone": "inventory", "slot": 0}))
+
+
+func test_can_drop_rejects_non_dictionary_payload() -> void:
+	assert_false(ShopSystem.can_drop(_make_state(), null, {"zone": "inventory", "slot": 0}))
+
+
+func test_can_drop_grid_to_inventory_allowed() -> void:
+	var state := _make_state()
+	var elem: Dictionary = ElementData.find("fire").duplicate()
+	elem["element_id"] = "fire"; elem["level"] = 1
+	state["battle_grid"][0] = elem
+	assert_true(ShopSystem.can_drop(state, {"type": "grid", "slot": 0}, {"zone": "inventory", "slot": 1}))
+
+
+func test_can_drop_grid_onto_same_grid_slot_rejected() -> void:
+	assert_false(ShopSystem.can_drop(_make_state(), {"type": "grid", "slot": 2}, {"zone": "grid", "slot": 2}))

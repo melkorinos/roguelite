@@ -240,6 +240,34 @@ static func can_transfer(state: Dictionary, from_loc: Dictionary, to_loc: Dictio
 	return true
 
 
+# ── drag-drop intake seam (slots validate through here) ───────────────────────
+# Slots put a drag payload — {"type": "inventory"|"grid"|"shop", "slot": int,
+# "shop_slot": int (shop only)} — into _get_drag_data. These two functions are the
+# single place that payload maps to a transfer loc and gets validated, so the slot
+# scripts stop re-deriving the translation. The apply path is resolve_drop.
+
+# Translates a drag payload into a transfer loc ({"zone", "slot"}). {} = unrecognised.
+static func drag_to_loc(drag: Dictionary) -> Dictionary:
+	match drag.get("type", "") as String:
+		"shop":
+			return {"zone": "shop", "slot": drag.get("shop_slot", -1) as int}
+		"inventory", "grid":
+			if not drag.has("slot"):
+				return {}
+			return {"zone": drag["type"] as String, "slot": drag["slot"] as int}
+	return {}
+
+
+# Whether a raw drag payload may drop onto to_loc. Wraps drag_to_loc + can_transfer.
+static func can_drop(state: Dictionary, drag: Variant, to_loc: Dictionary) -> bool:
+	if not drag is Dictionary:
+		return false
+	var from_loc: Dictionary = drag_to_loc(drag as Dictionary)
+	if from_loc.is_empty():
+		return false
+	return can_transfer(state, from_loc, to_loc)
+
+
 static func sell_item(state: Dictionary, slot_index: int) -> Dictionary:
 	var inv: Array = state["inventory"]
 	if slot_index < 0 or slot_index >= inv.size():
@@ -342,26 +370,26 @@ static func _buy_into(state: Dictionary, shop_slot: int, dest_key: String, dest_
 	if dest_slot < 0 or dest_slot >= dest.size():
 		return state
 	var existing: Variant = dest[dest_slot]
+	# An occupied slot only accepts the buy when it holds a matching level-1 piece
+	# (the buy then levels it to 2); anything else rejects.
+	if existing != null:
+		var target: Dictionary = existing as Dictionary
+		if (target.get("element_id", "") as String) != (elem_def["id"] as String):
+			return state
+		if (target["level"] as int) != 1:
+			return state
+	var s: Dictionary = state.duplicate(true)
+	s["gold"] = gold - price
+	s["shop_items"][shop_slot] = null
 	if existing == null:
-		var s: Dictionary = state.duplicate(true)
 		var instance: Dictionary = elem_def.duplicate()
 		instance["element_id"] = elem_def["id"] as String
 		instance["level"] = 1
 		s[dest_key][dest_slot] = instance
-		s["gold"] = gold - price
-		s["shop_items"][shop_slot] = null
-		return s
-	var target: Dictionary = existing as Dictionary
-	if (target.get("element_id", "") as String) != (elem_def["id"] as String):
-		return state
-	if (target["level"] as int) != 1:
-		return state
-	var s: Dictionary = state.duplicate(true)
-	var upgraded: Dictionary = (s[dest_key][dest_slot] as Dictionary).duplicate()
-	upgraded["level"] = 2
-	s[dest_key][dest_slot] = upgraded
-	s["gold"] = gold - price
-	s["shop_items"][shop_slot] = null
+	else:
+		var upgraded: Dictionary = (s[dest_key][dest_slot] as Dictionary).duplicate()
+		upgraded["level"] = 2
+		s[dest_key][dest_slot] = upgraded
 	return s
 
 

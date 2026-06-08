@@ -40,9 +40,9 @@ godot --headless --quit            # headless smoke-test
 |--------|---------|
 | `scenes/screens/` | Full-screen scene files: Boot, MainMenu, Settings, Shop, Battle, Compendium |
 | `scenes/slots/` | Reusable tile/slot nodes: BattleSlot, ForgeSlot, InventorySlot, ShopItemTile, SellZone |
-| `scenes/shared/` | Cross-scene UI: TooltipCard |
+| `scenes/shared/` | Cross-scene UI: TooltipCard, PauseOverlay, StartingPickOverlay |
 | `systems/` | Pure logic — static GDScript classes, take state Dictionary, return new Dictionary |
-| `data/` | `GameState.gd` factory, item/piece data definitions, `UIScale.gd` font-size constants, `FeatureFlags.gd` playtest toggles |
+| `data/` | `GameState.gd` factory; element/recipe/ability data (`ElementData`, `RecipeData`, `AbilityData`); `TuningData.gd` (all balance knobs); `ThemeData.gd` (colors); `UIScale.gd` (font sizes); `FeatureFlags.gd` (playtest toggles) |
 | `autoloads/` | `GameManager.gd` — global state holder, registered as Autoload |
 
 **GameState** is a plain `Dictionary` created by `GameState.create()` in [data/GameState.gd](data/GameState.gd). All scenes read and write it via `GameManager.state`. Systems must not mutate state in-place — return a new Dictionary.
@@ -58,10 +58,12 @@ One **Round** = a Shop phase then a Combat phase. End-to-end flow, with the func
 
 1. **Shop phase** — `scenes/screens/Shop.gd` + `systems/ShopSystem.gd`. The player spends gold to buy
    elements, drags them onto the **Battlegrid** (`battle_grid`, currently 4 slots), **Merges** duplicates,
-   and **Forges** recipes (`systems/ForgeSystem.gd`). Every item move goes through `ShopSystem.transfer`.
-   All state lives in `GameManager.state` (a plain Dictionary from `GameState.create()`).
+   and **Forges** recipes (`systems/ForgeSystem.gd`). Drag-drops resolve through `ShopSystem.resolve_drop`
+   (the scene's verb; `transfer`/`can_transfer`/`can_drop` sit underneath). All state lives in
+   `GameManager.state` (a plain Dictionary from `GameState.create()`).
 2. **Fight clicked** → `PhaseSystem.to_battle(state, opponent_snapshot)`. Resets per-combat state:
-   `player_hp`=30, timers / `*_frozen_seconds` / `*_ability_timers` zeroed, fresh
+   `player_hp` = round-scaled (`BASE_PLAYER_HP` + (round−1)×`HP_PER_ROUND` + `hp_bonus`, all in `TuningData`),
+   timers / `*_frozen_seconds` / `*_ability_timers` zeroed, fresh
    `StatusSystem.empty_statuses()` per side, seeds `combat_rng_state` (per round → reproducible), clears
    `pending_commands` and `battle_events`, builds the opponent grid from a **Ghost** snapshot
    (`OpponentProvider` / `GhostFixtures`), then runs `AbilitySystem.resolve_combat_start` (combat_start +
@@ -80,8 +82,11 @@ One **Round** = a Shop phase then a Combat phase. End-to-end flow, with the func
    - **Timed commands** — `_drain_commands` fires any due Innate-Ability command (the Replay seam).
    - `battle_timer` advances; `phase` flips to `"result"` when either side's HP hits 0 or the 30 s limit
      (`BATTLE_TIME_LIMIT`) is reached.
-4. **Result** — `BattleSystem.compute_result` / `PhaseSystem.describe_result` classify win/loss/draw and the
-   Life delta; `Battle.gd` shows the outcome + Battle Summary.
+4. **Result** — `PhaseSystem.resolve_round` is the single Round-outcome resolver (win/loss/draw, Life delta,
+   next phase, achievement event); `describe_result` is its render-facing alias and `advance_round` reads it,
+   so the result shown can't disagree with how the Run advances. **Canonical win rule = opponent eliminated**
+   (`opponent_hp ≤ 0`); a timeout with the opponent alive is a loss scaled by their remaining HP; mutual KO =
+   draw = win. `Battle.gd` shows the outcome + Battle Summary.
 5. **Next round** — `PhaseSystem.advance_round`: +1 round, +5 gold, reset `player_hp`, tally wins / Life,
    set `phase` back to `"shop"` (or `"victory"` / `"eliminated"`). Loop to step 1.
 
@@ -115,7 +120,7 @@ godot --headless --quit     # boot check — exit 0 means scripts load and autol
 Requires `godot` on PATH. On Windows: add the Godot editor directory to system PATH.
 CI runs the same two commands on every push (see [.github/workflows/ci.yml](.github/workflows/ci.yml)).
 
-**Run GUT tests** (10 suites across `test/unit/data/`, `test/unit/systems/`, `test/unit/autoloads/`):
+**Run GUT tests** (17 suites across `test/unit/data/`, `test/unit/systems/`, `test/unit/autoloads/`):
 ```
 godot --headless -s addons/gut/gut_cmdln.gd -gdir=res://test/unit/data/ -gdir=res://test/unit/systems/ -gdir=res://test/unit/autoloads/ -gprefix=test_ -gexit
 ```
@@ -129,7 +134,7 @@ Note: `-gsuffix` is not supported by this GUT version — omit it. `-gdir` must 
 
 ## Skill output — mandatory rule
 
-**`/improve-architecture` output always goes in `.claude/ai-helper/reviews/`** — never in the OS temp directory. Filename: `architecture-review-YYYYMMDD.html`. Open with `start .claude/ai-helper/reviews/<filename>` after writing.
+**`/improve-architecture` output always goes in `.claude/ai-helper/reviews/`** — never in the OS temp directory. Filename: `architecture-review-YYYYMMDD.html`, with a letter suffix (`-b`, `-c`, …) for additional reviews the same day so existing ones aren't clobbered. Open with `start .claude/ai-helper/reviews/<filename>` after writing.
 
 ## Agent skills
 

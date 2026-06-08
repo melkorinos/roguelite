@@ -13,8 +13,8 @@ Combining two identical elements at the same level to produce one element of lev
 _Avoid_: level up, fuse, evolve, combine
 
 **Forge**:
-Combining two specific elements (A + B → C) to produce a new element with a different identity. Requires gold and an intentional trip to the Forge. The rare, exciting upgrade path.
-_Avoid_: craft, fuse, combine (too generic — Forge is a specific action with a cost)
+Combining two specific elements (A + B → C) via a recipe to produce a new element one Tier up. Both inputs must be at **Level 2 or higher** — you Merge up before you Forge, coupling the Level and Tier axes — and the result comes out **one Level below its inputs** (two Level-2s → a Level-1 of the next Tier). An intentional trip to the Forge bench; gold-free today (a cost knob is reserved for tuning). The rare, exciting upgrade path. See `docs/adr/0008`.
+_Avoid_: craft, fuse, combine (too generic — Forge is a specific action)
 
 ### Pieces and equipment
 

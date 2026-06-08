@@ -4,6 +4,10 @@ extends Node
 var state: Dictionary = {}
 var undo_state: Variant = null
 
+# The scene the Compendium returns to on Back. Set by whoever opens it (MainMenu or
+# Shop) so the Compendium works as an in-run recipe reference, not just a menu screen.
+var compendium_return_scene: String = "res://scenes/screens/MainMenu.tscn"
+
 
 func _ready() -> void:
 	state = GameState.create(PlayerProfile.get_discovered_recipes())

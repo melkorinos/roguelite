@@ -18,6 +18,7 @@ func _on_settings_pressed() -> void:
 
 func _on_compendium_pressed() -> void:
 	AudioManager.play("click")
+	GameManager.compendium_return_scene = "res://scenes/screens/MainMenu.tscn"
 	get_tree().change_scene_to_file("res://scenes/screens/Compendium.tscn")
 
 

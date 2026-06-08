@@ -29,6 +29,14 @@ const GRID_SIZE: int = 4                  # CombatState.SLOT_COUNT re-exports th
 
 # ── Progression / unlocks ────────────────────────────────────────────────────
 const TIER_UNLOCK_THRESHOLDS: Dictionary = { 2: 3, 3: 2, 4: 1 }  # distinct forges to unlock
+# Forge gating (ADR 0008): both Forge inputs must be at least this Level — you must
+# Merge up before you Forge, coupling the Level and Tier axes and pacing the climb.
+# The result comes out PENALTY levels below its inputs (floored at 1), so the
+# Merge investment recurs per tier. Set PENALTY to 0 to make it "paid once at the
+# base" instead. Forge is gold-free today (cost 0) — the knob is reserved for tuning.
+const FORGE_MIN_INPUT_LEVEL: int = 2
+const FORGE_RESULT_LEVEL_PENALTY: int = 1
+const FORGE_GOLD_COST: int = 0
 const STARTING_OPTION_COUNT: int = 3
 const STARTING_BUFF_MULTIPLIER: int = 2
 # Shop slot 0 is always a T1 (forge fuel). Each of the other four slots independently

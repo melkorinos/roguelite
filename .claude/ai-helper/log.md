@@ -1,18 +1,22 @@
 # Development Log
 
-## 2026-06-07 — Arch review #2: unify Round resolution + collapse Shop intake
-- Review `reviews/architecture-review-20260607-b.html` (4 candidates). Implemented **1 & 2**.
-- **#1 Round resolution (bug fix):** who-won was decided in three places with **two win rules** — `BattleSystem.compute_result` (HP comparison, drove the result screen) vs `advance_round` (`opp_hp≤0`, moves the Run). At a 30 s timeout these disagreed (shown WIN, applied LOSS). New single `PhaseSystem.resolve_round(state)` (outcome/is_win/wins_after/lives_*/is_victory/is_eliminated/next_phase/event); `describe_result` + `advance_round` + Battle.gd all read it. **Canonical win rule = opponent eliminated** (`opp_hp≤0`); timeout-with-opp-alive is a loss scaled by remaining HP; mutual KO = draw = win. `compute_result` rewritten to match; its 3 HP-comparison tests corrected.
-- **#2 Shop intake:** twin `_buy`/`_buy_to_grid` → one `_buy_into(state, shop_slot, dest_key, dest_slot)`; `can_transfer` shop branch → one `_shop_target_ok` helper. `resolve_drop` stays the scene's single verb; `transfer`/`can_transfer` kept public (test contract).
-- **441/441 green** (+7), boot 0. Win-rule change is gameplay-facing — flagged to player.
+## 2026-06-09 — Arch review #3: index data modules (#1) + drop seam (#2)
+- Review `reviews/architecture-review-20260607-c.html` (7 candidates, 3 strong). **#1:** `ElementData`/`RecipeData` → `const ELEMENTS`/`const RECIPES` (built once) + lazy static indices behind the **unchanged** interface (was rebuild+scan per call, in render loops); mirrors AbilityData; zero-copy `find()` (audited — mutators already `.duplicate()`). **#2:** `ShopSystem.can_drop`/`drag_to_loc` seam; InventorySlot/BattleSlot `_can_drop_data` → one-liners; `can_transfer` kept public. **469/469**, boot 0. **#3 (extract ForgePanel from 794-line Shop.gd) NOT started** — scene-UI refactor, no unit-test net; pending F5 decision.
 
-## 2026-06-07 — Deepen Forge: one `attempt(op)` / `preview(op)` interface (arch review #1)
-- `ForgeSystem`'s 9 functions / 3 return shapes → two verbs over an op vocabulary {merge, forge_pair, forge_bench, to_bench, from_bench}, uniform `{state, outcome}`. Granular mutators are now private. Callers updated (`ShopSystem.resolve_drop`, `Shop.gd` forge handlers); forge tests rewritten against the interface + added forge_bench-outcome / unknown-op coverage.
-- Implements the top recommendation of `reviews/architecture-review-20260607.html`; the queued loop concerns (leveled forge inputs, recipe discoverability) now land in one module. **434/434 green**, boot 0.
+## 2026-06-07 — Concern C: eliminate forward dead-end elements (grilled; ADR 0010)
+- Was 24 T2 + 11 T3 elements never used as a higher-recipe ingredient (audited via `comm`). Now **invariant: every element < T4 is an ingredient in ≥1 higher recipe** → forge path to a T4 Phenomenon from anything. Added **22 recipes** (`RecipeData` 169→191), **cluster-routed** for theme (frost/nature/storm/earth/blood/fungus/light-dark/metal); mostly alt-paths, two dead-ends paired per recipe. No prunes/new elements — prism routed via `prism+rain→rainbow` (kept, not cut). Locked by `test_no_non_apex_forward_dead_ends` + `test_no_duplicate_recipe_pairs`. Family/economy rebalance → G4. **459/459**, boot 0.
+
+## 2026-06-07 — G2 polish + bug fixes (forge discoverability round 2)
+- Fixed `CONFUSABLE_LOCAL_DECLARATION` in `ShopSystem._buy_into` (single `s`). Forge hint reworked: **Made from** (new pair-preserving `RecipeData.recipes_for(id)`) + **Forges with**, each a hoverable **chip** → shared `TooltipCard.show_for` (no card dup); removed scroll/max-height; `Compendium._recipes_for` shares the helper. Item Tooltip gains a MADE FROM line (`_render_made_from`, id-guarded vs battle refresh). **457/457**, boot 0.
+
+## 2026-06-07 — Run-loop G1/G2 + arch reviews #1/#2 (all grilled)
+- **G2 Forge discoverability (ADR 0009):** reveal all (`hidden_recipes` inert seam). Bench hint `Shop._update_forge_partner_hint` off new pure `RecipeData.recipes_with(id)` (owned-first, warns < Lv2); "📖 Compendium" button in Shop returning via `GameManager.compendium_return_scene`. **453/453**.
+- **G1 Forge leveled inputs (ADR 0008):** both inputs Level ≥ `FORGE_MIN_INPUT_LEVEL`(2); result = `max(1, min(inputs) − FORGE_RESULT_LEVEL_PENALTY(1))` (Lv2+Lv2 → Lv1 next tier; −1 makes the Merge tax recur per tier, knob to 0). Under-level → `level_too_low` (staged); self-combos no exception; `FORGE_GOLD_COST=0` wired. Guards in `_forge_pair`/`_forge_bench`+previews; Shop messages. Merge ungated. Threshold re-tune deferred to G4.
+- **Arch review #2 (`reviews/architecture-review-20260607-b.html`): #1** unified Round resolution — who-won was decided 3× with 2 win rules (`compute_result` HP-compare vs `advance_round` opp_hp≤0) → disagreed at 30 s timeout (shown WIN/applied LOSS). New single `PhaseSystem.resolve_round`; canonical rule = **opponent eliminated**; mutual KO = draw = win. **#2** Shop intake: twin `_buy`/`_buy_to_grid` → `_buy_into`; `can_transfer` shop branch → `_shop_target_ok`.
+- **Arch review #1:** `ForgeSystem` 9 fns/3 shapes → `attempt(op)`/`preview(op)`, uniform `{state, outcome}`. Win-rule + forge-pacing changes are gameplay-facing (flagged). Boot 0.
 
 ## 2026-06-05 — Centralized balance knobs in `data/TuningData.gd`
-- New `TuningData.gd` holds all **balance knobs** (economy, progression, run/match, combat, status magnitudes); systems reference it directly (local dup consts removed: REROLL_BASE_COST, TIER_UNLOCK_THRESHOLDS, HASTE_REDUCTION_DECISECONDS, STARTING_*, BATTLE_TIME_LIMIT, opponent curve, sell/gold/HP/Life). Engine/safety (COMBAT_STEP, MAX_STACKS, MAX_REACTIONS) + UI/infra stay local → a future "config constants" file. `CombatState.SLOT_COUNT` re-exports `GRID_SIZE`. Element `price` field kept; tier-default table added.
-- Status scalars centralized incl. **×1 placeholders** (burn/poison/armor/plating per-stack/point) — no-ops now, tunable later.
+- New `TuningData.gd` holds all **balance knobs** (economy, progression, run/match, combat, status magnitudes); systems reference it directly (local dup consts removed: REROLL_BASE_COST, TIER_UNLOCK_THRESHOLDS, HASTE_REDUCTION_DECISECONDS, STARTING_*, BATTLE_TIME_LIMIT, opponent curve, sell/gold/HP/Life). Engine/safety (COMBAT_STEP, MAX_STACKS, MAX_REACTIONS) + UI/infra stay local → a future "config constants" file. `CombatState.SLOT_COUNT` re-exports `GRID_SIZE`. Element `price` kept; tier-default table added. Status scalars centralized incl. **×1 placeholders** (no-ops now, tunable later).
 - **Behavior changes:** Life loss now proportional `round(clamp(ratio)×MAX_LIFE_LOSS)` (no buckets/floor); player HP scales `BASE+(round-1)×HP_PER_ROUND+hp_bonus` (new reward-hook field) + `player_starting_hp` for the HP-bar max (also fixed pre-existing opp-bar overflow). **427/427 green**, boot 0. CONTEXT Life/Player-HP terms updated.
 
 ## 2026-06-05 — Forge-gated, family-filtered shop pool (ADR 0007)
@@ -112,6 +116,5 @@
 - T4: T3+T3 only, 16g, "Phenomena" tier; 10 elements (Ice Age, Maelstrom, Supernova…).
 
 ## 2026-06-03 → 05-30 — Foundations (collapsed)
-- **06-03 Status Effects:** `StatusSystem.gd` NEW (empty_statuses/apply_effect/tick/compute_incoming_damage/slow_pct); Sound→Fungus, Blood+Frost; BattleSystem integrated. Tests → `test/unit/{data,systems,autoloads}/`.
-- **06-02 Foundation:** `OpponentProvider`/`AchievementSystem`/`PlayerProfile`/`GhostFixtures` NEW; `ShopSystem.transfer()`, `ElementData.effective_damage`, `UIScale`; drag-drop/forge/undo/sell/reroll; Life 100 / 10 wins / +5g per round.
+- **06-03 Status Effects + 06-02 Foundation:** `StatusSystem.gd` NEW (Sound→Fungus, Blood+Frost, BattleSystem integrated); `OpponentProvider`/`AchievementSystem`/`PlayerProfile`/`GhostFixtures`; `ShopSystem.transfer()`, `ElementData.effective_damage`, `UIScale`; drag-drop/forge/undo/sell/reroll; Life 100 / 10 wins / +5g per round. Tests → `test/unit/{data,systems,autoloads}/`.
 - **06-01 Godot migration:** Phaser3/TS → Godot 4.6/GDScript; Boot→MainMenu→Shop→Battle loop; strict typing, GUT, CI. **05-30 Genre pivot:** extraction roguelite → auto-battler.

@@ -29,7 +29,7 @@ func _ready() -> void:
 
 func _on_back_pressed() -> void:
 	AudioManager.play("click")
-	get_tree().change_scene_to_file("res://scenes/screens/MainMenu.tscn")
+	get_tree().change_scene_to_file(GameManager.compendium_return_scene)
 
 
 func _build_content() -> void:
@@ -178,14 +178,13 @@ func _trigger_label(ability: Dictionary) -> String:
 
 func _recipes_for(element_id: String) -> Array[Dictionary]:
 	var results: Array[Dictionary] = []
-	for recipe: Dictionary in RecipeData.all_recipes():
-		if (recipe["result"] as String) == element_id:
-			var a: Dictionary = ElementData.find(recipe["a"] as String)
-			var b: Dictionary = ElementData.find(recipe["b"] as String)
-			results.append({
-				"a_emoji": a["emoji"] as String,
-				"a_name":  a["name"]  as String,
-				"b_emoji": b["emoji"] as String,
-				"b_name":  b["name"]  as String,
-			})
+	for pair: Dictionary in RecipeData.recipes_for(element_id):
+		var a: Dictionary = ElementData.find(pair["a"] as String)
+		var b: Dictionary = ElementData.find(pair["b"] as String)
+		results.append({
+			"a_emoji": a["emoji"] as String,
+			"a_name":  a["name"]  as String,
+			"b_emoji": b["emoji"] as String,
+			"b_name":  b["name"]  as String,
+		})
 	return results

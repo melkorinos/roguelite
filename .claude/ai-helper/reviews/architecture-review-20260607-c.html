@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Architecture review — roguelite (post run-loop)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="module">
+      import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+      mermaid.initialize({ startOnLoad: true, theme: "neutral", securityLevel: "loose" });
+    </script>
+    <style>
+      .seam { stroke-dasharray: 4 4; }
+      .deep { background: linear-gradient(135deg, #0f172a, #1e293b); }
+      .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+      .grid-bg { background-image: radial-gradient(circle at 1px 1px, rgba(15,23,42,0.06) 1px, transparent 0); background-size: 22px 22px; }
+    </style>
+  </head>
+  <body class="bg-stone-50 text-slate-900 font-sans grid-bg">
+    <main class="max-w-5xl mx-auto px-6 py-12 space-y-10">
+
+      <header class="border-b border-slate-300 pb-6">
+        <p class="text-xs uppercase tracking-[0.3em] text-indigo-600 mb-2">Deepening review · third pass</p>
+        <h1 class="font-serif text-4xl text-slate-900">roguelite — architecture review</h1>
+        <p class="text-slate-500 mt-2">2026-06-07 · after G1 (forge gating), G2 (discoverability), and concern C (dead-end elimination) landed</p>
+        <div class="mt-5 flex flex-wrap gap-x-6 gap-y-2 text-xs text-slate-600">
+          <span class="flex items-center gap-2"><span class="inline-block w-4 h-3 border-2 border-slate-700"></span> module</span>
+          <span class="flex items-center gap-2"><svg width="34" height="8"><line x1="0" y1="4" x2="34" y2="4" stroke="#475569" stroke-width="2" class="seam"/></svg> seam</span>
+          <span class="flex items-center gap-2"><svg width="34" height="8"><line x1="0" y1="4" x2="30" y2="4" stroke="#dc2626" stroke-width="2"/><polygon points="30,1 34,4 30,7" fill="#dc2626"/></svg> rebuild / leak</span>
+          <span class="flex items-center gap-2"><span class="inline-block w-4 h-3 deep"></span> deep module</span>
+        </div>
+        <div class="mt-6 grid grid-cols-3 sm:grid-cols-7 gap-2 text-center text-xs">
+          <div class="rounded-lg border border-emerald-300 bg-emerald-50 py-2"><div class="font-serif text-lg text-emerald-700">1</div>index data</div>
+          <div class="rounded-lg border border-emerald-300 bg-emerald-50 py-2"><div class="font-serif text-lg text-emerald-700">2</div>drop seam</div>
+          <div class="rounded-lg border border-emerald-300 bg-emerald-50 py-2"><div class="font-serif text-lg text-emerald-700">3</div>forge panel</div>
+          <div class="rounded-lg border border-amber-300 bg-amber-50 py-2"><div class="font-serif text-lg text-amber-700">4</div>status view</div>
+          <div class="rounded-lg border border-amber-300 bg-amber-50 py-2"><div class="font-serif text-lg text-amber-700">5</div>create/reset</div>
+          <div class="rounded-lg border border-amber-300 bg-amber-50 py-2"><div class="font-serif text-lg text-amber-700">6</div>recipe rows</div>
+          <div class="rounded-lg border border-slate-300 bg-slate-100 py-2"><div class="font-serif text-lg text-slate-600">7</div>render churn</div>
+        </div>
+        <p class="text-xs text-slate-400 mt-3">3 <span class="text-emerald-700 font-semibold">Strong</span> · 3 <span class="text-amber-700 font-semibold">Worth exploring</span> · 1 <span class="text-slate-600 font-semibold">Speculative</span></p>
+      </header>
+
+      <section id="candidates" class="space-y-10">
+
+        <!-- 1 -->
+        <article id="c1" class="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+          <div class="px-6 pt-6 pb-2">
+            <div class="flex items-center gap-3 flex-wrap">
+              <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800">Strong</span>
+              <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">in-process</span>
+              <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-indigo-100 text-indigo-700">in-repo template exists</span>
+            </div>
+            <h2 class="font-serif text-2xl mt-3">1 · Index ElementData &amp; RecipeData — the way AbilityData already does</h2>
+            <p class="mono text-sm text-slate-500 mt-2">data/ElementData.gd · find / all_elements &nbsp;|&nbsp; data/RecipeData.gd · all_recipes / find_result / recipes_with / recipes_for / ingredients_of</p>
+          </div>
+          <div class="px-6 py-5 grid md:grid-cols-2 gap-5">
+            <div class="rounded-lg border border-slate-200 p-4">
+              <p class="text-xs uppercase tracking-wider text-slate-400 mb-3">Before — rebuild + linear scan, every call</p>
+              <pre class="mermaid">
+flowchart TD
+  R[Compendium · builds 132 cards] -->|per card| RF["recipes_for(id)"]
+  H[Forge hint · per chip] -->|per chip| EF["ElementData.find(id)"]
+  RF --> AR["all_recipes()<br/>rebuild 191 dicts + scan"]
+  EF --> AE["all_elements()<br/>rebuild 132 dicts + scan"]
+  classDef bad stroke:#dc2626,stroke-width:2px,fill:#fef2f2;
+  class AR,AE bad
+              </pre>
+              <p class="text-xs text-slate-500 mt-2"><span class="mono">AbilityData.get_ability</span> is already <span class="mono">ABILITIES.get(id,{})</span> over a <span class="mono">const</span> dict — O(1), built once. Element/Recipe never got the same treatment.</p>
+            </div>
+            <div class="rounded-lg border border-slate-200 p-4 deep text-slate-100">
+              <p class="text-xs uppercase tracking-wider text-slate-400 mb-3">After — const data + lazy indices behind the same interface</p>
+              <pre class="mermaid">
+flowchart TD
+  R[callers unchanged] --> I["find / recipes_for / recipes_with"]
+  I --> IDX["lazy static index<br/>id→elem · ingredient→recipes · result→recipes"]
+  IDX --> C["const ELEMENTS / RECIPES<br/>built once"]
+  classDef deep fill:#0f172a,stroke:#6366f1,stroke-width:2px,color:#e2e8f0;
+  class IDX,C deep
+              </pre>
+              <p class="text-xs text-slate-300 mt-2">Interface identical; implementation absorbs the cache. The roster just stabilised (dead-ends fixed), so the long-standing PERF deferral is now safe to cash in.</p>
+            </div>
+          </div>
+          <div class="px-6 pb-6 space-y-3">
+            <p><span class="font-semibold text-slate-700">Problem.</span> Two of the three data modules rebuild their full array and scan linearly on every lookup, inside render loops — while the third (AbilityData) already proves the indexed shape.</p>
+            <p><span class="font-semibold text-slate-700">Solution.</span> Make ELEMENTS/RECIPES <span class="mono">const</span> (or lazy-cached) and add id/ingredient/result indices, behind the unchanged <span class="mono">find</span> / <span class="mono">recipes_*</span> interface.</p>
+            <div class="grid sm:grid-cols-2 gap-x-6 gap-y-1 text-sm text-slate-600">
+              <ul class="list-disc list-inside space-y-1"><li>leverage: every render + lookup path</li><li>locality: caching in one module</li></ul>
+              <ul class="list-disc list-inside space-y-1"><li>interface unchanged → tests untouched</li><li>copy AbilityData's proven shape</li></ul>
+            </div>
+          </div>
+        </article>
+
+        <!-- 2 -->
+        <article id="c2" class="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+          <div class="px-6 pt-6 pb-2">
+            <div class="flex items-center gap-3 flex-wrap">
+              <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800">Strong</span>
+              <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">in-process</span>
+            </div>
+            <h2 class="font-serif text-2xl mt-3">2 · One drag-drop intake seam</h2>
+            <p class="mono text-sm text-slate-500 mt-2">scenes/slots/{InventorySlot,BattleSlot,ForgeSlot,SellZone,ShopItemTile}.gd · _can_drop_data / _get_drag_data &nbsp;|&nbsp; systems/ShopSystem.gd · transfer / can_transfer / resolve_drop</p>
+          </div>
+          <div class="px-6 py-5 grid md:grid-cols-2 gap-5">
+            <div class="rounded-lg border border-slate-200 p-4">
+              <p class="text-xs uppercase tracking-wider text-slate-400 mb-3">Before — each slot hand-builds loc dicts; 3 public verbs</p>
+              <pre class="mermaid">
+flowchart TD
+  S1[InventorySlot] -->|build from/to loc| CT["can_transfer"]
+  S2[BattleSlot] -->|build from/to loc| CT
+  S3[ForgeSlot] -->|own logic| X((?))
+  S4[SellZone] -->|own logic| X
+  SH[Shop.gd] --> RD["resolve_drop"]
+  SH --> TR["transfer"]
+  classDef leak stroke:#dc2626,stroke-width:2px,fill:#fef2f2;
+  class CT,TR,RD leak
+              </pre>
+              <p class="text-xs text-slate-500 mt-2">Apply goes through <span class="mono">resolve_drop</span>; validation goes through <span class="mono">can_transfer</span>; <span class="mono">transfer</span> is a third near-passthrough. Each slot re-derives the loc descriptor.</p>
+            </div>
+            <div class="rounded-lg border border-slate-200 p-4 deep text-slate-100">
+              <p class="text-xs uppercase tracking-wider text-slate-400 mb-3">After — one drag descriptor, two verbs over it</p>
+              <pre class="mermaid">
+flowchart TD
+  SLOTS[all 5 slots] -->|drag descriptor| DI["can_drop(state, drag)"]
+  SH2[Shop.gd] --> DI2["resolve_drop(state, drag)"]
+  DI --> IMPL["intake impl<br/>(transfer/can_transfer now private)"]
+  DI2 --> IMPL
+  classDef deep fill:#0f172a,stroke:#6366f1,stroke-width:2px,color:#e2e8f0;
+  class DI,DI2,IMPL deep
+              </pre>
+              <p class="text-xs text-slate-300 mt-2">Validation crosses the same seam as apply. Drop rules live in one place; the slots stop knowing zone/slot vocabulary.</p>
+            </div>
+          </div>
+          <div class="px-6 pb-6 space-y-3">
+            <p><span class="font-semibold text-slate-700">Problem.</span> Drop validity is decided slot-by-slot (each builds its own loc dicts and picks a verb), and the intake module exposes three overlapping public verbs.</p>
+            <p><span class="font-semibold text-slate-700">Solution.</span> One drag descriptor + a <span class="mono">can_drop</span>/<span class="mono">resolve_drop</span> pair both slots and Shop speak; fold <span class="mono">transfer</span>/<span class="mono">can_transfer</span> into the implementation.</p>
+            <div class="grid sm:grid-cols-2 gap-x-6 gap-y-1 text-sm text-slate-600">
+              <ul class="list-disc list-inside space-y-1"><li>locality: drop rules in one module</li><li>validation = apply's test surface</li></ul>
+              <ul class="list-disc list-inside space-y-1"><li>interface shrinks 3 verbs → 2</li><li>slots stop re-deriving zone/slot</li></ul>
+            </div>
+            <div class="rounded-md bg-amber-50 border border-amber-200 text-amber-800 text-sm px-4 py-2">Note: ~40 tests pin <span class="mono">transfer</span>/<span class="mono">can_transfer</span> as public — make them private only with a test migration to the new seam, or keep them as thin internal-but-tested shims.</div>
+          </div>
+        </article>
+
+        <!-- 3 -->
+        <article id="c3" class="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+          <div class="px-6 pt-6 pb-2">
+            <div class="flex items-center gap-3 flex-wrap">
+              <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800">Strong</span>
+              <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">in-process</span>
+            </div>
+            <h2 class="font-serif text-2xl mt-3">3 · Lift the Forge panel out of the Shop god-scene</h2>
+            <p class="mono text-sm text-slate-500 mt-2">scenes/screens/Shop.gd (794 lines) → scenes/slots/ForgePanel.{tscn,gd}</p>
+          </div>
+          <div class="px-6 py-5 grid md:grid-cols-2 gap-5">
+            <div class="rounded-lg border border-slate-200 p-4">
+              <p class="text-xs uppercase tracking-wider text-slate-400 mb-3">Before — one scene owns everything</p>
+              <div class="space-y-1.5 mono text-[11px]">
+                <div class="h-7 bg-rose-200 border-2 border-rose-400 rounded flex items-center justify-center">Shop.gd · 794 lines</div>
+                <div class="grid grid-cols-2 gap-1.5 text-[10px] text-center">
+                  <div class="h-6 bg-slate-100 border border-slate-300 rounded flex items-center justify-center">shop grid</div>
+                  <div class="h-6 bg-slate-100 border border-slate-300 rounded flex items-center justify-center">inventory</div>
+                  <div class="h-6 bg-slate-100 border border-slate-300 rounded flex items-center justify-center">battle grid</div>
+                  <div class="h-6 bg-amber-100 border border-amber-400 rounded flex items-center justify-center">forge bench+hint+chips</div>
+                  <div class="h-6 bg-slate-100 border border-slate-300 rounded flex items-center justify-center">sell / buy / reroll</div>
+                  <div class="h-6 bg-slate-100 border border-slate-300 rounded flex items-center justify-center">debug / overlays</div>
+                </div>
+                <p class="text-[11px] text-slate-500">The amber slice — bench, hint, chips, made-from, ~12 forge handlers — is a cohesive ~280-line sub-UI with its own state (<span class="mono">forge_slots</span>).</p>
+              </div>
+            </div>
+            <div class="rounded-lg border border-slate-200 p-4 deep text-slate-100">
+              <p class="text-xs uppercase tracking-wider text-slate-400 mb-3">After — forge UI is its own module</p>
+              <div class="space-y-1.5 mono text-[11px]">
+                <div class="h-7 bg-slate-700 border-2 border-slate-500 rounded flex items-center justify-center text-slate-200">Shop.gd · orchestration (~520)</div>
+                <div class="h-8 deep border-2 border-indigo-400 rounded flex items-center justify-center text-indigo-200">ForgePanel · bench · hint · chips · forge ops</div>
+                <p class="text-[11px] text-slate-300">Shop emits "forge happened" / re-renders; ForgePanel owns the bench seam. Each is independently readable.</p>
+              </div>
+            </div>
+          </div>
+          <div class="px-6 pb-6 space-y-3">
+            <p><span class="font-semibold text-slate-700">Problem.</span> Shop.gd is the largest file in the repo and mixes six sub-UIs; the forge slice keeps growing (hint + chips + made-from landed this session).</p>
+            <p><span class="font-semibold text-slate-700">Solution.</span> Extract a <span class="mono">ForgePanel</span> component owning the bench, hint, chips, and forge execution; Shop keeps orchestration and state.</p>
+            <div class="grid sm:grid-cols-2 gap-x-6 gap-y-1 text-sm text-slate-600">
+              <ul class="list-disc list-inside space-y-1"><li>locality: all forge UI in one module</li><li>deletion test: forge logic concentrates</li></ul>
+              <ul class="list-disc list-inside space-y-1"><li>Shop.gd drops ~280 lines</li><li>seam: state in, signals out</li></ul>
+            </div>
+          </div>
+        </article>
+
+        <!-- 4 -->
+        <article id="c4" class="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+          <div class="px-6 pt-6 pb-2">
+            <div class="flex items-center gap-3 flex-wrap">
+              <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-100 text-amber-800">Worth exploring</span>
+              <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">in-process</span>
+              <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-500">carried from review #2</span>
+            </div>
+            <h2 class="font-serif text-2xl mt-3">4 · One status-presentation table</h2>
+            <p class="mono text-sm text-slate-500 mt-2">Battle.gd · _spawn_float_labels / _trigger_label / _format_effects &nbsp;·&nbsp; Shop.gd forge-hint colors &nbsp;·&nbsp; data/EffectRegistry.gd · data/StatusGlossary.gd</p>
+          </div>
+          <div class="px-6 py-5 grid md:grid-cols-2 gap-5">
+            <div class="rounded-lg border border-slate-200 p-4">
+              <p class="text-xs uppercase tracking-wider text-slate-400 mb-3">Before — status display hardcoded in views</p>
+              <pre class="mermaid">
+flowchart LR
+  subgraph data
+    ER[EffectRegistry]
+    SG[StatusGlossary]
+  end
+  subgraph views
+    B["Battle.gd<br/>emoji+colour/status"]
+    SH[Shop hint colours]
+    T[Tooltip]
+  end
+  B -.dup.-> ER
+  SH -.dup.-> ER
+  classDef leak stroke:#dc2626,stroke-width:2px,fill:#fef2f2;
+  class B,SH leak
+              </pre>
+            </div>
+            <div class="rounded-lg border border-slate-200 p-4 deep text-slate-100">
+              <p class="text-xs uppercase tracking-wider text-slate-400 mb-3">After — display metadata joins the registry</p>
+              <pre class="mermaid">
+flowchart LR
+  SP["StatusPresentation<br/>emoji·colour·label"]
+  V1[float labels] --> SP
+  V2[summary] --> SP
+  V3[tooltip / hint] --> SP
+  classDef deep fill:#0f172a,stroke:#6366f1,stroke-width:2px,color:#e2e8f0;
+  class SP deep
+              </pre>
+            </div>
+          </div>
+          <div class="px-6 pb-6 space-y-2">
+            <p><span class="font-semibold text-slate-700">Problem.</span> status → emoji/colour/label is a third per-status table hardcoded in the views, beside two data tables already keyed on status.</p>
+            <p><span class="font-semibold text-slate-700">Solution.</span> Move display metadata into one data module the views read. <span class="text-slate-500 text-sm">(Still open from the 2026-06-04 review.)</span></p>
+          </div>
+        </article>
+
+        <!-- 5 -->
+        <article id="c5" class="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+          <div class="px-6 pt-6 pb-2">
+            <div class="flex items-center gap-3 flex-wrap">
+              <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-100 text-amber-800">Worth exploring</span>
+              <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">in-process</span>
+              <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-500">carried from review #2</span>
+            </div>
+            <h2 class="font-serif text-2xl mt-3">5 · create() delegates the combat shape to reset()</h2>
+            <p class="mono text-sm text-slate-500 mt-2">data/GameState.gd · create() &nbsp;↔&nbsp; data/CombatState.gd · reset()</p>
+          </div>
+          <div class="px-6 py-4">
+            <p class="text-sm text-slate-600"><span class="font-semibold text-slate-700">Problem.</span> <span class="mono">create()</span> hand-rolls the per-combat fields (timers, frozen, ability-timers, statuses, battle_stats) that <span class="mono">CombatState.reset()</span> already owns — two field lists kept in sync by hand, and create()'s copies are overwritten before combat reads them.</p>
+            <p class="text-sm text-slate-600 mt-2"><span class="font-semibold text-slate-700">Solution.</span> <span class="mono">create()</span> builds the run-level fields, then calls <span class="mono">CombatState.reset()</span> for the combat shape — one owner for the per-slot arrays.</p>
+            <p class="text-xs text-slate-500 mt-2">locality: grid-shape change in one place · removes dead initial writes · <span class="text-slate-400">(open from the 2026-06-04 review).</span></p>
+          </div>
+        </article>
+
+        <!-- 6 -->
+        <article id="c6" class="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+          <div class="px-6 pt-6 pb-2">
+            <div class="flex items-center gap-3 flex-wrap">
+              <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-100 text-amber-800">Worth exploring</span>
+              <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">in-process</span>
+            </div>
+            <h2 class="font-serif text-2xl mt-3">6 · One recipe-row renderer for the three surfaces</h2>
+            <p class="mono text-sm text-slate-500 mt-2">Compendium._make_card · Shop._update_forge_partner_hint · TooltipCard._render_made_from</p>
+          </div>
+          <div class="px-6 py-4">
+            <p class="text-sm text-slate-600"><span class="font-semibold text-slate-700">Problem.</span> Three surfaces now render "a recipe as emoji + names." The <em>data</em> lookup is shared (<span class="mono">recipes_for</span> — done this session), but each surface hand-builds its own row layout. The next recipe-display tweak touches three files.</p>
+            <p class="text-sm text-slate-600 mt-2"><span class="font-semibold text-slate-700">Solution.</span> A small <span class="mono">RecipeRow</span> builder (emoji chip + separator + chip) the three surfaces call. Modest — the layouts differ slightly, so only the common core extracts.</p>
+            <p class="text-xs text-slate-500 mt-2">locality: recipe display in one builder · pairs with candidate 1's shared lookups.</p>
+          </div>
+        </article>
+
+        <!-- 7 -->
+        <article id="c7" class="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+          <div class="px-6 pt-6 pb-2">
+            <div class="flex items-center gap-3 flex-wrap">
+              <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-200 text-slate-700">Speculative</span>
+              <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">in-process</span>
+            </div>
+            <h2 class="font-serif text-2xl mt-3">7 · Stop tearing down the whole Shop on every render</h2>
+            <p class="mono text-sm text-slate-500 mt-2">Shop.gd · _rebuild_shop_grid / _rebuild_inventory / _rebuild_battle_grid / _rebuild_forge_bench</p>
+          </div>
+          <div class="px-6 py-4">
+            <p class="text-sm text-slate-600"><span class="font-semibold text-slate-700">Problem.</span> Every <span class="mono">_render()</span> <span class="mono">queue_free()</span>s and recreates all shop/inventory/grid/forge nodes (and re-wires every signal) — a full UI teardown on each interaction. Cheap today (~20 nodes), but it compounds with candidate 1's per-node data scans, and grid growth multiplies it.</p>
+            <p class="text-sm text-slate-600 mt-2"><span class="font-semibold text-slate-700">Solution.</span> Persistent slot nodes updated in place (set element / clear), rebuilt only on count change. Bigger rework; flagged so it's on the radar, not urgent.</p>
+            <p class="text-xs text-slate-500 mt-2">Speculative: real but low-pain now; revisit alongside candidate 1 or grid growth.</p>
+          </div>
+        </article>
+
+      </section>
+
+      <section id="top-recommendation">
+        <div class="rounded-xl deep text-slate-100 p-8 shadow-md">
+          <p class="text-xs uppercase tracking-[0.3em] text-indigo-300 mb-2">Tackle first</p>
+          <h2 class="font-serif text-3xl mb-3">1 · Index ElementData &amp; RecipeData</h2>
+          <p class="text-slate-300 max-w-3xl">Highest leverage (every render path and every element/recipe lookup), lowest risk (the interface is unchanged, so the test suite doesn't move), and the template already lives in the repo — <span class="mono text-indigo-200">AbilityData</span> is the const-dict + O(1) shape the other two never got. It's the long-deferred PERF item, and the reason it was parked — a roster in flux — went away this session when we closed the dead-ends. After it, candidate 2 (drop seam) and 3 (forge panel) are the two structural wins worth doing before more features pile onto Shop.gd.</p>
+          <a href="#c1" class="inline-block mt-5 text-sm font-semibold text-indigo-300 hover:text-indigo-200">→ jump to candidate 1</a>
+        </div>
+        <p class="text-xs text-slate-400 mt-4 text-center">Pick one to grill. No interfaces proposed yet — that happens in the grilling loop.</p>
+      </section>
+
+    </main>
+  </body>
+</html>

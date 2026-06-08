@@ -14,8 +14,15 @@ class_name ForgeSystem
 #   "to_bench"    { forge_slot:int (-1 = auto), from:{ zone:"inventory"|"grid", slot:int } }
 #   "from_bench"  { forge_slot:int }                          bench slot → first free inventory
 #
-# outcome ∈ "ok" | "no_op" | "no_recipe" | "incomplete" | "inv_full".
+# outcome ∈ "ok" | "no_op" | "no_recipe" | "incomplete" | "inv_full"
+#         | "level_too_low" (a forge whose inputs are below FORGE_MIN_INPUT_LEVEL —
+#           you must Merge them up first; ADR 0008)
+#         | "no_gold" (forge gold cost not met — inert while FORGE_GOLD_COST is 0).
 # "forge_bench" additionally returns "level_mismatch": bool.
+#
+# Forge gating (ADR 0008): both inputs must be Level ≥ FORGE_MIN_INPUT_LEVEL and the
+# result lands FORGE_RESULT_LEVEL_PENALTY levels below its inputs (floored at 1).
+# Merge has no such gate — it is how you produce the leveled ingredients.
 
 
 static func attempt(state: Dictionary, op: Dictionary) -> Dictionary:
@@ -63,7 +70,8 @@ static func _merge(state: Dictionary, zone: String, slot_a: int, slot_b: int) ->
 	return { "state": s, "outcome": "ok" }
 
 
-# ── forge a pair of inventory slots via a recipe. Result level = min(levels). ───
+# ── forge a pair of inventory slots via a recipe. Inputs must be Level ≥ min (ADR
+# 0008); result level = inputs − penalty, floored at 1. ─────────────────────────
 static func _forge_pair(state: Dictionary, slot_a: int, slot_b: int) -> Dictionary:
 	var inv: Array = state["inventory"]
 	var ea: Variant = inv[slot_a]
@@ -78,10 +86,15 @@ static func _forge_pair(state: Dictionary, slot_a: int, slot_b: int) -> Dictiona
 	var result_def: Dictionary = ElementData.find(result_id)
 	if result_def.is_empty():
 		return { "state": state, "outcome": "no_recipe" }
+	if _inputs_below_min_level(da, db):
+		return { "state": state, "outcome": "level_too_low" }
+	if (state["gold"] as int) < TuningData.FORGE_GOLD_COST:
+		return { "state": state, "outcome": "no_gold" }
 	var s: Dictionary = state.duplicate(true)
+	s["gold"] = (s["gold"] as int) - TuningData.FORGE_GOLD_COST
 	var instance: Dictionary = result_def.duplicate()
 	instance["element_id"] = result_id
-	instance["level"] = mini(da["level"] as int, db["level"] as int)
+	instance["level"] = _forged_level(da["level"] as int, db["level"] as int)
 	s["inventory"][slot_a] = instance
 	s["inventory"][slot_b] = null
 	_record_discovery(s, result_id)
@@ -111,15 +124,22 @@ static func _forge_bench(state: Dictionary) -> Dictionary:
 	var result_def: Dictionary = ElementData.find(result_id)
 	if result_def.is_empty():
 		return { "state": state, "outcome": "no_recipe", "level_mismatch": false }
+	# Inputs too low: keep both items staged in the bench (unlike no_recipe, which
+	# returns them) so the player can pull them out and Merge up — they CAN forge.
+	if _inputs_below_min_level(da, db):
+		return { "state": state, "outcome": "level_too_low", "level_mismatch": false }
+	if (state["gold"] as int) < TuningData.FORGE_GOLD_COST:
+		return { "state": state, "outcome": "no_gold", "level_mismatch": false }
 	var s: Dictionary = state.duplicate(true)
 	var free_slot: int = _first_empty_inv_slot(s["inventory"])
 	if free_slot < 0:
 		return { "state": state, "outcome": "inv_full", "level_mismatch": false }
+	s["gold"] = (s["gold"] as int) - TuningData.FORGE_GOLD_COST
 	var level_a: int = da["level"] as int
 	var level_b: int = db["level"] as int
 	var instance: Dictionary = result_def.duplicate()
 	instance["element_id"] = result_id
-	instance["level"] = mini(level_a, level_b)
+	instance["level"] = _forged_level(level_a, level_b)
 	s["inventory"][free_slot] = instance
 	s["forge_slots"] = [null, null]
 	_record_discovery(s, result_id)
@@ -174,6 +194,8 @@ static func _preview_pair(state: Dictionary, slot_a: int, slot_b: int) -> String
 	var db: Dictionary = eb as Dictionary
 	var result_id: String = RecipeData.find_result(da["element_id"], db["element_id"])
 	if not result_id.is_empty():
+		if _inputs_below_min_level(da, db):
+			return "⚠ Level %d+ to forge" % TuningData.FORGE_MIN_INPUT_LEVEL
 		var r: Dictionary = ElementData.find(result_id)
 		return "→ %s %s" % [r["emoji"], r["name"]]
 	if da["element_id"] == db["element_id"]:
@@ -194,10 +216,12 @@ static func _preview_bench(state: Dictionary) -> String:
 	var db: Dictionary = eb as Dictionary
 	var result_id: String = RecipeData.find_result(da["element_id"], db["element_id"])
 	if not result_id.is_empty():
+		if _inputs_below_min_level(da, db):
+			return "⚠ Inputs must be Level %d+ — Merge them first" % TuningData.FORGE_MIN_INPUT_LEVEL
 		var r: Dictionary = ElementData.find(result_id)
 		var level_a: int = da["level"] as int
 		var level_b: int = db["level"] as int
-		var result_level: int = mini(level_a, level_b)
+		var result_level: int = _forged_level(level_a, level_b)
 		var warn: String = "  ⚠ level mismatch" if level_a != level_b else ""
 		return "→ %s %s Lv%d%s" % [r["emoji"], r["name"], result_level, warn]
 	return "✗ No recipe"
@@ -215,6 +239,18 @@ static func _record_discovery(s: Dictionary, result_id: String) -> void:
 	var run_disc: Array = s["run_discoveries"]
 	if not run_disc.has(result_id):
 		run_disc.append(result_id)
+
+
+# True when either forge input is below the minimum forge-input Level (ADR 0008).
+static func _inputs_below_min_level(da: Dictionary, db: Dictionary) -> bool:
+	return (da["level"] as int) < TuningData.FORGE_MIN_INPUT_LEVEL \
+		or (db["level"] as int) < TuningData.FORGE_MIN_INPUT_LEVEL
+
+
+# A forged result lands PENALTY levels below its (Level-gated) inputs, floored at 1.
+# With min-input 2 and penalty 1, the floor case (two Level-2s) yields Level 1.
+static func _forged_level(level_a: int, level_b: int) -> int:
+	return maxi(1, mini(level_a, level_b) - TuningData.FORGE_RESULT_LEVEL_PENALTY)
 
 
 static func _first_empty_inv_slot(inventory: Array) -> int:

@@ -15,6 +15,9 @@ var _ability_rich: RichTextLabel
 var _glossary_panel: PanelContainer
 var _glossary_lbl: Label
 
+var _madefrom_box: VBoxContainer
+var _last_madefrom_id: String = ""  # guards against per-frame rebuilds (battle live-refresh)
+
 # Battle context: empty side = shop/static. When set, stats refresh from live state.
 var _battle_side: String = ""
 var _battle_slot: int = -1
@@ -92,6 +95,11 @@ func _build_ui() -> void:
 	_ability_rich.meta_hover_started.connect(_on_keyword_hover)
 	_ability_rich.meta_hover_ended.connect(_on_keyword_unhover)
 	vbox.add_child(_ability_rich)
+
+	# "Made from" — the recipe(s) that produce this element (T2+). Populated in _render.
+	_madefrom_box = VBoxContainer.new()
+	_madefrom_box.add_theme_constant_override("separation", 1)
+	vbox.add_child(_madefrom_box)
 
 	var hint := Label.new()
 	hint.text = "hold Shift to inspect keywords"
@@ -196,6 +204,37 @@ func _render(element: Dictionary, own_statuses: Dictionary) -> void:
 		_ability_rich.text = new_text
 		_ability_rich.modulate = Color(0.82, 0.82, 0.9) if description != "" else Color(0.42, 0.42, 0.48)
 		_last_ability_text = new_text
+
+	_render_made_from(element_id)
+
+
+# "Made from" recipe list (reverse lookup). Static per element, so it only rebuilds
+# when the shown element changes — battle's per-frame live-refresh leaves it alone.
+func _render_made_from(element_id: String) -> void:
+	if element_id == _last_madefrom_id:
+		return
+	_last_madefrom_id = element_id
+	for child: Node in _madefrom_box.get_children():
+		child.queue_free()
+	var made: Array[Dictionary] = RecipeData.recipes_for(element_id)
+	if made.is_empty():
+		return
+	var header := Label.new()
+	header.text = "MADE FROM"
+	UIScale.apply(header, UIScale.TOOLTIP_SECTION)
+	header.modulate = Color(0.55, 0.55, 0.62)
+	_madefrom_box.add_child(header)
+	for pair: Dictionary in made:
+		var a: Dictionary = ElementData.find(pair["a"] as String)
+		var b: Dictionary = ElementData.find(pair["b"] as String)
+		if a.is_empty() or b.is_empty():
+			continue
+		var row := Label.new()
+		row.text = "%s %s + %s %s" % [a["emoji"], a["name"], b["emoji"], b["name"]]
+		row.autowrap_mode = TextServer.AUTOWRAP_WORD
+		UIScale.apply(row, UIScale.TOOLTIP_STAT)
+		row.modulate = Color(0.65, 0.9, 0.65)
+		_madefrom_box.add_child(row)
 
 
 # Turns [keyword] tags into hoverable links for keywords the glossary defines.

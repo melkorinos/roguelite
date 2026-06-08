@@ -6,6 +6,7 @@ var _tooltip: TooltipCard
 var _pause_overlay: PauseOverlay
 var _starting_pick_overlay: StartingPickOverlay
 var _add_elem_panel: PanelContainer = null
+var _forge_hint_box: VBoxContainer = null
 
 
 func _ready() -> void:
@@ -21,6 +22,8 @@ func _ready() -> void:
 	_pause_overlay.quit_to_desktop_requested.connect(func() -> void: get_tree().quit())
 
 	_apply_theme()
+	_build_compendium_button()
+	_build_forge_hint()
 
 	_starting_pick_overlay = StartingPickOverlay.new()
 	add_child(_starting_pick_overlay)
@@ -109,6 +112,159 @@ func _apply_theme() -> void:
 	($VBox/MainArea/LeftPanel/BattleGridHeader as Label).add_theme_color_override("font_color", ThemeData.COLOR_HEADER_GRID)
 	($VBox/MainArea/RightPanel/ForgeHeader as Label).add_theme_color_override("font_color", ThemeData.COLOR_HEADER_FORGE)
 	($VBox/TopBar/RoundLabel as Label).add_theme_color_override("font_color", ThemeData.COLOR_ROUND_LABEL)
+
+
+# ── Compendium (in-run recipe reference) ──────────────────────────────────────
+
+func _build_compendium_button() -> void:
+	var btn := Button.new()
+	btn.text = "📖 Compendium"
+	UIScale.apply(btn, UIScale.FORGE_BUTTON)
+	btn.pressed.connect(_on_compendium_pressed)
+	$VBox/TopBar.add_child(btn)
+
+
+func _on_compendium_pressed() -> void:
+	AudioManager.play("click")
+	GameManager.compendium_return_scene = "res://scenes/screens/Shop.tscn"
+	get_tree().change_scene_to_file("res://scenes/screens/Compendium.tscn")
+
+
+# ── Forge discoverability hint (ADR 0009) ─────────────────────────────────────
+# Appended to the forge panel; populated when exactly one element sits in the bench.
+# Shows "Made from" (the recipe(s) that produce the placed element) + "Forges with"
+# (everything it can forge into). Each element is a hoverable chip that pops the
+# Item Tooltip — the SAME card used everywhere (TooltipCard.show_for), no duplication.
+
+func _build_forge_hint() -> void:
+	_forge_hint_box = VBoxContainer.new()
+	_forge_hint_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_forge_hint_box.add_theme_constant_override("separation", 2)
+	$VBox/MainArea/RightPanel.add_child(_forge_hint_box)
+
+
+func _update_forge_partner_hint(s: Dictionary) -> void:
+	for child: Node in _forge_hint_box.get_children():
+		child.queue_free()
+
+	# Show only when exactly one bench slot is filled (the "what next?" moment).
+	var slots: Array = s["forge_slots"]
+	var single: Variant = null
+	if slots[0] != null and slots[1] == null:
+		single = slots[0]
+	elif slots[1] != null and slots[0] == null:
+		single = slots[1]
+	if single == null:
+		_forge_hint_box.visible = false
+		return
+	_forge_hint_box.visible = true
+
+	var elem: Dictionary = single as Dictionary
+	var elem_id: String = elem["element_id"] as String
+
+	# Honest about ADR 0008: a Level-1 bench item can't forge until merged up.
+	if (elem["level"] as int) < TuningData.FORGE_MIN_INPUT_LEVEL:
+		var note := Label.new()
+		note.text = "⚠ Level %d — Merge to Level %d to forge" % [elem["level"] as int, TuningData.FORGE_MIN_INPUT_LEVEL]
+		note.autowrap_mode = TextServer.AUTOWRAP_WORD
+		note.modulate = ThemeData.COLOR_OPP_SIDE
+		UIScale.apply(note, UIScale.TOOLTIP_SECTION)
+		_forge_hint_box.add_child(note)
+
+	# Made from — the recipe(s) that produce this element (reverse). T2+ only; a T1
+	# bench item has none. Hover any ingredient chip for its card.
+	var made: Array[Dictionary] = RecipeData.recipes_for(elem_id)
+	if not made.is_empty():
+		_add_hint_section_header("Made from:")
+		var neutral := Color(0.7, 0.82, 0.95)
+		for pair: Dictionary in made:
+			var a: Dictionary = ElementData.find(pair["a"] as String)
+			var b: Dictionary = ElementData.find(pair["b"] as String)
+			if a.is_empty() or b.is_empty():
+				continue
+			_add_recipe_row(_make_element_chip(a, neutral), "+", _make_element_chip(b, neutral))
+
+	# Forges with — everything this element can forge INTO (forward). Owned partners
+	# (inventory + grid) first and highlighted. Hidden when empty (a forward dead-end).
+	var owned: Dictionary = _owned_element_ids(s)
+	var rows: Array = []
+	for recipe: Dictionary in RecipeData.recipes_with(elem_id):
+		var partner: Dictionary = ElementData.find(recipe["partner"] as String)
+		var result: Dictionary = ElementData.find(recipe["result"] as String)
+		if partner.is_empty() or result.is_empty():
+			continue
+		rows.append({
+			"partner": partner, "result": result,
+			"owned": owned.has(recipe["partner"] as String),
+			"tier": result["tier"] as int,
+		})
+	rows.sort_custom(func(x: Dictionary, y: Dictionary) -> bool:
+		if (x["owned"] as bool) != (y["owned"] as bool):
+			return x["owned"] as bool
+		return (x["tier"] as int) < (y["tier"] as int))
+
+	if not rows.is_empty():
+		_add_hint_section_header("Forges with:")
+		var owned_color := Color(0.55, 0.95, 0.6)
+		var unowned_color := Color(0.62, 0.64, 0.72)
+		for row: Dictionary in rows:
+			var partner_color: Color = owned_color if (row["owned"] as bool) else unowned_color
+			var partner_chip: Control = _make_element_chip(row["partner"] as Dictionary, partner_color)
+			var result_chip: Control = _make_element_chip(row["result"] as Dictionary, Color(0.85, 0.85, 0.92))
+			_add_recipe_row(partner_chip, "→", result_chip)
+
+
+func _add_hint_section_header(text: String) -> void:
+	var header := Label.new()
+	header.text = text
+	header.modulate = Color(0.6, 0.6, 0.68)
+	UIScale.apply(header, UIScale.TOOLTIP_SECTION)
+	_forge_hint_box.add_child(header)
+
+
+# Assembles one recipe row: [chip] sep [chip], the chips hoverable for their card.
+func _add_recipe_row(left: Control, separator: String, right: Control) -> void:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 5)
+	row.add_child(left)
+	var sep := Label.new()
+	sep.text = separator
+	sep.modulate = Color(0.5, 0.5, 0.56)
+	UIScale.apply(sep, UIScale.TOOLTIP_STAT)
+	row.add_child(sep)
+	row.add_child(right)
+	_forge_hint_box.add_child(row)
+
+
+# A hoverable element chip (emoji + name). Hovering pops the shared Item Tooltip —
+# the same card seen everywhere — so the player can read the element's full info.
+func _make_element_chip(def: Dictionary, color: Color) -> Control:
+	var chip := Label.new()
+	chip.text = "%s %s" % [def["emoji"], def["name"]]
+	chip.modulate = color
+	chip.mouse_filter = Control.MOUSE_FILTER_STOP
+	UIScale.apply(chip, UIScale.TOOLTIP_STAT)
+	chip.mouse_entered.connect(_on_hint_chip_hover.bind(def))
+	chip.mouse_exited.connect(_on_hint_chip_unhover)
+	return chip
+
+
+func _on_hint_chip_hover(def: Dictionary) -> void:
+	_tooltip.show_for(def)
+
+
+func _on_hint_chip_unhover() -> void:
+	_tooltip.hide_card()
+
+
+# Set of element ids the player currently owns (inventory + battle grid), at any level.
+func _owned_element_ids(s: Dictionary) -> Dictionary:
+	var owned: Dictionary = {}
+	for zone: String in ["inventory", "battle_grid"]:
+		for item: Variant in s[zone] as Array:
+			if item != null:
+				owned[(item as Dictionary)["element_id"] as String] = true
+	return owned
 
 
 func _unhandled_key_input(event: InputEvent) -> void:
@@ -277,6 +433,7 @@ func _rebuild_forge_bench(s: Dictionary) -> void:
 
 
 func _update_forge_info(s: Dictionary) -> void:
+	_update_forge_partner_hint(s)
 	var info: Label = $VBox/MainArea/RightPanel/ForgeInfoLabel
 	var result: Label = $VBox/MainArea/RightPanel/ForgeResultLabel
 	var forge_btn: Button = $VBox/MainArea/RightPanel/ForgeButton
@@ -452,6 +609,10 @@ func _execute_forge() -> void:
 			result_lbl.text = msg
 		"no_recipe":
 			result_lbl.text = "✗ No recipe — items returned"
+		"level_too_low":
+			result_lbl.text = "✗ Inputs must be Level %d+ — Merge them first" % TuningData.FORGE_MIN_INPUT_LEVEL
+		"no_gold":
+			result_lbl.text = "✗ Not enough gold to forge"
 		"inv_full":
 			result_lbl.text = "✗ Inventory full — clear a slot first"
 		_:
