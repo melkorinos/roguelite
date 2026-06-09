@@ -92,10 +92,7 @@ static func _forge_pair(state: Dictionary, slot_a: int, slot_b: int) -> Dictiona
 		return { "state": state, "outcome": "no_gold" }
 	var s: Dictionary = state.duplicate(true)
 	s["gold"] = (s["gold"] as int) - TuningData.FORGE_GOLD_COST
-	var instance: Dictionary = result_def.duplicate()
-	instance["element_id"] = result_id
-	instance["level"] = _forged_level(da["level"] as int, db["level"] as int)
-	s["inventory"][slot_a] = instance
+	s["inventory"][slot_a] = ElementData.instantiate(result_id, _forged_level(da["level"] as int, db["level"] as int))
 	s["inventory"][slot_b] = null
 	_record_discovery(s, result_id)
 	return { "state": s, "outcome": "ok" }
@@ -137,10 +134,7 @@ static func _forge_bench(state: Dictionary) -> Dictionary:
 	s["gold"] = (s["gold"] as int) - TuningData.FORGE_GOLD_COST
 	var level_a: int = da["level"] as int
 	var level_b: int = db["level"] as int
-	var instance: Dictionary = result_def.duplicate()
-	instance["element_id"] = result_id
-	instance["level"] = _forged_level(level_a, level_b)
-	s["inventory"][free_slot] = instance
+	s["inventory"][free_slot] = ElementData.instantiate(result_id, _forged_level(level_a, level_b))
 	s["forge_slots"] = [null, null]
 	_record_discovery(s, result_id)
 	return { "state": s, "outcome": "ok", "level_mismatch": level_a != level_b }

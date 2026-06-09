@@ -209,20 +209,24 @@ func test_armor_value_is_capped() -> void:
 
 # ── effective_cooldown_deciseconds ────────────────────────────────────────────
 
-func test_effective_cooldown_no_statuses_returns_base() -> void:
-	assert_eq(StatusSystem.effective_cooldown_deciseconds(25, _s()), 25)
+func test_effective_cooldown_no_statuses_applies_global_multiplier() -> void:
+	# base × the global firing-rate dial, no statuses
+	var expected: int = maxi(TuningData.EFFECTIVE_CD_FLOOR_DECISECONDS, int(round(25.0 * TuningData.COMBAT_COOLDOWN_MULTIPLIER)))
+	assert_eq(StatusSystem.effective_cooldown_deciseconds(25, _s()), expected)
 
 
 func test_effective_cooldown_floors_at_10_deciseconds() -> void:
-	assert_eq(StatusSystem.effective_cooldown_deciseconds(5, _s()), 10)
+	assert_eq(StatusSystem.effective_cooldown_deciseconds(5, _s()), TuningData.EFFECTIVE_CD_FLOOR_DECISECONDS)
 
 
 func test_effective_cooldown_shock_slows_fire() -> void:
-	# shock n=5 → slow_pct=25% → 25 * 1.25 = 31.25 → round 31
+	# shock n=5 → slow_pct 25%, applied on top of the globally-scaled base
 	var s: Dictionary = _s()
 	for _i: int in 5:
 		s = _apply(s, "shock")
-	assert_eq(StatusSystem.effective_cooldown_deciseconds(25, s), 31)
+	var scaled: float = 25.0 * TuningData.COMBAT_COOLDOWN_MULTIPLIER
+	var expected: int = maxi(TuningData.EFFECTIVE_CD_FLOOR_DECISECONDS, int(round(scaled * (1.0 + StatusSystem.slow_pct(5) / 100.0))))
+	assert_eq(StatusSystem.effective_cooldown_deciseconds(25, s), expected)
 
 
 # ── tick ─────────────────────────────────────────────────────────────────────
@@ -386,10 +390,12 @@ func test_poison_tick_damage_bonus_adds_to_each_tick() -> void:
 # ── shock effective_stack_bonus (Plasma pattern) ──────────────────────────────
 
 func test_shock_effective_stack_bonus_increases_slow() -> void:
-	# bonus 5 with no real shock → slow computed as if n=5 → 25% → 25 * 1.25 = 31
+	# bonus 5 with no real shock → slow computed as if n=5 (25%), on the scaled base
 	var s: Dictionary = _s()
 	(s["shock"] as Dictionary)["effective_stack_bonus"] = 5
-	assert_eq(StatusSystem.effective_cooldown_deciseconds(25, s), 31)
+	var scaled: float = 25.0 * TuningData.COMBAT_COOLDOWN_MULTIPLIER
+	var expected: int = maxi(TuningData.EFFECTIVE_CD_FLOOR_DECISECONDS, int(round(scaled * (1.0 + StatusSystem.slow_pct(5) / 100.0))))
+	assert_eq(StatusSystem.effective_cooldown_deciseconds(25, s), expected)
 
 
 # ── signed cooldown_modifier_deciseconds (Mud / Lodestone patterns) ───────────
@@ -397,19 +403,22 @@ func test_shock_effective_stack_bonus_increases_slow() -> void:
 func test_cooldown_modifier_penalty_increases_effective_cooldown() -> void:
 	var s: Dictionary = _s()
 	s["cooldown_modifier_deciseconds"] = 8
-	assert_eq(StatusSystem.effective_cooldown_deciseconds(25, s), 33)
+	# +8 absolute, on top of the globally-scaled base
+	var expected: int = maxi(TuningData.EFFECTIVE_CD_FLOOR_DECISECONDS, int(round(25.0 * TuningData.COMBAT_COOLDOWN_MULTIPLIER + 8.0)))
+	assert_eq(StatusSystem.effective_cooldown_deciseconds(25, s), expected)
 
 
 func test_cooldown_modifier_reduction_decreases_effective_cooldown() -> void:
 	var s: Dictionary = _s()
 	s["cooldown_modifier_deciseconds"] = -5
-	assert_eq(StatusSystem.effective_cooldown_deciseconds(25, s), 20)
+	var expected: int = maxi(TuningData.EFFECTIVE_CD_FLOOR_DECISECONDS, int(round(25.0 * TuningData.COMBAT_COOLDOWN_MULTIPLIER - 5.0)))
+	assert_eq(StatusSystem.effective_cooldown_deciseconds(25, s), expected)
 
 
 func test_cooldown_modifier_reduction_respects_floor() -> void:
 	var s: Dictionary = _s()
 	s["cooldown_modifier_deciseconds"] = -50
-	assert_eq(StatusSystem.effective_cooldown_deciseconds(25, s), 10)
+	assert_eq(StatusSystem.effective_cooldown_deciseconds(25, s), TuningData.EFFECTIVE_CD_FLOOR_DECISECONDS)
 
 
 # ── passive modifiers (steel / mountain / blackice patterns) ──────────────────

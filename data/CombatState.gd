@@ -57,6 +57,7 @@ static func empty_battle_stats(count: int = SLOT_COUNT) -> Dictionary:
 # with PhaseSystem.to_battle().
 static func reset(state: Dictionary, slot_count: int = SLOT_COUNT) -> Dictionary:
 	state["battle_timer"] = 0.0
+	state["sandstorm_ticks"] = 0
 	state["element_timers"] = zero_floats(slot_count)
 	state["opponent_timers"] = zero_floats(slot_count)
 	state["player_frozen_seconds"] = zero_floats(slot_count)

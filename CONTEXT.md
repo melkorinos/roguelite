@@ -131,6 +131,10 @@ _Avoid_: stun, stop, disable
 The integer time unit for all combat design values — one tenth of a second. A 2.5-second cooldown is stored as 25 deciseconds. No combat design value is a decimal. Effective cooldown is floored at 10 deciseconds (one fire per second).
 _Avoid_: tick (reserved for the 1-second Status tick), ms, frame
 
+**Sandstorm**:
+A sudden-death mechanic: once a combat reaches `BATTLE_TIME_LIMIT` (the storm *start*, 30 s), escalating true damage hits **both** sides each storm-second until one is eliminated — so every fight resolves by KO rather than a flat timeout loss. Impartial (symmetric), bypasses all mitigation, emits no Combat Events, and is fully deterministic. A hard cap (`SANDSTORM_HARD_CAP_SECONDS`) is only a determinism backstop. See `docs/adr/0012`.
+_Avoid_: overtime, sudden death, fatigue, timeout
+
 **Ability Chain** *(planned, not yet implemented)*:
 The future combat model where Ability activations resolve in a meaningful sequence, with interactions between pieces producing emergent outcomes. Currently deferred — the live model uses individual element cooldown timers.
 _Avoid_: combat sequence, turn order, resolution
@@ -174,6 +178,18 @@ _Avoid_: tribe, type — and **not** Faction (the separate, future threshold-syn
 **Starting Pick**:
 A once-per-Run choice at the start of round 1: three Tier-1 elements are offered and the chosen one is granted to the player with doubled base damage.
 _Avoid_: draft (Draft is the separate free Item/Trinket selection)
+
+**Event**:
+A non-combat choice node that interrupts the Run every `EVENT_EVERY_N_ROUNDS` rounds (before the shop): the player is offered three distinct **Event Rewards** and must take exactly one. Distinct from a **PvE Round** — an Event is never a fight. Presented as a blocking overlay in the Shop, mirroring the Starting Pick. The offer is seeded per round so it reproduces under Replay. See `docs/adr/0011`.
+_Avoid_: PvE Round (that is the future shared-combat concept), encounter, node, choice
+
+**Event Reward**:
+One of the three options an Event offers. Either **one-shot** (Gold, or a granted Element placed straight into inventory — capped at the player's highest unlocked Tier and drawn from their Families) or a persistent **Run Modifier**. A granted Element never writes `run_discoveries`, so it cannot unlock a Shop tier by itself — Forging stays the only thing that does.
+_Avoid_: prize, loot, boon, drop
+
+**Run Modifier**:
+A persistent, accumulating buff granted by an Event Reward, stored as a discrete field on the Run state and read each round by another system: `hp_bonus` (extra Player HP, read in `PhaseSystem`) and `reroll_discount` (subtracts from the Shop reroll cost, floored at 0). Stacks across the Run as more Events grant it.
+_Avoid_: relic, perk, upgrade, buff (too generic)
 
 **Draft**:
 The free selection of Items and Trinkets offered each round. Separate from the gold shop.
@@ -229,6 +245,8 @@ _Avoid_: options menu, escape menu
 A special PvE encounter that functions as a damage or defence check. Beating a Boss unlocks a milestone (new Faction, new Synergy, or a game-changing modifier). Not confirmed for launch; noted as a strong design option.
 
 ### Developer tooling
+
+> **Unbuilt (2026-06-09).** The Efficiency Score / DPS Score / Action Score / Balance Sandbox below describe a planned balance tool that was **never implemented** (ADR 0002, superseded). Only the inert `FeatureFlags.efficiency_scoring` flag exists. Balance is tuned empirically via `BattleSystem.simulate_battle()`. Terms kept for if/when an analytical scorer is built.
 
 **Efficiency Score**:
 A two-axis developer-only score: DPS Score and Action Score. Used in the Balance Sandbox and Compendium dev column to identify balance outliers. Never shown to players. Gated by `FeatureFlags.efficiency_scoring`.

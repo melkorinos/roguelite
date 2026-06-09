@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Architecture review — roguelite (2026-06-09)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="module">
+      import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+      mermaid.initialize({ startOnLoad: true, theme: "neutral", securityLevel: "loose" });
+    </script>
+    <style>
+      .seam { stroke-dasharray: 4 4; }
+      .leak { stroke: #dc2626; }
+      .deep { background: linear-gradient(135deg, #0f172a, #1e293b); }
+      .chip { font-size: 0.7rem; letter-spacing: .08em; }
+    </style>
+  </head>
+  <body class="bg-stone-50 text-slate-900 font-sans">
+    <main class="max-w-5xl mx-auto px-6 py-12 space-y-12">
+      <header class="space-y-4">
+        <h1 class="text-4xl font-serif tracking-tight">Architecture review</h1>
+        <p class="text-slate-500">roguelite · 2026-06-09 · scope: the every-N <strong>Event</strong> + reward framework (ADR 0011), <strong>Sandstorm</strong> (ADR 0012), the round-scaled <strong>Ghost</strong> generator, and the G4 balance dial — and how they sit in the combat/round loop.</p>
+        <div class="flex flex-wrap gap-3 text-xs text-slate-600 border-t border-slate-200 pt-4">
+          <span class="inline-flex items-center gap-1"><span class="inline-block w-4 h-3 border border-slate-400"></span> module</span>
+          <span class="inline-flex items-center gap-1"><svg width="26" height="8"><line x1="0" y1="4" x2="26" y2="4" stroke="#475569" class="seam"/></svg> seam</span>
+          <span class="inline-flex items-center gap-1"><svg width="26" height="8"><line x1="0" y1="4" x2="26" y2="4" stroke="#dc2626" stroke-width="2"/></svg> leakage / duplication</span>
+          <span class="inline-flex items-center gap-1"><span class="inline-block w-4 h-3 deep"></span> deep module</span>
+        </div>
+      </header>
+
+      <section id="candidates" class="space-y-12">
+
+        <!-- ============ CANDIDATE A ============ -->
+        <article class="space-y-5">
+          <div class="flex items-center justify-between flex-wrap gap-2">
+            <h2 class="text-2xl font-serif">A · Element instance factory</h2>
+            <div class="flex gap-2">
+              <span class="chip uppercase bg-emerald-100 text-emerald-800 rounded px-2 py-1 font-semibold">Strong</span>
+              <span class="chip uppercase bg-slate-100 text-slate-600 rounded px-2 py-1">in-process</span>
+            </div>
+          </div>
+          <p class="font-mono text-sm text-slate-600">data/ElementData.gd · systems/{Event,Start,Forge,Shop,Opponent}System.gd · data/GhostFixtures.gd · scenes/screens/Shop.gd</p>
+
+          <div class="grid md:grid-cols-2 gap-4">
+            <div class="rounded-lg border border-slate-200 bg-white p-4">
+              <p class="text-xs uppercase tracking-wider text-slate-400 mb-2">before — 7 copies of the same instantiation</p>
+              <pre class="mermaid">
+flowchart TD
+  D["ElementData.find(id)\n(shared const dict)"]
+  S1["StartSystem\nduplicate + element_id + level + mult"]:::leak
+  S2["EventSystem._grant_element\nduplicate + element_id + level"]:::leak
+  S3["OpponentProvider\nduplicate + element_id + level"]:::leak
+  S4["ShopSystem\nduplicate + element_id"]:::leak
+  S5["ForgeSystem ×2\nduplicate + element_id"]:::leak
+  S6["GhostFixtures\nelement_id = id"]:::leak
+  S7["Shop.gd\nduplicate + element_id"]:::leak
+  D --> S1 & S2 & S3 & S4 & S5 & S6 & S7
+  classDef leak stroke:#dc2626,stroke-width:2px;
+              </pre>
+            </div>
+            <div class="rounded-lg border border-slate-200 bg-white p-4">
+              <p class="text-xs uppercase tracking-wider text-slate-400 mb-2">after — one deep factory</p>
+              <pre class="mermaid">
+flowchart TD
+  F["ElementData.instantiate(id, level)\n→ fresh instance dict"]:::deep
+  C1["StartSystem (+ damage_multiplier)"]
+  C2["EventSystem"]
+  C3["OpponentProvider"]
+  C4["ShopSystem"]
+  C5["ForgeSystem (override id)"]
+  C1 & C2 & C3 & C4 & C5 --> F
+  classDef deep fill:#0f172a,color:#e2e8f0,stroke:#0f172a;
+              </pre>
+            </div>
+          </div>
+
+          <div class="grid md:grid-cols-2 gap-x-8 gap-y-2 text-sm">
+            <p><span class="font-semibold">Problem.</span> "Build a live Element from its definition" (duplicate the shared const dict, set <code>element_id</code> + <code>level</code>) is reimplemented in 7 places — the recent Event + Ghost work added two more.</p>
+            <p><span class="font-semibold">Solution.</span> One <code>ElementData.instantiate(id, level)</code> that returns a fresh, owned instance dict. Callers set their extras (Starting Pick's <code>damage_multiplier</code>, a forge's result id) after.</p>
+          </div>
+          <ul class="grid sm:grid-cols-3 gap-2 text-sm">
+            <li class="bg-white border border-slate-200 rounded p-3">locality: instance shape defined once</li>
+            <li class="bg-white border border-slate-200 rounded p-3">leverage: one interface, 7 call sites</li>
+            <li class="bg-white border border-slate-200 rounded p-3">guards the zero-copy <code>find()</code> contract (always duplicates)</li>
+          </ul>
+        </article>
+
+        <!-- ============ CANDIDATE B ============ -->
+        <article class="space-y-5">
+          <div class="flex items-center justify-between flex-wrap gap-2">
+            <h2 class="text-2xl font-serif">B · One notion of board power (route HP through <code>effective_damage</code>)</h2>
+            <div class="flex gap-2">
+              <span class="chip uppercase bg-amber-100 text-amber-800 rounded px-2 py-1 font-semibold">Worth exploring</span>
+              <span class="chip uppercase bg-slate-100 text-slate-600 rounded px-2 py-1">in-process</span>
+            </div>
+          </div>
+          <p class="font-mono text-sm text-slate-600">systems/BattleSystem.gd:29 (compute_opponent_hp) · data/ElementData.gd:177 (effective_damage) · systems/AchievementSystem.gd:74</p>
+
+          <div class="grid md:grid-cols-2 gap-4">
+            <div class="rounded-lg border border-slate-200 bg-white p-4">
+              <p class="text-xs uppercase tracking-wider text-slate-400 mb-2">before — two seams disagree on "how strong is this element"</p>
+              <pre class="mermaid">
+flowchart LR
+  E["Element instance\n(damage, level, tier)"]
+  ED["ElementData.effective_damage\n= damage×level + tier\n(LEVEL-AWARE)"]
+  CH["compute_opponent_hp\n= Σ raw damage × 5\n(LEVEL-IGNORANT)"]:::leak
+  E --> ED
+  E --> CH
+  ED -. "actual hits scale with level" .-> OUT1["opponent offence ↑"]
+  CH -. "HP ignores level" .-> OUT2["opponent HP plateaus ~230"]:::leak
+  classDef leak stroke:#dc2626,stroke-width:2px;
+              </pre>
+            </div>
+            <div class="rounded-lg border border-slate-200 bg-white p-4">
+              <p class="text-xs uppercase tracking-wider text-slate-400 mb-2">after — HP keys off the same canonical value</p>
+              <pre class="mermaid">
+flowchart LR
+  E["Element instance"]
+  ED["ElementData.effective_damage\n(single source of element worth)"]:::deep
+  CH["compute_opponent_hp\n= Σ effective_damage × k"]
+  E --> ED --> CH
+  CH --> OUT["opponent HP rises with tier AND level\n→ late curve can sit at ~50%"]
+  classDef deep fill:#0f172a,color:#e2e8f0,stroke:#0f172a;
+              </pre>
+            </div>
+          </div>
+
+          <div class="grid md:grid-cols-2 gap-x-8 gap-y-2 text-sm">
+            <p><span class="font-semibold">Problem.</span> The new round-scaled Ghosts gain <strong>Level</strong>, so their offence scales — but <code>compute_opponent_hp</code> sums raw <code>damage</code> and ignores level, so opponent HP plateaus at ~230 from round 7. Two definitions of "element worth" that drift.</p>
+            <p><span class="font-semibold">Solution.</span> Sum <code>effective_damage(elem)</code> instead of raw <code>damage</code> in <code>compute_opponent_hp</code> (and the same in <code>AchievementSystem</code>). "What an element is worth" lives in one place.</p>
+          </div>
+          <ul class="grid sm:grid-cols-3 gap-2 text-sm">
+            <li class="bg-white border border-slate-200 rounded p-3">locality: element worth defined once</li>
+            <li class="bg-white border border-slate-200 rounded p-3">fixes the opponent-HP plateau (G4)</li>
+            <li class="bg-white border border-slate-200 rounded p-3">leverage: tier + level both feed HP</li>
+          </ul>
+          <div class="bg-amber-50 border border-amber-200 rounded p-3 text-sm text-amber-900">
+            ⚠ Shifts opponent HP values — it's a balance change as much as a deepening. Do it <em>inside</em> the paused G4 pass, then re-sweep, not as a silent refactor.
+          </div>
+        </article>
+
+        <!-- ============ CANDIDATE C ============ -->
+        <article class="space-y-5">
+          <div class="flex items-center justify-between flex-wrap gap-2">
+            <h2 class="text-2xl font-serif">C · A "grant Element to inventory" operation</h2>
+            <div class="flex gap-2">
+              <span class="chip uppercase bg-amber-100 text-amber-800 rounded px-2 py-1 font-semibold">Worth exploring</span>
+              <span class="chip uppercase bg-slate-100 text-slate-600 rounded px-2 py-1">in-process</span>
+            </div>
+          </div>
+          <p class="font-mono text-sm text-slate-600">systems/StartSystem.gd:38 (apply_starting_pick) · systems/EventSystem.gd:_grant_element · systems/ShopSystem.gd (_first_empty_slot)</p>
+
+          <div class="grid md:grid-cols-2 gap-4">
+            <div class="rounded-lg border border-slate-200 bg-white p-4 relative">
+              <p class="text-xs uppercase tracking-wider text-slate-400 mb-3">before — two near-identical grant routines</p>
+              <div class="space-y-2 text-xs">
+                <div class="border border-red-300 rounded p-2 bg-red-50">
+                  <div class="font-semibold">StartSystem.apply_starting_pick</div>
+                  find empty inv slot → instantiate → place
+                </div>
+                <div class="border border-red-300 rounded p-2 bg-red-50">
+                  <div class="font-semibold">EventSystem._grant_element</div>
+                  find empty inv slot → instantiate → place · <span class="italic">else gold fallback</span>
+                </div>
+                <div class="border border-slate-300 rounded p-2 bg-slate-50 text-slate-500">
+                  ShopSystem already owns <code>_first_empty_slot</code> + intake
+                </div>
+              </div>
+            </div>
+            <div class="rounded-lg border border-slate-200 bg-white p-4">
+              <p class="text-xs uppercase tracking-wider text-slate-400 mb-3">after — one grant seam</p>
+              <div class="space-y-3 text-xs">
+                <div class="deep text-slate-100 rounded p-3">
+                  <div class="font-semibold">grant_element(state, id, level, on_full)</div>
+                  instantiate (via A) → first empty slot → place · fallback policy
+                </div>
+                <div class="flex gap-2">
+                  <div class="border border-slate-300 rounded p-2 flex-1 text-center">StartSystem</div>
+                  <div class="border border-slate-300 rounded p-2 flex-1 text-center">EventSystem</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid md:grid-cols-2 gap-x-8 gap-y-2 text-sm">
+            <p><span class="font-semibold">Problem.</span> "Drop a granted Element into the first empty inventory slot" is implemented twice (Starting Pick, Event reward), each with its own full-inventory handling.</p>
+            <p><span class="font-semibold">Solution.</span> One <code>grant_element</code> seam (built on factory A), with the full-inventory policy as a parameter (gold-equivalent for Events, no-op for Starting Pick).</p>
+          </div>
+          <ul class="grid sm:grid-cols-3 gap-2 text-sm">
+            <li class="bg-white border border-slate-200 rounded p-3">locality: grant rules in one module</li>
+            <li class="bg-white border border-slate-200 rounded p-3">composes with factory A</li>
+            <li class="bg-white border border-slate-200 rounded p-3">interface is the test surface</li>
+          </ul>
+        </article>
+
+        <!-- ============ CANDIDATE D ============ -->
+        <article class="space-y-5">
+          <div class="flex items-center justify-between flex-wrap gap-2">
+            <h2 class="text-2xl font-serif">D · Run Modifier registry</h2>
+            <div class="flex gap-2">
+              <span class="chip uppercase bg-slate-200 text-slate-700 rounded px-2 py-1 font-semibold">Speculative</span>
+              <span class="chip uppercase bg-slate-100 text-slate-600 rounded px-2 py-1">in-process</span>
+            </div>
+          </div>
+          <p class="font-mono text-sm text-slate-600">data/GameState.gd · systems/EventSystem.gd · systems/PhaseSystem.gd (_scaled_player_hp) · systems/ShopSystem.gd (reroll_cost)</p>
+
+          <div class="rounded-lg border border-slate-200 bg-white p-4">
+            <p class="text-xs uppercase tracking-wider text-slate-400 mb-2">knowledge of "what Run Modifiers exist" is spread across 4 modules</p>
+            <pre class="mermaid">
+flowchart TD
+  R["EventSystem.apply_reward"] -->|writes| HB["hp_bonus field"]
+  R -->|writes| RD["reroll_discount field"]
+  HB -->|read in| PS["PhaseSystem._scaled_player_hp"]:::leak
+  RD -->|read in| SS["ShopSystem.reroll_cost"]:::leak
+  GS["GameState.create\n(declare + init each)"] -.-> HB & RD
+  AR["advance_round\n(reset some, not others)"] -.-> RD
+  classDef leak stroke:#dc2626,stroke-width:2px;
+            </pre>
+          </div>
+
+          <div class="grid md:grid-cols-2 gap-x-8 gap-y-2 text-sm">
+            <p><span class="font-semibold">Problem.</span> Each new persistent reward = a new field + a new read site + a remember-to-(not)-reset decision, with no module that knows the modifier set. Shallow spread that grows with every reward.</p>
+            <p><span class="font-semibold">Solution.</span> A small registry: each Run Modifier declares its key, default, and reset cadence in one place; consumers ask the registry. Deepens as the reward pool grows.</p>
+          </div>
+          <div class="bg-amber-50 border border-amber-200 rounded p-3 text-sm text-amber-900">
+            ⚠ <span class="font-semibold">Contradicts ADR 0011</span>, which deliberately chose discrete fields over a generic modifier list ("over-engineering for two modifiers"). Only reopen once the modifier count is clearly past a handful — at <em>two</em> the discrete fields win. Listed for honesty, not action.
+          </div>
+        </article>
+
+      </section>
+
+      <section id="top-recommendation" class="space-y-3">
+        <h2 class="text-xs uppercase tracking-widest text-slate-400">Top recommendation</h2>
+        <div class="rounded-xl border-2 border-emerald-300 bg-white p-6 space-y-2">
+          <a href="#" class="text-2xl font-serif hover:underline">A · Element instance factory</a>
+          <p class="text-slate-600 text-sm max-w-2xl">Highest leverage, zero behaviour change, and squarely on the recent work — the Event and Ghost features each added a fresh copy of the instantiation pattern. One <code>ElementData.instantiate</code> concentrates the instance shape, protects the zero-copy <code>find()</code> contract, and gives A→C a base to build on. Then fold <strong>B</strong> into the G4 balance pass (it fixes the HP plateau but moves numbers, so it belongs with a re-sweep, not a silent refactor).</p>
+        </div>
+      </section>
+
+      <footer class="text-xs text-slate-400 pt-8 border-t border-slate-200">
+        Architecture vocabulary per LANGUAGE.md · domain vocabulary per CONTEXT.md · ADRs not re-litigated except where flagged.
+      </footer>
+    </main>
+  </body>
+</html>

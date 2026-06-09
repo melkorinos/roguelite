@@ -18,6 +18,18 @@ func _state_with_player_element(element_id: String) -> Dictionary:
 	return state
 
 
+# A combat state with EMPTY boards on both sides, so no element fires or statuses act
+# — only the Sandstorm (ADR 0012) can change HP. Lets storm behaviour be asserted in
+# isolation.
+func _storm_state(player_hp: int, opp_hp: int, timer: float) -> Dictionary:
+	var s := _make_state()
+	s["phase"] = "battle"
+	s["player_hp"] = player_hp
+	s["opponent_hp"] = opp_hp
+	s["battle_timer"] = timer
+	return s
+
+
 # ── compute_opponent_hp ───────────────────────────────────────────────────────
 
 func test_compute_opponent_hp_empty_grid_is_base() -> void:
@@ -56,8 +68,11 @@ func test_tick_battle_player_damages_opponent_at_cooldown() -> void:
 
 func test_tick_battle_does_not_fire_before_cooldown() -> void:
 	var state := PhaseSystem.to_battle(_state_with_player_element("fire"), _fixture())
-	var cooldown: float = float(ElementData.find("fire")["cooldown_deciseconds"] as int) / 10.0
-	var s := BattleSystem.tick_battle(state, cooldown - 0.1)
+	# Tick just under the EFFECTIVE cooldown (base × the global firing-rate dial), so the
+	# element has not charged yet regardless of COMBAT_COOLDOWN_MULTIPLIER.
+	var base_ds: int = ElementData.find("fire")["cooldown_deciseconds"] as int
+	var effective: float = float(StatusSystem.effective_cooldown_deciseconds(base_ds, StatusSystem.empty_statuses())) / 10.0
+	var s := BattleSystem.tick_battle(state, effective - 0.1)
 	assert_eq(s["opponent_hp"] as int, state["opponent_hp"] as int)
 
 
@@ -84,10 +99,60 @@ func test_tick_battle_sets_result_when_player_hp_zero() -> void:
 	assert_eq(s["phase"], "result")
 
 
-func test_tick_battle_sets_result_at_time_limit() -> void:
-	var state := PhaseSystem.to_battle(_make_state(), _fixture())
-	var s := BattleSystem.tick_battle(state, TuningData.BATTLE_TIME_LIMIT + 0.1)
+# ── Sandstorm (ADR 0012) ──────────────────────────────────────────────────────
+# The 30 s mark is the storm START, not a hard end: crossing it with both sides
+# healthy keeps the fight going (the storm now whittles them down to a KO).
+func test_tick_battle_does_not_end_at_time_limit_alone() -> void:
+	var s := _storm_state(200, 200, TuningData.BATTLE_TIME_LIMIT - 0.05)
+	s = BattleSystem.tick_battle(s, 0.1)  # crosses the limit; storm deals BASE to each
+	assert_eq(s["phase"], "battle")
+
+
+func test_no_sandstorm_damage_before_start() -> void:
+	var s := _storm_state(200, 200, 10.0)
+	s = BattleSystem.tick_battle(s, 1.0)  # timer 11.0, well before the storm
+	assert_eq(s["player_hp"] as int, 200)
+	assert_eq(s["opponent_hp"] as int, 200)
+
+
+func test_sandstorm_first_tick_hits_both_sides_for_base() -> void:
+	var s := _storm_state(200, 200, TuningData.BATTLE_TIME_LIMIT - 0.05)
+	s = BattleSystem.tick_battle(s, 0.1)  # crosses into the storm: storm-second 0
+	assert_eq(s["player_hp"] as int, 200 - TuningData.SANDSTORM_BASE_DAMAGE)
+	assert_eq(s["opponent_hp"] as int, 200 - TuningData.SANDSTORM_BASE_DAMAGE)
+	assert_eq(s["sandstorm_ticks"] as int, 1)
+
+
+func test_sandstorm_escalates_each_second() -> void:
+	var s := _storm_state(200, 200, TuningData.BATTLE_TIME_LIMIT - 0.05)
+	s = BattleSystem.tick_battle(s, 0.1)  # storm-second 0 → BASE
+	s = BattleSystem.tick_battle(s, 1.0)  # storm-second 1 → BASE + RAMP
+	var expected_loss: int = TuningData.SANDSTORM_BASE_DAMAGE \
+		+ (TuningData.SANDSTORM_BASE_DAMAGE + TuningData.SANDSTORM_RAMP_PER_SECOND)
+	assert_eq(s["player_hp"] as int, 200 - expected_loss)
+	assert_eq(s["opponent_hp"] as int, 200 - expected_loss)
+	assert_eq(s["sandstorm_ticks"] as int, 2)
+
+
+# The storm guarantees a KO, so the fight always resolves by elimination (equal boards
+# → mutual KO same tick → draw), not a flat timeout — and well before the hard cap.
+func test_sandstorm_resolves_fight_by_elimination() -> void:
+	var s := BattleSystem.simulate_battle(_storm_state(200, 200, 0.0))
 	assert_eq(s["phase"], "result")
+	assert_lte(s["player_hp"] as int, 0)
+	assert_lte(s["opponent_hp"] as int, 0)
+	assert_gt(s["battle_timer"] as float, TuningData.BATTLE_TIME_LIMIT)
+	assert_lte(s["battle_timer"] as float, TuningData.SANDSTORM_HARD_CAP_SECONDS + 1.0)
+
+
+# The hard cap is a pure determinism backstop: even HP the storm can't chew through by
+# the cap force-ends the fight (both still alive → opponent survives → a loss).
+func test_tick_battle_ends_at_hard_cap_even_if_both_alive() -> void:
+	var s := _storm_state(100000, 100000, 0.0)
+	s = BattleSystem.tick_battle(s, TuningData.SANDSTORM_HARD_CAP_SECONDS + 0.1)
+	assert_eq(s["phase"], "result")
+	assert_gt(s["player_hp"] as int, 0)
+	assert_gt(s["opponent_hp"] as int, 0)
 
 
 func test_tick_battle_returns_state_unchanged_when_already_result() -> void:
@@ -192,6 +257,7 @@ func test_on_hit_passive_applies_status_at_full_chance() -> void:
 	var ability: Dictionary = { "trigger": "passive_on_hit",
 		"effects": [{ "status": "weaken", "chance": 100, "target": "opponent" }] }
 	var st := _battle_with_player_ability("fire", ability)
+	_silence_opponent(st)  # isolate the player's on-hit apply (no opponent cleanse interference)
 	var cooldown: float = float(ElementData.find("fire")["cooldown_deciseconds"] as int) / 10.0
 	var s := BattleSystem.tick_battle(st, cooldown)
 	assert_gt(((s["opponent_statuses"] as Dictionary)["weaken"] as Dictionary)["stacks"] as int, 0)
@@ -238,6 +304,7 @@ func test_on_activate_ability_applies_through_tick() -> void:
 	var ability: Dictionary = { "trigger": "on_activate",
 		"effects": [{ "kind": "apply_status", "status": "poison", "amount": 1, "target": "opponent" }] }
 	var st := _battle_with_player_ability("fire", ability)
+	_silence_opponent(st)  # isolate the player's on_activate apply (no opponent cleanse interference)
 	var cooldown: float = float(ElementData.find("fire")["cooldown_deciseconds"] as int) / 10.0
 	var s := BattleSystem.tick_battle(st, cooldown)
 	assert_eq(((s["opponent_statuses"] as Dictionary)["poison"] as Dictionary)["stacks"] as int, 1)

@@ -24,6 +24,12 @@ static func create(seed_recipes: Array[String] = []) -> Dictionary:
 		"battle_events": [],
 		"shop_items": CombatState.empty_slots(TuningData.SHOP_SLOT_COUNT),
 		"reroll_count": 0,
+		# Persistent Run Modifier (ADR 0011): subtracted from the reroll cost, floored at
+		# 0. Granted by Events; accumulates across the run (NOT reset per round).
+		"reroll_discount": 0,
+		# The round whose Event has been consumed (ADR 0011) — guards re-showing the
+		# Event overlay when the Shop is re-entered. -1 = none taken yet.
+		"last_event_round": -1,
 		"starting_pick_done": false,
 		# Per-run record of element ids the player has FORGED this run. Drives the
 		# discovery-gated shop pool (ShopSystem). Distinct from discovered_recipes,
@@ -31,6 +37,8 @@ static func create(seed_recipes: Array[String] = []) -> Dictionary:
 		"run_discoveries": [],
 		"discovered_recipes": seed_recipes.duplicate(),
 		"battle_timer": 0.0,
+		# Sandstorm storm-seconds already applied this combat (ADR 0012). Reset per combat.
+		"sandstorm_ticks": 0,
 		"forge_slots": [null, null],
 		"battle_stats": CombatState.empty_battle_stats(),
 		"lives": TuningData.STARTING_LIFE,

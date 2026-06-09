@@ -5,6 +5,7 @@ var _battle_slot_nodes: Array = []
 var _tooltip: TooltipCard
 var _pause_overlay: PauseOverlay
 var _starting_pick_overlay: StartingPickOverlay
+var _event_overlay: EventOverlay
 var _add_elem_panel: PanelContainer = null
 var _forge_hint_box: VBoxContainer = null
 
@@ -29,21 +30,35 @@ func _ready() -> void:
 	add_child(_starting_pick_overlay)
 	_starting_pick_overlay.picked.connect(_on_starting_pick)
 
+	_event_overlay = EventOverlay.new()
+	add_child(_event_overlay)
+	_event_overlay.chosen.connect(_on_event_chosen)
+
 	var s: Dictionary = GameManager.state
 	var all_null: bool = (s["shop_items"] as Array).all(func(x: Variant) -> bool: return x == null)
 	if all_null:
 		GameManager.state = ShopSystem.reroll_shop(s, true)
 	_render()
 
-	# Run-start choice: offer three T1s, the chosen one buffed ×2 (once per run).
+	# Run-start choice takes priority on round 1; the Event (every N rounds) shows on
+	# later visits. Both are blocking overlays gated so Shop re-entry can't double-fire.
 	if not (GameManager.state["starting_pick_done"] as bool):
 		_starting_pick_overlay.show_options(StartSystem.starting_options())
+	elif EventSystem.is_event_due(GameManager.state):
+		_event_overlay.show_rewards(EventSystem.offer(GameManager.state))
 
 
 func _on_starting_pick(element_id: String) -> void:
 	AudioManager.play("buy")
 	GameManager.state = StartSystem.apply_starting_pick(GameManager.state, element_id)
 	_starting_pick_overlay.hide_overlay()
+	_render()
+
+
+func _on_event_chosen(reward: Dictionary) -> void:
+	AudioManager.play("buy")
+	GameManager.state = EventSystem.apply_reward(GameManager.state, reward)
+	_event_overlay.hide_overlay()
 	_render()
 
 
@@ -764,20 +779,13 @@ func _build_add_elem_panel() -> PanelContainer:
 
 
 func _debug_add_element(element_id: String) -> void:
-	var elem_def: Dictionary = ElementData.find(element_id)
-	if elem_def.is_empty():
+	var instance: Dictionary = ElementData.instantiate(element_id)
+	if instance.is_empty():
 		return
 	var s: Dictionary = GameManager.state.duplicate(true)
-	var inv: Array = s["inventory"] as Array
-	for i: int in inv.size():
-		if inv[i] == null:
-			var instance: Dictionary = elem_def.duplicate()
-			instance["element_id"] = element_id
-			instance["level"] = 1
-			s["inventory"][i] = instance
-			GameManager.state = s
-			_render()
-			return
+	if ShopSystem.grant_to_inventory(s, instance):
+		GameManager.state = s
+		_render()
 
 
 func _on_fight_pressed() -> void:

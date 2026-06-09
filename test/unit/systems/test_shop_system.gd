@@ -314,6 +314,20 @@ func test_free_reroll_does_not_escalate_or_charge() -> void:
 	assert_eq(s["reroll_count"] as int, 0)
 
 
+# ── reroll_discount Run Modifier (ADR 0011) ───────────────────────────────────
+
+func test_reroll_discount_reduces_cost() -> void:
+	var state := _make_state()
+	state["reroll_discount"] = 1
+	assert_eq(ShopSystem.reroll_cost(state), TuningData.REROLL_BASE_COST - 1)
+
+
+func test_reroll_discount_floored_at_zero() -> void:
+	var state := _make_state()
+	state["reroll_discount"] = TuningData.REROLL_BASE_COST + 100
+	assert_eq(ShopSystem.reroll_cost(state), 0)
+
+
 func test_advance_round_resets_reroll_count() -> void:
 	var state := _make_state()
 	state = ShopSystem.reroll_shop(state)

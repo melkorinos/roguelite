@@ -31,18 +31,13 @@ static func starting_options(count: int = TuningData.STARTING_OPTION_COUNT, rng:
 static func apply_starting_pick(state: Dictionary, element_id: String) -> Dictionary:
 	if state.get("starting_pick_done", false) as bool:
 		return state
-	var def: Dictionary = ElementData.find(element_id)
-	if def.is_empty():
+	var instance: Dictionary = ElementData.instantiate(element_id)
+	if instance.is_empty():
 		return state
+	instance["damage_multiplier"] = TuningData.STARTING_BUFF_MULTIPLIER
 	var s: Dictionary = state.duplicate(true)
-	var inv: Array = s["inventory"] as Array
-	for i: int in inv.size():
-		if inv[i] == null:
-			var instance: Dictionary = def.duplicate()
-			instance["element_id"] = def["id"] as String
-			instance["level"] = 1
-			instance["damage_multiplier"] = TuningData.STARTING_BUFF_MULTIPLIER
-			inv[i] = instance
-			break
+	# Full inventory → the grant is silently dropped (matches prior behaviour); the pick
+	# is still consumed.
+	ShopSystem.grant_to_inventory(s, instance)
 	s["starting_pick_done"] = true
 	return s

@@ -12,7 +12,9 @@ const COMBAT_STEP_SECONDS: float = 0.1
 # non-terminating edge case (combat also self-terminates at BATTLE_TIME_LIMIT).
 static func simulate_battle(state: Dictionary) -> Dictionary:
 	var s: Dictionary = state
-	var max_steps: int = int(TuningData.BATTLE_TIME_LIMIT / COMBAT_STEP_SECONDS) + 50
+	# Bounded by the Sandstorm hard cap (combat can now run past BATTLE_TIME_LIMIT until
+	# the storm forces a KO); +50 steps of slack.
+	var max_steps: int = int(TuningData.SANDSTORM_HARD_CAP_SECONDS / COMBAT_STEP_SECONDS) + 50
 	var steps: int = 0
 	while (s["phase"] as String) != "result" and steps < max_steps:
 		s = tick_battle(s, COMBAT_STEP_SECONDS)
@@ -79,10 +81,36 @@ static func tick_battle(state: Dictionary, delta: float) -> Dictionary:
 	# clock reaches their moment.
 	s = _drain_commands(s, timer)
 
-	if (s["player_hp"] as int) <= 0 or (s["opponent_hp"] as int) <= 0 or timer >= TuningData.BATTLE_TIME_LIMIT:
+	_tick_sandstorm(s, timer)
+
+	# Combat ends on elimination (the canonical win rule) or the Sandstorm hard cap
+	# (a determinism backstop — the storm normally forces a KO long before it).
+	if (s["player_hp"] as int) <= 0 or (s["opponent_hp"] as int) <= 0 \
+			or timer >= TuningData.SANDSTORM_HARD_CAP_SECONDS:
 		s["phase"] = "result"
 
 	return s
+
+
+# Sandstorm (ADR 0012): after BATTLE_TIME_LIMIT (the storm START), escalating TRUE
+# damage hits BOTH sides on each whole storm-second until one is eliminated. Damage of
+# storm-second k (from 0) = SANDSTORM_BASE_DAMAGE + SANDSTORM_RAMP_PER_SECOND*k. Bypasses
+# all mitigation by design (an impartial environmental clock — see TuningData) and emits
+# no combat events (not reactive). Deterministic (time-driven, no RNG) → Replay-safe.
+# `sandstorm_ticks` tracks storm-seconds already applied, so the cadence is independent
+# of the combat step size. Mutates `s` (already a fresh duplicate).
+static func _tick_sandstorm(s: Dictionary, timer: float) -> void:
+	var elapsed: float = timer - TuningData.BATTLE_TIME_LIMIT
+	if elapsed < 0.0:
+		return
+	var due_ticks: int = int(floor(elapsed)) + 1
+	var applied: int = s.get("sandstorm_ticks", 0) as int
+	while applied < due_ticks:
+		var dmg: int = TuningData.SANDSTORM_BASE_DAMAGE + TuningData.SANDSTORM_RAMP_PER_SECOND * applied
+		s["player_hp"] = maxi(0, (s["player_hp"] as int) - dmg)
+		s["opponent_hp"] = maxi(0, (s["opponent_hp"] as int) - dmg)
+		applied += 1
+	s["sandstorm_ticks"] = applied
 
 
 # Queues a player command to fire at at_seconds of battle time, applying the given

@@ -91,6 +91,18 @@ const COLOR_COMP_TRIGGER     := Color(0.55, 0.85, 0.95)  # compendium ability tr
 const COLOR_COMP_ABILITY     := Color(0.78, 0.82, 0.95)  # compendium ability description
 
 
+# ── Event overlay (ADR 0011) ──────────────────────────────────────────────────
+const EVENT_DIMMER             := Color(0.0, 0.0, 0.0, 0.7)
+const EVENT_PANEL_BG           := Color(0.08, 0.08, 0.13, 0.98)
+const EVENT_PANEL_BORDER       := Color(0.55, 0.45, 0.85, 0.9)
+const EVENT_TITLE_COLOR        := Color(0.92, 0.82, 0.45)   # warm gold — "reward"
+const EVENT_REWARD_BG          := Color(0.12, 0.13, 0.20, 1.0)
+const EVENT_REWARD_BG_HOVER    := Color(0.19, 0.21, 0.32, 1.0)
+const EVENT_REWARD_BORDER      := Color(0.55, 0.50, 0.85, 0.9)
+const EVENT_REWARD_LABEL_COLOR := Color(0.96, 0.93, 0.72)
+const EVENT_REWARD_DESC_COLOR  := Color(0.74, 0.77, 0.90)
+
+
 static func tier_bg(tier: int) -> Color:
 	match tier:
 		1: return TIER_1_BG

@@ -38,8 +38,11 @@ static func effective_cooldown_deciseconds(base_deciseconds: int, own_statuses: 
 	var shock_dict: Dictionary = own_statuses["shock"] as Dictionary
 	var shock_stacks: int = (shock_dict["n"] as int) + (shock_dict.get("effective_stack_bonus", 0) as int)
 	var cooldown_modifier_deciseconds: int = own_statuses.get("cooldown_modifier_deciseconds", 0) as int
-	var modified_base: int = base_deciseconds + cooldown_modifier_deciseconds
-	var slowed_deciseconds: float = float(modified_base) * (1.0 + slow_pct(shock_stacks) / 100.0)
+	# Global firing-rate dial (G4, TuningData.COMBAT_COOLDOWN_MULTIPLIER) scales the base
+	# before the side-wide modifier and shock-slow are applied.
+	var scaled_base: float = float(base_deciseconds) * TuningData.COMBAT_COOLDOWN_MULTIPLIER
+	var modified_base: float = scaled_base + float(cooldown_modifier_deciseconds)
+	var slowed_deciseconds: float = modified_base * (1.0 + slow_pct(shock_stacks) / 100.0)
 	return maxi(TuningData.EFFECTIVE_CD_FLOOR_DECISECONDS, int(round(slowed_deciseconds)))
 
 

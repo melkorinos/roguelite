@@ -37,6 +37,11 @@ const SUMMARY_HEADER := 16
 const SUMMARY_ROW    := 14
 const SUMMARY_EMPTY  := 13
 
+# ── Event overlay (ADR 0011) ──────────────────────────────────────────────────
+const EVENT_TITLE        := 22
+const EVENT_REWARD_LABEL := 18
+const EVENT_REWARD_DESC  := 12
+
 # ── Tooltip card ──────────────────────────────────────────────────────────────
 const TOOLTIP_TITLE   := 17
 const TOOLTIP_STAT    := 14

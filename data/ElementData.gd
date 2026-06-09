@@ -173,6 +173,20 @@ static func find(element_id: String) -> Dictionary:
 	return _by_id.get(element_id, {})
 
 
+# The single place that turns a (shared, const) definition into a fresh, owned live
+# instance — for a board slot, inventory slot, shop tile, forge result, or ghost grid.
+# Always duplicates, so it never mutates the zero-copy find() result. Sets element_id +
+# level; callers layer on extras (Starting Pick's damage_multiplier). Empty for unknown id.
+static func instantiate(element_id: String, level: int = 1) -> Dictionary:
+	var def: Dictionary = find(element_id)
+	if def.is_empty():
+		return {}
+	var instance: Dictionary = def.duplicate()
+	instance["element_id"] = def["id"] as String
+	instance["level"] = level
+	return instance
+
+
 # Effective damage = base_damage × level + tier. Applies universally (level-up and forge results).
 static func effective_damage(item: Dictionary) -> int:
 	var level: int = item.get("level", 1) as int

@@ -73,6 +73,46 @@ func test_same_context_produces_same_grid() -> void:
 			assert_eq((a as Dictionary)["element_id"], (b as Dictionary)["element_id"])
 
 
+# ── round-scaled power (G4): level + max-tier bias ────────────────────────────
+
+func test_early_ghost_elements_are_level_one() -> void:
+	var g := OpponentProvider.get_opponent(_ctx(1, 1))
+	for slot: Variant in g["grid"] as Array:
+		if slot != null:
+			assert_eq((slot as Dictionary)["level"] as int, 1)
+
+
+func test_late_ghost_elements_level_up_with_round() -> void:
+	# Round 9 is past both GHOST_LEVEL_ROUND_BREAKS → Level 3.
+	var g := OpponentProvider.get_opponent(_ctx(1, 9))
+	var saw_element: bool = false
+	for slot: Variant in g["grid"] as Array:
+		if slot != null:
+			saw_element = true
+			assert_eq((slot as Dictionary)["level"] as int, 3)
+	assert_true(saw_element)
+
+
+func test_ghost_fields_its_max_tier() -> void:
+	# At round 9 (max tier 4) the top-tier fraction guarantees at least one T4 slot.
+	var g := OpponentProvider.get_opponent(_ctx(1, 9))
+	var max_tier: int = 0
+	for slot: Variant in g["grid"] as Array:
+		if slot != null:
+			max_tier = maxi(max_tier, (slot as Dictionary)["tier"] as int)
+	assert_eq(max_tier, 4)
+
+
+func test_ghost_has_no_duplicate_elements() -> void:
+	var g := OpponentProvider.get_opponent(_ctx(7, 9))
+	var seen: Dictionary = {}
+	for slot: Variant in g["grid"] as Array:
+		if slot != null:
+			var id: String = (slot as Dictionary)["element_id"] as String
+			assert_false(seen.has(id), "duplicate ghost element: " + id)
+			seen[id] = true
+
+
 func test_different_round_produces_different_grid() -> void:
 	var g1 := OpponentProvider.get_opponent(_ctx(1, 3))
 	var g2 := OpponentProvider.get_opponent(_ctx(1, 4))

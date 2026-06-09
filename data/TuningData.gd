@@ -49,21 +49,61 @@ const SHOP_HIGHER_TIER_SLOT_PERCENT: int = 30
 const STARTING_LIFE: int = 100
 const WIN_THRESHOLD: int = 10
 const MAX_LIFE_LOSS: int = 30             # lives_lost = round(opp_hp_ratio * MAX_LIFE_LOSS)
-const BASE_PLAYER_HP: int = 200
-const HP_PER_ROUND: int = 3               # hp = BASE + (round-1)*HP_PER_ROUND + hp_bonus
+const BASE_PLAYER_HP: int = 130           # G4: lowered so early fights KO in-window (not storm)
+const HP_PER_ROUND: int = 11              # hp = BASE + (round-1)*HP_PER_ROUND + hp_bonus; G4: ~matches opponent HP slope (~+11/round)
 # Placeholder opponent HP in a fresh GameState, before the first battle replaces it
 # with the board-derived value (BattleSystem.compute_opponent_hp in PhaseSystem.to_battle).
 const INITIAL_OPPONENT_HP: int = 20
 
 
+# ── Events (ADR 0011) ─────────────────────────────────────────────────────────
+# A non-combat choice node every N rounds: three distinct Event Rewards, pick one.
+# First-pass magnitudes — fair game for the G4 balance pass. Persistent rewards
+# (bonus HP, reroll discount) accumulate across the Run.
+const EVENT_EVERY_N_ROUNDS: int = 3
+const EVENT_OFFER_COUNT: int = 3
+const EVENT_GOLD_REWARD: int = 15
+const EVENT_HP_BONUS_REWARD: int = 30     # → hp_bonus (persistent Run Modifier)
+const EVENT_REROLL_DISCOUNT: int = 1      # → reroll_discount (persistent Run Modifier)
+
+
 # ── Combat ───────────────────────────────────────────────────────────────────
+# BATTLE_TIME_LIMIT is the SANDSTORM START, not a hard end (ADR 0012): at this mark
+# the Sandstorm begins and combat continues until a side is eliminated.
 const BATTLE_TIME_LIMIT: float = 30.0
-const OPPONENT_BASE_HP: int = 200         # flat base, mirrors BASE_PLAYER_HP; board damage adds on top
+# Global firing-rate dial (G4): multiplies every element's base cooldown in
+# StatusSystem.effective_cooldown_deciseconds. <1 = faster fires (more DPS) WITHOUT
+# inflating opponent HP (which keys off `damage`, not cooldown) — the surgical lever for
+# making early fights resolve by KO before the Sandstorm. The lone deliberate non-integer
+# in the cooldown path: a balance scalar, not a per-element design value; the result is
+# still rounded to whole deciseconds and floored.
+const COMBAT_COOLDOWN_MULTIPLIER: float = 0.7
+const OPPONENT_BASE_HP: int = 130         # flat base, mirrors BASE_PLAYER_HP; board damage adds on top (G4)
 const OPPONENT_HP_PER_DAMAGE: int = 5
 const OPPONENT_HP_MIN: int = 15
 const OPPONENT_TIER_ROUND_BREAKS: Array = [2, 4, 6]   # ≤2→T1, ≤4→T2, ≤6→T3, else T4
 const OPPONENT_SLOTS_BASE: int = 2
 const OPPONENT_SLOTS_ROUND_BREAKS: Array = [1, 3]     # +1 slot past each (≤1→2, ≤3→3, else 4)
+# Synthetic ghost board generation (G4): make opponent power track the round predictably
+# instead of a uniform grab-bag. Most slots field the round's max tier; the rest one tier
+# down. Ghost elements also gain Level with the round so opponent offence grows like a
+# real board's. Tune these to shape the difficulty curve toward the ~60% win-rate target.
+const GHOST_TOP_TIER_FRACTION: float = 0.6            # fraction of slots at the round's max tier
+const GHOST_LEVEL_ROUND_BREAKS: Array = [3, 6]        # ghost level: ≤3→Lv1, ≤6→Lv2, else Lv3
+
+
+# ── Sandstorm (ADR 0012) ──────────────────────────────────────────────────────
+# After BATTLE_TIME_LIMIT (the storm START), escalating damage hits BOTH sides each
+# second until one is eliminated — so every fight resolves by KO, never a flat
+# timeout. Damage of the k-th storm second (k from 0) = BASE + RAMP*k, applied to both
+# player_hp and opponent_hp equally.
+# DELIBERATE: storm damage is TRUE damage — it bypasses ALL mitigation (armor, plating,
+# absorb). The storm is an impartial environmental clock; routing it through defenses
+# would let tanky boards outlast it and defeat the purpose. May route through mitigation
+# later — this knob block is the reminder that the choice was made on purpose.
+const SANDSTORM_BASE_DAMAGE: int = 5             # damage of the first storm second
+const SANDSTORM_RAMP_PER_SECOND: int = 5         # added each subsequent storm second
+const SANDSTORM_HARD_CAP_SECONDS: float = 60.0   # absolute end — determinism backstop
 
 
 # ── Status magnitudes (×1 entries are no-ops today, tunable later) ────────────

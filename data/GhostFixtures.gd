@@ -12,10 +12,7 @@ static func get_fixture(shop_tier: int) -> Dictionary:
 
 
 static func _make_elem(id: String, level: int) -> Dictionary:
-	var elem: Dictionary = ElementData.find(id).duplicate()
-	elem["element_id"] = elem["id"]
-	elem["level"] = level
-	return elem
+	return ElementData.instantiate(id, level)
 
 
 static func _tier1() -> Dictionary:

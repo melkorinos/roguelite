@@ -300,10 +300,27 @@ static func sell_grid_item(state: Dictionary, grid_slot: int) -> Dictionary:
 	return s
 
 
+# Places a ready Element `instance` in the first empty inventory slot of `s` (mutated in
+# place — the caller owns the duplicate). Returns true if placed, false if the inventory
+# is full. The single grant-to-inventory seam shared by Starting Pick and Event rewards.
+static func grant_to_inventory(s: Dictionary, instance: Dictionary) -> bool:
+	var inv: Array = s["inventory"] as Array
+	var slot: int = _first_empty_slot(inv)
+	if slot == -1:
+		return false
+	inv[slot] = instance
+	return true
+
+
 # Reroll cost escalates within a shop phase: base + REROLL_COST_STEP per paid reroll
 # already done this phase. reroll_count resets each round (PhaseSystem.advance_round).
+# A persistent reroll_discount Run Modifier (ADR 0011) subtracts from the total, floored
+# at 0 so a discount never pays the player to reroll.
 static func reroll_cost(state: Dictionary) -> int:
-	return TuningData.REROLL_BASE_COST + (state.get("reroll_count", 0) as int) * TuningData.REROLL_COST_STEP
+	var raw: int = TuningData.REROLL_BASE_COST \
+		+ (state.get("reroll_count", 0) as int) * TuningData.REROLL_COST_STEP \
+		- (state.get("reroll_discount", 0) as int)
+	return maxi(0, raw)
 
 
 static func reroll_shop(state: Dictionary, is_free: bool = false) -> Dictionary:
@@ -382,10 +399,7 @@ static func _buy_into(state: Dictionary, shop_slot: int, dest_key: String, dest_
 	s["gold"] = gold - price
 	s["shop_items"][shop_slot] = null
 	if existing == null:
-		var instance: Dictionary = elem_def.duplicate()
-		instance["element_id"] = elem_def["id"] as String
-		instance["level"] = 1
-		s[dest_key][dest_slot] = instance
+		s[dest_key][dest_slot] = ElementData.instantiate(elem_def["id"] as String, 1)
 	else:
 		var upgraded: Dictionary = (s[dest_key][dest_slot] as Dictionary).duplicate()
 		upgraded["level"] = 2

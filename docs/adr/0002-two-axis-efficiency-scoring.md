@@ -1,3 +1,14 @@
+---
+status: superseded — never implemented; see note below (2026-06-09)
+---
+
+> **Status note (2026-06-09):** This was a *plan* for a balance tool that was never built.
+> There is no `BalanceSystem.gd`, no Effect/Action Score table, and no Compendium dev panel
+> in the codebase — only the inert `FeatureFlags.efficiency_scoring` flag remains. The G4
+> balance pass tunes **empirically via `BattleSystem.simulate_battle()`** (combat is now
+> real and deterministic — simulation is ground truth) rather than a subjective score table.
+> If an analytical scorer is ever wanted, this two-axis design is a reasonable starting point.
+
 # Two-axis Efficiency Score (DPS + Effect Score)
 
 The balance tool scores each Element on two axes — DPS Score (`effective_damage / cooldown`) and Effect Score (hardcoded utility value per effect string) — rather than a single composite number or three separate axes (DPS / offensive utility / defensive utility).
