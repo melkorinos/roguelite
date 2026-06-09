@@ -91,6 +91,16 @@ const COLOR_COMP_TRIGGER     := Color(0.55, 0.85, 0.95)  # compendium ability tr
 const COLOR_COMP_ABILITY     := Color(0.78, 0.82, 0.95)  # compendium ability description
 
 
+# ── Status Tray (in-combat) ───────────────────────────────────────────────────
+const STATUS_BUFF_TINT   := Color(0.55, 0.95, 0.62)   # buffs — green
+const STATUS_DEBUFF_TINT := Color(1.00, 0.52, 0.45)   # debuffs — red
+const STATUS_COUNT_TINT  := Color(0.96, 0.96, 1.00)   # the stack-count badge text
+# Status Readout (the framed hover popup)
+const STATUS_READOUT_BG     := Color(0.08, 0.08, 0.13, 0.98)
+const STATUS_READOUT_BORDER := Color(0.55, 0.55, 0.72, 0.95)
+const STATUS_READOUT_TEXT   := Color(0.90, 0.92, 1.00)
+
+
 # ── Event overlay (ADR 0011) ──────────────────────────────────────────────────
 const EVENT_DIMMER             := Color(0.0, 0.0, 0.0, 0.7)
 const EVENT_PANEL_BG           := Color(0.08, 0.08, 0.13, 0.98)

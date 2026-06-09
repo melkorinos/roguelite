@@ -12,6 +12,9 @@ const MAX_FLOAT_LABELS: int = 40  # cap concurrent combat labels so heavy multic
 var _active_float_labels: int = 0
 var _player_hp_bar: ProgressBar
 var _opp_hp_bar: ProgressBar
+# Status Tray: status name → its chip Control, per side. Built once, toggled per render.
+var _player_chips: Dictionary = {}
+var _opp_chips: Dictionary = {}
 
 
 func _ready() -> void:
@@ -37,6 +40,7 @@ func _ready() -> void:
 	_style_hp_bar(_opp_hp_bar)
 
 	_build_grids()
+	_build_status_trays()
 	_render()
 
 
@@ -67,6 +71,50 @@ func _process(delta: float) -> void:
 		_process_fire_events(GameManager.state)
 	_update_progress_bars(GameManager.state)
 	_render()
+
+
+# Builds a Status Tray (a row of Status Chips) for each side, between the side label and
+# its grid. One chip per tray-eligible status (those with a persistent shape; slow is
+# dead), built once and toggled in _update_status_trays. Emoji + valence come from
+# EffectRegistry; the live readout from StatusSystem.describe.
+func _build_status_trays() -> void:
+	_player_chips = _build_tray($VBox/BattleRow/PlayerSide)
+	_opp_chips = _build_tray($VBox/BattleRow/OppSide)
+
+
+func _build_tray(side_node: Node) -> Dictionary:
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 6)
+	side_node.add_child(row)
+	side_node.move_child(row, 1)  # between the side label (0) and the grid
+	var chips: Dictionary = {}
+	for effect_key: Variant in EffectRegistry.EFFECTS:
+		var entry: Dictionary = EffectRegistry.EFFECTS[effect_key] as Dictionary
+		if (entry["status_shape"] as Dictionary).is_empty() or (effect_key as String) == "slow":
+			continue  # heal/cleanse are instant; slow is dead
+		var tint: Color = ThemeData.STATUS_BUFF_TINT if (entry["valence"] as String) == "buff" else ThemeData.STATUS_DEBUFF_TINT
+		var chip := StatusChip.new()
+		chip.setup(entry["emoji"] as String, tint)
+		chip.visible = false
+		row.add_child(chip)
+		chips[effect_key as String] = chip
+	return chips
+
+
+func _update_status_trays(s: Dictionary) -> void:
+	_update_tray(_player_chips, s["player_statuses"] as Dictionary)
+	_update_tray(_opp_chips, s["opponent_statuses"] as Dictionary)
+
+
+func _update_tray(chips: Dictionary, statuses: Dictionary) -> void:
+	for effect_key: Variant in chips:
+		var chip: StatusChip = chips[effect_key] as StatusChip
+		var status_name: String = effect_key as String
+		var active: bool = StatusSystem.is_active(status_name, statuses)
+		chip.visible = active
+		if active:
+			chip.set_data(StatusSystem.chip_badge(status_name, statuses), StatusSystem.describe(status_name, statuses))
 
 
 func _style_hp_bar(bar: ProgressBar) -> void:
@@ -214,6 +262,7 @@ func _render() -> void:
 	_player_hp_bar.value = s["player_hp"] as int
 	_opp_hp_bar.max_value = maxi(1, s.get("opponent_starting_hp", 1) as int)
 	_opp_hp_bar.value = s["opponent_hp"] as int
+	_update_status_trays(s)
 	var remaining: float = maxf(0.0, TuningData.BATTLE_TIME_LIMIT - (s["battle_timer"] as float))
 	$VBox/TimerRow/TimerLabel.text = "⏱ %.1fs" % remaining
 
@@ -329,7 +378,7 @@ func _build_side_table(title: String, accent: Color, grid: Array, stats: Array, 
 		var st: Dictionary = stats[i] as Dictionary
 		var fires: int = st["fires"] as int
 		var dmg: int = st["damage"] as int
-		var fx_map: Dictionary = st.get("effects_by_status", {}) as Dictionary
+		var _fx_map: Dictionary = st.get("effects_by_status", {}) as Dictionary
 		var fx_text: String = _format_effects(elem, st)
 		var dps: float = float(dmg) / battle_time
 

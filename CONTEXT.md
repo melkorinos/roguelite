@@ -217,6 +217,18 @@ _Avoid_: info section, details panel, ability text
 A small secondary overlay that appears when the player hovers a highlighted keyword (e.g. [weaken], [shock]) inside an Abilities Panel. Contains a one-line glossary definition. Does not require Shift or any modifier key.
 _Avoid_: glossary card, definition popup, shift card
 
+**Status Tray**:
+The row of **Status Chips** shown per side during combat (between the side label and its grid), surfacing every Status currently active on that side — both buffs and debuffs — for at-a-glance legibility.
+_Avoid_: status bar, buff bar, effect list
+
+**Status Chip**:
+One emoji icon in a Status Tray representing an active Status, tinted by valence (green = buff, red = debuff; from `EffectRegistry`). Hovering it shows the Status Readout.
+_Avoid_: status icon, badge, pip
+
+**Status Readout**:
+The plain-language, magnitude-filled hover text on a Status Chip — e.g. "Burning: 3 damage/tick · 3 stacks left", "Hasted: fires 0.3s sooner". Produced by the pure `StatusSystem.describe`, so its numbers match combat exactly.
+_Avoid_: status description, blurb, hint
+
 ### Async PvP
 
 **Ghost**:

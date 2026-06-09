@@ -30,6 +30,101 @@ static func curse_active(curse: Dictionary) -> bool:
 	return (curse["is_permanent"] as bool) or (curse["ticks_remaining"] as int) > 0
 
 
+# ── Status Tray readout (in-combat HUD) ───────────────────────────────────────
+# Whether a status is currently in effect on `statuses` and worth showing a chip for.
+# Reads each status's own "in effect" rule (a bare count_field check misses curse's
+# permanent flag, weaken's expiry, and leech's modifier fields). `slow` is dead → never.
+static func is_active(name: String, statuses: Dictionary) -> bool:
+	if not statuses.has(name) or not (statuses[name] is Dictionary):
+		return false
+	var d: Dictionary = statuses[name] as Dictionary
+	match name:
+		"burn", "poison", "weaken": return (d["stacks"] as int) > 0 and (name != "weaken" or (d["ticks"] as int) > 0)
+		"armor", "plating": return (d["value"] as int) > 0
+		"blind": return (d["percent"] as int) > 0
+		"shock": return (d["n"] as int) > 0
+		"haste": return (d["reduction"] as int) > 0
+		"curse": return curse_active(d)
+		"leech": return (d["bonus"] as int) > 0 or (d["double"] as bool)
+	return false
+
+
+# Active statuses on `statuses`, in EffectRegistry (stable) order — the Status Tray's
+# chips for one side.
+static func active_statuses(statuses: Dictionary) -> Array[String]:
+	var result: Array[String] = []
+	for name: Variant in EffectRegistry.EFFECTS:
+		if is_active(name as String, statuses):
+			result.append(name as String)
+	return result
+
+
+# Plain-language, magnitude-filled readout for one active status — the Status Readout
+# shown on a chip's hover. Numbers come straight from TuningData so they match combat.
+static func describe(name: String, statuses: Dictionary) -> String:
+	var d: Dictionary = statuses.get(name, {}) as Dictionary
+	match name:
+		"burn":
+			var stacks: int = d["stacks"] as int
+			var per_tick: int = stacks * TuningData.BURN_DAMAGE_PER_STACK + (d["tick_damage_bonus"] as int)
+			return "Burning: %d damage/tick · %d stack%s left" % [per_tick, stacks, _plural(stacks)]
+		"poison":
+			var stacks: int = d["stacks"] as int
+			var per_tick: int = stacks * TuningData.POISON_DAMAGE_PER_STACK + (d["tick_damage_bonus"] as int)
+			return "Poisoned: %d damage/tick · %d stacks (permanent)" % [per_tick, stacks]
+		"armor":
+			return "Armor: absorbs %d incoming damage" % [(d["value"] as int) * TuningData.ARMOR_ABSORB_PER_POINT]
+		"plating":
+			return "Plating: -%d damage per hit" % [(d["value"] as int) * TuningData.PLATING_REDUCTION_PER_POINT]
+		"blind":
+			return "Blinded: %d%% chance to miss" % [d["percent"] as int]
+		"shock":
+			var n: int = (d["n"] as int) + (d["effective_stack_bonus"] as int)
+			return "Shocked: cooldowns %d%% slower" % [int(round(slow_pct(n)))]
+		"haste":
+			return "Hasted: fires %.1fs sooner" % [float(d["reduction"] as int) / 10.0]
+		"weaken":
+			return "Weakened: -%d damage per hit · %ds left" % [(d["stacks"] as int) * TuningData.WEAKEN_DAMAGE_REDUCTION_PER_STACK, d["ticks"] as int]
+		"curse":
+			var dur: String = "permanent" if (d["is_permanent"] as bool) else ("%ds left" % (d["ticks_remaining"] as int))
+			var vuln: int = d["damage_amplifier"] as int
+			var vuln_str: String = (", +%d per hit" % vuln) if vuln > 0 else ""
+			return "Cursed: +%d damage-over-time%s · %s" % [TuningData.CURSE_DOT_AMPLIFIER, vuln_str, dur]
+		"leech":
+			var bonus: int = d["bonus"] as int
+			var bonus_str: String = (" +%d" % bonus) if bonus > 0 else ""
+			var double_str: String = " (doubled)" if (d["double"] as bool) else ""
+			return "Leeching: heals for damage dealt%s%s" % [bonus_str, double_str]
+	return ""
+
+
+static func _plural(n: int) -> String:
+	return "" if n == 1 else "s"
+
+
+# Short stack/magnitude badge shown beside a chip's emoji (and echoed in the readout).
+# "" when there's nothing meaningful to count. Permanent curse shows "∞".
+static func chip_badge(name: String, statuses: Dictionary) -> String:
+	if not statuses.has(name) or not (statuses[name] is Dictionary):
+		return ""
+	var d: Dictionary = statuses[name] as Dictionary
+	if name == "curse":
+		return "∞" if (d["is_permanent"] as bool) else str(d["ticks_remaining"] as int)
+	var n: int = 0
+	match name:
+		"burn", "poison", "weaken": n = d["stacks"] as int
+		"armor", "plating": n = d["value"] as int
+		"shock": n = (d["n"] as int) + (d["effective_stack_bonus"] as int)
+		"blind":
+			@warning_ignore("integer_division")
+			n = (d["percent"] as int) / TuningData.BLIND_PERCENT_PER_STACK
+		"haste":
+			@warning_ignore("integer_division")
+			n = (d["reduction"] as int) / TuningData.HASTE_REDUCTION_DECISECONDS
+		"leech": n = d["bonus"] as int
+	return str(n) if n > 0 else ""
+
+
 # Effective firing cooldown for one element, in integer deciseconds.
 # Applies the side-wide signed cooldown modifier (penalties +, reductions -) and
 # shock-slow, then floors at 10 deciseconds (one fire per second). The slowed

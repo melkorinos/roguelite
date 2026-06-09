@@ -32,6 +32,35 @@ func _ready() -> void:
 	_apply_base_style()
 
 
+func apply_item_style(tier: int) -> void:
+	var bg: Color = ThemeData.tier_bg(tier)
+	var border: Color = ThemeData.tier_border(tier)
+	var normal := StyleBoxFlat.new()
+	normal.bg_color = bg
+	normal.set_border_width_all(2)
+	normal.border_color = border
+	normal.set_corner_radius_all(6)
+	add_theme_stylebox_override("normal", normal)
+	var hover := StyleBoxFlat.new()
+	hover.bg_color = bg.lightened(0.07)
+	hover.set_border_width_all(2)
+	hover.border_color = border.lightened(0.25)
+	hover.set_corner_radius_all(6)
+	add_theme_stylebox_override("hover", hover)
+	var pressed_style := StyleBoxFlat.new()
+	pressed_style.bg_color = bg.darkened(0.10)
+	pressed_style.set_border_width_all(2)
+	pressed_style.border_color = border
+	pressed_style.set_corner_radius_all(6)
+	add_theme_stylebox_override("pressed", pressed_style)
+	var focus_style := StyleBoxFlat.new()
+	focus_style.bg_color = bg
+	focus_style.set_border_width_all(2)
+	focus_style.border_color = border.lightened(0.35)
+	focus_style.set_corner_radius_all(6)
+	add_theme_stylebox_override("focus", focus_style)
+
+
 func _apply_base_style() -> void:
 	var normal := StyleBoxFlat.new()
 	normal.bg_color = ThemeData.SLOT_BG_EMPTY

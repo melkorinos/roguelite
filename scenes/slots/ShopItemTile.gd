@@ -7,7 +7,7 @@ extends ElementCard
 
 signal buy_pressed(element_id: String, shop_slot: int)
 
-const SIZE := Vector2(110, 110)
+const SIZE := Vector2(143, 143)
 
 var shop_slot_index: int = -1
 

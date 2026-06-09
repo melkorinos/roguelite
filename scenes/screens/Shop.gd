@@ -8,6 +8,8 @@ var _starting_pick_overlay: StartingPickOverlay
 var _event_overlay: EventOverlay
 var _add_elem_panel: PanelContainer = null
 var _forge_hint_box: VBoxContainer = null
+var _forge_result_elem: Variant = null
+var _forge_result_hover_timer: Timer
 
 
 func _ready() -> void:
@@ -25,6 +27,22 @@ func _ready() -> void:
 	_apply_theme()
 	_build_compendium_button()
 	_build_forge_hint()
+
+	_forge_result_hover_timer = Timer.new()
+	_forge_result_hover_timer.wait_time = 0.3
+	_forge_result_hover_timer.one_shot = true
+	add_child(_forge_result_hover_timer)
+	_forge_result_hover_timer.timeout.connect(_on_forge_result_hover_timeout)
+	var forge_result_lbl: Label = $VBox/MainArea/RightPanel/ForgeResultLabel
+	forge_result_lbl.mouse_filter = Control.MOUSE_FILTER_STOP
+	forge_result_lbl.mouse_entered.connect(func() -> void:
+		if _forge_result_elem != null:
+			_forge_result_hover_timer.start()
+	)
+	forge_result_lbl.mouse_exited.connect(func() -> void:
+		_forge_result_hover_timer.stop()
+		_on_tooltip_hide()
+	)
 
 	_starting_pick_overlay = StartingPickOverlay.new()
 	add_child(_starting_pick_overlay)
@@ -381,7 +399,7 @@ func _rebuild_inventory(s: Dictionary) -> void:
 		var item: Variant = inv[i]
 		var slot: InventorySlot = InventorySlot.new()
 		slot.slot_index = i
-		slot.custom_minimum_size = Vector2(110, 110)
+		slot.custom_minimum_size = Vector2(143, 143)
 		UIScale.apply(slot, UIScale.INV_SLOT)
 		if item != null:
 			var elem: Dictionary = item as Dictionary
@@ -392,6 +410,7 @@ func _rebuild_inventory(s: Dictionary) -> void:
 			slot.item_dict = elem.duplicate()
 			var eff_dmg: int = ElementData.effective_damage(elem)
 			slot.text = "%s\n%s\nLv%d  %ddmg" % [elem["emoji"], elem["name"], elem["level"], eff_dmg]
+			slot.apply_item_style(elem["tier"] as int)
 		else:
 			slot.has_item = false
 			slot.text = "[ ]"
@@ -456,6 +475,7 @@ func _update_forge_info(s: Dictionary) -> void:
 	var ea: Variant = slots[0]
 	var eb: Variant = slots[1]
 	result.text = ""
+	_forge_result_elem = null
 	if ea == null and eb == null:
 		info.text = "Drop 2 items to forge"
 		forge_btn.disabled = true
@@ -476,6 +496,23 @@ func _update_forge_info(s: Dictionary) -> void:
 		result.text = preview_text
 		result.add_theme_color_override("font_color", ThemeData.COLOR_PLAYER_SIDE if has_recipe else ThemeData.COLOR_OPP_SIDE)
 		forge_btn.disabled = not has_recipe
+		# Compute the hoverable result element for the tooltip.
+		if has_recipe:
+			var da: Dictionary = (ea as Dictionary)
+			var db: Dictionary = (eb as Dictionary)
+			var result_id: String = RecipeData.find_result(da["element_id"], db["element_id"])
+			if not result_id.is_empty():
+				var la: int = da["level"] as int
+				var lb: int = db["level"] as int
+				var result_level: int = maxi(1, mini(la, lb) - TuningData.FORGE_RESULT_LEVEL_PENALTY)
+				_forge_result_elem = ElementData.instantiate(result_id, result_level)
+			else:
+				# Merge case: same element, level+1
+				var merged: Dictionary = (ea as Dictionary).duplicate()
+				merged["level"] = (merged["level"] as int) + 1
+				_forge_result_elem = merged
+		else:
+			_forge_result_elem = null
 
 
 # ── Item Tooltip ─────────────────────────────────────────────────────────────
@@ -486,6 +523,11 @@ func _on_tooltip_requested(element: Dictionary) -> void:
 
 func _on_tooltip_hide() -> void:
 	_tooltip.hide_card()
+
+
+func _on_forge_result_hover_timeout() -> void:
+	if _forge_result_elem != null:
+		_tooltip.show_for(_forge_result_elem as Dictionary)
 
 
 # ── Drag hint overlays ────────────────────────────────────────────────────────

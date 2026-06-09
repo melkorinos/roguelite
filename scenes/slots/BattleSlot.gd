@@ -10,7 +10,7 @@ signal drag_started(element_id: String, grid_slot: int, sell_price: int)
 signal drag_ended()
 signal forge_quick_slot_grid(grid_slot: int)
 
-const SIZE := Vector2(120, 120)
+const SIZE := Vector2(156, 156)
 
 var slot_index: int = -1
 var draggable: bool = true

@@ -1,15 +1,15 @@
 class_name UIScale
 
 # ── Tile emojis ───────────────────────────────────────────────────────────────
-const SHOP_EMOJI  := 50
-const SLOT_EMOJI  := 40
-const FORGE_EMOJI := 38
+const SHOP_EMOJI  := 65
+const SLOT_EMOJI  := 52
+const FORGE_EMOJI := 49
 const COMP_EMOJI  := 60
 
 # ── Tile labels ───────────────────────────────────────────────────────────────
-const SHOP_LABEL  := 14
-const SLOT_NAME   := 11
-const INV_SLOT    := 22
+const SHOP_LABEL  := 18
+const SLOT_NAME   := 14
+const INV_SLOT    := 29
 const SELL_HINT   := 20
 const SOLD_LABEL  := 16
 
@@ -18,6 +18,8 @@ const FORGE_BUTTON := 20
 
 # ── Combat ────────────────────────────────────────────────────────────────────
 const FLOAT_LABEL := 20  # floating combat damage / status numbers
+const STATUS_CHIP  := 22  # in-combat Status Tray emoji chips
+const STATUS_COUNT := 14  # the stack-count badge beside a chip emoji
 
 # ── Drag previews ─────────────────────────────────────────────────────────────
 const DRAG_SHOP   := 48

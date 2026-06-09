@@ -491,6 +491,91 @@ func test_compute_armor_absorbs_physical() -> void:
 	assert_eq(r["damage"] as int, 1)
 
 
+# ── Status Tray: is_active / active_statuses / describe ───────────────────────
+
+func test_is_active_false_on_empty() -> void:
+	assert_false(StatusSystem.is_active("burn", _s()))
+
+
+func test_is_active_true_after_apply() -> void:
+	assert_true(StatusSystem.is_active("burn", _apply(_s(), "burn")))
+
+
+func test_is_active_weaken_false_after_ticks_expire() -> void:
+	# Weaken stacks persist but it stops being active once its ticks run out.
+	var s: Dictionary = _apply(_s(), "weaken")
+	for _i: int in TuningData.WEAKEN_DURATION_TICKS:
+		s = _tick_s(s)
+	assert_false(StatusSystem.is_active("weaken", s))
+
+
+func test_is_active_skips_dead_slow() -> void:
+	var s: Dictionary = _apply(_s(), "slow")
+	assert_false(StatusSystem.is_active("slow", s))
+
+
+func test_active_statuses_empty_is_empty() -> void:
+	assert_eq(StatusSystem.active_statuses(_s()).size(), 0)
+
+
+func test_active_statuses_lists_in_registry_order() -> void:
+	# armor is registered after burn → burn first.
+	var s: Dictionary = _apply(_apply(_s(), "armor"), "burn")
+	assert_eq(StatusSystem.active_statuses(s), ["burn", "armor"] as Array[String])
+
+
+func test_describe_burn_reports_per_tick_and_stacks() -> void:
+	var s: Dictionary = _apply(_apply(_apply(_s(), "burn"), "burn"), "burn")
+	var per_tick: int = 3 * TuningData.BURN_DAMAGE_PER_STACK
+	assert_eq(StatusSystem.describe("burn", s), "Burning: %d damage/tick · 3 stacks left" % per_tick)
+
+
+func test_describe_haste_reports_seconds() -> void:
+	var s: Dictionary = _apply(_s(), "haste")
+	var secs: float = float(TuningData.HASTE_REDUCTION_DECISECONDS) / 10.0
+	assert_eq(StatusSystem.describe("haste", s), "Hasted: fires %.1fs sooner" % secs)
+
+
+func test_describe_shock_reports_slow_percent() -> void:
+	var s: Dictionary = _s()
+	for _i: int in 5:
+		s = _apply(s, "shock")
+	assert_eq(StatusSystem.describe("shock", s), "Shocked: cooldowns %d%% slower" % int(round(StatusSystem.slow_pct(5))))
+
+
+func test_describe_weaken_reports_reduction_and_duration() -> void:
+	var s: Dictionary = _apply(_s(), "weaken")
+	assert_eq(StatusSystem.describe("weaken", s),
+		"Weakened: -%d damage per hit · %ds left" % [TuningData.WEAKEN_DAMAGE_REDUCTION_PER_STACK, TuningData.WEAKEN_DURATION_TICKS])
+
+
+func test_chip_badge_shows_stack_count() -> void:
+	var s: Dictionary = _apply(_apply(_apply(_s(), "burn"), "burn"), "burn")
+	assert_eq(StatusSystem.chip_badge("burn", s), "3")
+
+
+func test_chip_badge_empty_when_inactive() -> void:
+	assert_eq(StatusSystem.chip_badge("burn", _s()), "")
+
+
+func test_chip_badge_armor_shows_value() -> void:
+	var s: Dictionary = _apply(_apply(_s(), "armor"), "armor")
+	assert_eq(StatusSystem.chip_badge("armor", s), "2")
+
+
+func test_chip_badge_permanent_curse_is_infinity() -> void:
+	var s: Dictionary = _s()
+	(s["curse"] as Dictionary)["is_permanent"] = true
+	assert_eq(StatusSystem.chip_badge("curse", s), "∞")
+
+
+func test_every_tray_status_has_emoji_and_valence() -> void:
+	for name: Variant in EffectRegistry.EFFECTS:
+		var entry: Dictionary = EffectRegistry.EFFECTS[name] as Dictionary
+		assert_true(entry.has("emoji") and (entry["emoji"] as String) != "", "missing emoji: " + (name as String))
+		assert_true((entry["valence"] as String) in ["buff", "debuff"], "bad valence: " + (name as String))
+
+
 func test_compute_armor_depletes_in_returned_statuses() -> void:
 	var def: Dictionary = _apply(_s(), "armor")  # armor=1
 	var r: Dictionary = StatusSystem.compute_incoming_damage(5, _s(), def)

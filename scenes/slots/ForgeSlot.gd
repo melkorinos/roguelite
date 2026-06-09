@@ -6,7 +6,7 @@ signal item_removed(forge_slot_index: int)
 signal tooltip_requested(element: Dictionary)
 signal tooltip_hide_requested()
 
-const SIZE := Vector2(110, 110)
+const SIZE := Vector2(143, 143)
 
 var forge_slot_index: int = -1
 var has_item: bool = false
