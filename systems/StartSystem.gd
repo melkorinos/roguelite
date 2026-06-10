@@ -1,13 +1,14 @@
 class_name StartSystem
 
 # Run-start "Starting Pick": the player is offered N distinct T1 elements and the
-# chosen one is granted to them with a buffed base damage. Pure functions over the
-# GameState dict, mirroring ShopSystem/ForgeSystem. The pick happens once per run,
-# gated by state["starting_pick_done"].
+# chosen one is granted at STARTING_PICK_LEVEL (a head start on the Merge/Forge climb).
+# Was a ×damage buff, but T1 are all pure-effect now, so a level head-start is the
+# meaningful reward. Pure functions over the GameState dict; once per run, gated by
+# state["starting_pick_done"].
 #
 # (Future: the options will diversify beyond plain T1s — out of scope for now.)
 
-# Tuning lives in TuningData (STARTING_OPTION_COUNT, STARTING_BUFF_MULTIPLIER).
+# Tuning lives in TuningData (STARTING_OPTION_COUNT, STARTING_PICK_LEVEL).
 
 
 # N distinct random T1 element definitions — the offered choices. Deterministic when
@@ -26,15 +27,14 @@ static func starting_options(count: int = TuningData.STARTING_OPTION_COUNT, rng:
 	return picks
 
 
-# Grants the chosen element to the first empty inventory slot with the starting buff
-# and marks the pick done. No-op if the pick was already made or the id is unknown.
+# Grants the chosen element to the first empty inventory slot at STARTING_PICK_LEVEL and
+# marks the pick done. No-op if the pick was already made or the id is unknown.
 static func apply_starting_pick(state: Dictionary, element_id: String) -> Dictionary:
 	if state.get("starting_pick_done", false) as bool:
 		return state
-	var instance: Dictionary = ElementData.instantiate(element_id)
+	var instance: Dictionary = ElementData.instantiate(element_id, TuningData.STARTING_PICK_LEVEL)
 	if instance.is_empty():
 		return state
-	instance["damage_multiplier"] = TuningData.STARTING_BUFF_MULTIPLIER
 	var s: Dictionary = state.duplicate(true)
 	# Full inventory → the grant is silently dropped (matches prior behaviour); the pick
 	# is still consumed.

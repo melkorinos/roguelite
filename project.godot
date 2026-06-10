@@ -35,5 +35,5 @@ enabled=PackedStringArray("res://addons/gut/plugin.cfg")
 
 [gui]
 
-theme/default_font_size=20
 timers/tooltip_delay_sec=0.25
+theme/default_font_size=20

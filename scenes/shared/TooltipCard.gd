@@ -176,6 +176,7 @@ func _render(element: Dictionary, own_statuses: Dictionary) -> void:
 	var base_cooldown_deciseconds: int = element.get("cooldown_deciseconds", 0) as int
 	var base_dmg: int = element.get("damage", 0) as int
 	var eff_dmg: int = ElementData.effective_damage(element)
+	var pure_effect: bool = eff_dmg == 0  # captured before weaken; 0 here = no direct damage
 	var price: int = element.get("price", 0) as int
 
 	var cooldown_seconds: float
@@ -196,6 +197,9 @@ func _render(element: Dictionary, own_statuses: Dictionary) -> void:
 	(_stat_vals["⚔ Base Dmg"] as Label).text = str(base_dmg)
 	(_stat_vals["💥 Eff. Dmg"] as Label).text = str(eff_dmg)
 	(_stat_vals["💰 Price"] as Label).text = "%dg" % price
+	# Pure-effect elements deal no direct damage — hide both damage rows (not "0").
+	((_stat_vals["⚔ Base Dmg"] as Label).get_parent() as Control).visible = not pure_effect
+	((_stat_vals["💥 Eff. Dmg"] as Label).get_parent() as Control).visible = not pure_effect
 
 	var element_id: String = element.get("element_id", element.get("id", "")) as String
 	var description: String = AbilityData.get_ability(element_id).get("description", "") as String

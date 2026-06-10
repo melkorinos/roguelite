@@ -30,7 +30,7 @@ static func to_battle(state: Dictionary, opponent_snapshot: Dictionary) -> Dicti
 	var combat_rng := RandomNumberGenerator.new()
 	combat_rng.seed = hash("combat:%d" % (s["round"] as int))
 	s["combat_rng_state"] = combat_rng.state
-	var opp_hp: int = BattleSystem.compute_opponent_hp(s["opponent_grid"])
+	var opp_hp: int = BattleSystem.compute_opponent_hp(s["round"] as int)
 	s["opponent_hp"] = opp_hp
 	s["opponent_starting_hp"] = opp_hp
 	s = AbilitySystem.resolve_combat_start(s)

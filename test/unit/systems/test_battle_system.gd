@@ -32,70 +32,66 @@ func _storm_state(player_hp: int, opp_hp: int, timer: float) -> Dictionary:
 
 # ── compute_opponent_hp ───────────────────────────────────────────────────────
 
-func test_compute_opponent_hp_empty_grid_is_base() -> void:
-	var grid: Array = [null, null, null, null]
-	assert_eq(BattleSystem.compute_opponent_hp(grid), TuningData.OPPONENT_BASE_HP)
+func test_compute_opponent_hp_round_one_is_base() -> void:
+	assert_eq(BattleSystem.compute_opponent_hp(1), TuningData.OPPONENT_BASE_HP)
 
 
-func test_compute_opponent_hp_adds_board_damage_to_base() -> void:
-	# fire damage=2, so 1 element → base + 2*5
-	var elem: Dictionary = ElementData.find("fire").duplicate()
-	elem["element_id"] = "fire"
-	elem["level"] = 1
-	var grid: Array = [elem, null, null, null]
-	var expected: int = TuningData.OPPONENT_BASE_HP + 2 * TuningData.OPPONENT_HP_PER_DAMAGE
-	assert_eq(BattleSystem.compute_opponent_hp(grid), expected)
+func test_compute_opponent_hp_scales_by_round() -> void:
+	var round_num: int = 5
+	var growth: float = 1.0 + float(TuningData.OPPONENT_HP_GROWTH_PERCENT) / 100.0 * float(round_num - 1)
+	var expected: int = maxi(TuningData.OPPONENT_HP_MIN, int(round(float(TuningData.OPPONENT_BASE_HP) * growth)))
+	assert_eq(BattleSystem.compute_opponent_hp(round_num), expected)
 
 
-func test_compute_opponent_hp_sums_damage_across_all_elements() -> void:
-	# lava damage=3; 4 slots → base + 4*3*5
-	var lava: Dictionary = ElementData.find("lava").duplicate()
-	lava["element_id"] = "lava"
-	lava["level"] = 1
-	var grid: Array = [lava, lava.duplicate(), lava.duplicate(), lava.duplicate()]
-	var expected: int = TuningData.OPPONENT_BASE_HP + 4 * 3 * TuningData.OPPONENT_HP_PER_DAMAGE
-	assert_eq(BattleSystem.compute_opponent_hp(grid), expected)
+func test_compute_opponent_hp_grows_each_round() -> void:
+	assert_gt(BattleSystem.compute_opponent_hp(6), BattleSystem.compute_opponent_hp(1))
+
+
+# Only damage-dealers deal direct hit damage now (most elements are pure-effect), so
+# damage-asserting tests use Boulder (T2, base 4, in ElementData.DAMAGE_DEALERS).
+const DEALER := "boulder"
+
+func _dealer_cooldown() -> float:
+	return float(ElementData.find(DEALER)["cooldown_deciseconds"] as int) / 10.0
+
+func _dealer_opponent() -> Dictionary:
+	return { "grid": [ElementData.instantiate(DEALER, 1), null, null, null], "round": 1 }
 
 
 # ── tick_battle ───────────────────────────────────────────────────────────────
 
 func test_tick_battle_player_damages_opponent_at_cooldown() -> void:
-	var state := PhaseSystem.to_battle(_state_with_player_element("fire"), _fixture())
-	var cooldown: float = float(ElementData.find("fire")["cooldown_deciseconds"] as int) / 10.0
-	var s := BattleSystem.tick_battle(state, cooldown)
+	var state := PhaseSystem.to_battle(_state_with_player_element(DEALER), _fixture())
+	var s := BattleSystem.tick_battle(state, _dealer_cooldown())
 	assert_lt(s["opponent_hp"] as int, state["opponent_hp"] as int)
 
 
 func test_tick_battle_does_not_fire_before_cooldown() -> void:
-	var state := PhaseSystem.to_battle(_state_with_player_element("fire"), _fixture())
-	# Tick just under the EFFECTIVE cooldown (base × the global firing-rate dial), so the
-	# element has not charged yet regardless of COMBAT_COOLDOWN_MULTIPLIER.
-	var base_ds: int = ElementData.find("fire")["cooldown_deciseconds"] as int
+	var state := PhaseSystem.to_battle(_state_with_player_element(DEALER), _fixture())
+	# Tick just under the EFFECTIVE cooldown (base × the global firing-rate dial).
+	var base_ds: int = ElementData.find(DEALER)["cooldown_deciseconds"] as int
 	var effective: float = float(StatusSystem.effective_cooldown_deciseconds(base_ds, StatusSystem.empty_statuses())) / 10.0
 	var s := BattleSystem.tick_battle(state, effective - 0.1)
 	assert_eq(s["opponent_hp"] as int, state["opponent_hp"] as int)
 
 
 func test_tick_battle_opponent_damages_player() -> void:
-	# Tier-1 fixture has fire (cooldown 2.5) — tick past it
-	var state := PhaseSystem.to_battle(_make_state(), _fixture())
-	var s := BattleSystem.tick_battle(state, 3.0)
+	var state := PhaseSystem.to_battle(_make_state(), _dealer_opponent())
+	var s := BattleSystem.tick_battle(state, _dealer_cooldown())
 	assert_lt(s["player_hp"] as int, state["player_hp"] as int)
 
 
 func test_tick_battle_sets_result_when_opponent_hp_zero() -> void:
-	var state := PhaseSystem.to_battle(_state_with_player_element("fire"), _fixture())
+	var state := PhaseSystem.to_battle(_state_with_player_element(DEALER), _fixture())
 	state["opponent_hp"] = 1
-	var cooldown: float = float(ElementData.find("fire")["cooldown_deciseconds"] as int) / 10.0
-	var s := BattleSystem.tick_battle(state, cooldown)
+	var s := BattleSystem.tick_battle(state, _dealer_cooldown())
 	assert_eq(s["phase"], "result")
 
 
 func test_tick_battle_sets_result_when_player_hp_zero() -> void:
-	var state := PhaseSystem.to_battle(_make_state(), _fixture())
+	var state := PhaseSystem.to_battle(_make_state(), _dealer_opponent())
 	state["player_hp"] = 1
-	# Tier-1 fixture fire cooldown is 2.5 — one tick at 3.0 kills player
-	var s := BattleSystem.tick_battle(state, 3.0)
+	var s := BattleSystem.tick_battle(state, _dealer_cooldown())
 	assert_eq(s["phase"], "result")
 
 
@@ -180,9 +176,8 @@ func test_tick_battle_accumulates_fires_in_battle_stats() -> void:
 
 
 func test_tick_battle_accumulates_damage_in_battle_stats() -> void:
-	var state := PhaseSystem.to_battle(_state_with_player_element("fire"), _fixture())
-	var cooldown: float = float(ElementData.find("fire")["cooldown_deciseconds"] as int) / 10.0
-	var s := BattleSystem.tick_battle(state, cooldown)
+	var state := PhaseSystem.to_battle(_state_with_player_element(DEALER), _fixture())
+	var s := BattleSystem.tick_battle(state, _dealer_cooldown())
 	var pstats: Array = (s["battle_stats"] as Dictionary)["player"] as Array
 	assert_gt((pstats[0] as Dictionary)["damage"] as int, 0)
 
@@ -232,12 +227,11 @@ func test_frozen_player_element_does_not_fire() -> void:
 
 
 func test_freeze_releases_element_after_it_expires() -> void:
-	var state := PhaseSystem.to_battle(_state_with_player_element("fire"), _fixture())
+	var state := PhaseSystem.to_battle(_state_with_player_element(DEALER), _fixture())
 	(state["player_frozen_seconds"] as Array)[0] = 1.0
 	var blocked := BattleSystem.tick_battle(state, 1.0)  # freeze drains to 0, no fire this tick
 	assert_eq(blocked["opponent_hp"] as int, state["opponent_hp"] as int)
-	var cooldown: float = float(ElementData.find("fire")["cooldown_deciseconds"] as int) / 10.0
-	var released := BattleSystem.tick_battle(blocked, cooldown)  # now unfrozen → fires
+	var released := BattleSystem.tick_battle(blocked, _dealer_cooldown())  # now unfrozen → fires
 	assert_lt(released["opponent_hp"] as int, blocked["opponent_hp"] as int)
 
 

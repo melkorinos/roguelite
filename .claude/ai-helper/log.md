@@ -1,5 +1,12 @@
 # Development Log
 
+## 2026-06-09 — Damage redesign (grilled; ADR 0013) — pure-effect vs damage-dealer
+- **Archetypes:** Elements are **pure-effect** (no direct damage — status IS the damage; all T1 + most T2+) or **damage-dealer** (direct hit; rare ~20% of T2+, impact theme, T4-skewed). Whitelist `ElementData.DAMAGE_DEALERS` (22 ids) gates it — **zero churn to the 132 entries**. `effective_damage = base × mult × level` (**dropped +tier**; mult vestigial; pure-effect → 0). `_fire_element_once` skips the damage block when raw=0.
+- **Level scales effects:** `StatusSystem.apply_effect(…, potency)` — a Lv-N element applies N stacks/points/heal; `AbilitySystem._apply_effects` derives potency from source level; on-hit passives carry their level.
+- **Curse v2:** stacks **consumed per damaging event** (hit or DOT tick), each adds `damage_amplifier`; replaces duration/`is_permanent`; level-scales. `void`/`voidrift` → deep curse (10 charges).
+- **Opponent HP:** round-scaled placeholder `100 × (1 + 15%·(round-1))`, board-independent. Supersedes deferred review candidate B. **Starting Pick** → +1 level (×damage buff now a no-op). **TooltipCard** hides Dmg rows for pure-effect.
+- Staged P1 (archetypes/formula/opp-HP/start/UI) then P2 (potency/Curse v2). **515/515**, boot 0. **F5 + balance retune pending** (opponent HP + the damage-dealer set).
+
 ## 2026-06-09 — In-combat Status Tray (grilled) — playtest legibility
 - Per-side **Status Tray** of hoverable emoji **Status Chips** in Battle.gd (between side label + grid), showing every active Status (buffs green / debuffs red, tinted by valence) + a **stack-count badge** beside each emoji (`StatusSystem.chip_badge`; "∞" for permanent curse). Hover → framed **Status Readout** with live magnitudes from the pure `StatusSystem.describe(name, statuses)` (e.g. "Burning: 3 damage/tick · 3 stacks left", "Hasted: fires 0.3s sooner") — numbers match combat. `EffectRegistry` gained `emoji`+`valence`; `StatusSystem` gained `is_active`/`active_statuses`/`describe`/`chip_badge`. New `scenes/shared/StatusChip.gd` (`_make_custom_tooltip` = framed popup, ThemeData-styled); tooltip delay halved to 0.25s (`project.godot`). Chips built once, toggled per render. ThemeData tints/readout colors + `UIScale.STATUS_CHIP`/`STATUS_COUNT`. CONTEXT terms added. **515/515**, boot 0. **F5 eyeball:** tray layout + framed hover readouts + badges.
 

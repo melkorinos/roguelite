@@ -75,12 +75,23 @@ static func _side_keys(side: String) -> Dictionary:
 	return CombatSide.keys(side)
 
 
+# The Level of the element at source_slot on its side — the potency for status scaling.
+# 1 when the slot is unknown (-1) or empty.
+static func _source_level(state: Dictionary, source_side: String, source_slot: int) -> int:
+	if source_slot < 0:
+		return 1
+	var grid: Array = state.get(CombatSide.keys(source_side)["grid"], []) as Array
+	if source_slot >= grid.size() or grid[source_slot] == null:
+		return 1
+	return maxi(1, (grid[source_slot] as Dictionary).get("level", 1) as int)
+
+
 # ── effect application (mutates the passed state) ─────────────────────────────
 
 # Returns a { status_name: count } map of the status applications made (for the
 # Summary breakdown). deal_damage / modify_cooldown / set_status_field apply no
 # named status and return {}.
-static func _apply_atom(state: Dictionary, effect: Dictionary, source_side: String) -> Dictionary:
+static func _apply_atom(state: Dictionary, effect: Dictionary, source_side: String, potency: int = 1) -> Dictionary:
 	var kind: String = effect.get("kind", "") as String
 	match kind:
 		"apply_status":
@@ -90,7 +101,7 @@ static func _apply_atom(state: Dictionary, effect: Dictionary, source_side: Stri
 			var status: String = effect["status"] as String
 			var amount: int = effect.get("amount", 1) as int
 			for _n: int in amount:
-				var result: Dictionary = StatusSystem.apply_effect(statuses, status)
+				var result: Dictionary = StatusSystem.apply_effect(statuses, status, potency)
 				statuses = result["statuses"] as Dictionary
 				state[keys["hp"]] = (state[keys["hp"]] as int) + (result["hp_delta"] as int)
 			state[keys["statuses"]] = statuses
@@ -157,12 +168,15 @@ static func _apply_atom(state: Dictionary, effect: Dictionary, source_side: Stri
 
 
 # source_slot >= 0 attributes the applied statuses to that element's Summary row.
+# `potency` (the source element's Level) scales every status quantity applied here — a
+# Lv-N element applies N stacks/points. Derived from source_slot; 1 when unknown.
 static func _apply_effects(state: Dictionary, effects: Array, source_side: String, source_slot: int = -1) -> void:
+	var potency: int = _source_level(state, source_side, source_slot)
 	var applied: Dictionary = {}
 	for effect: Variant in effects:
 		var e: Dictionary = effect as Dictionary
 		if _conditions_met(state, e.get("when", []) as Array, source_side):
-			var made: Dictionary = _apply_atom(state, e, source_side)
+			var made: Dictionary = _apply_atom(state, e, source_side, potency)
 			for status: Variant in made:
 				applied[status] = (applied.get(status, 0) as int) + (made[status] as int)
 	if source_slot >= 0 and not applied.is_empty():
@@ -422,5 +436,6 @@ static func on_hit_status_chances(grid: Array) -> Array:
 				"status": e["status"] as String,
 				"chance": e.get("chance", 0) as int,
 				"target": e.get("target", "opponent") as String,
+				"level": (slot as Dictionary).get("level", 1) as int,  # potency for status scaling
 			})
 	return chances

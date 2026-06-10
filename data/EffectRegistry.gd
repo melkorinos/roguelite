@@ -22,7 +22,7 @@ const EFFECTS: Dictionary = {
 	"slow":    { "status_shape": { "n": 0 },                                                 "count_field": "n",               "triggers": [], "emoji": "🐌", "valence": "debuff" },
 	"haste":   { "status_shape": { "reduction": 0, "reduction_bonus_deciseconds": 0 },       "count_field": "reduction",       "triggers": ["on_haste_applied"], "emoji": "💨", "valence": "buff" },
 	"weaken":  { "status_shape": { "stacks": 0, "ticks": 0, "duration_bonus": 0 },          "count_field": "stacks",          "triggers": ["on_status_applied:weaken"], "emoji": "📉", "valence": "debuff" },
-	"curse":   { "status_shape": { "ticks_remaining": 0, "is_permanent": false, "damage_amplifier": 0 }, "count_field": "ticks_remaining", "triggers": ["on_status_applied:curse"], "emoji": "🌑", "valence": "debuff" },
+	"curse":   { "status_shape": { "stacks": 0, "damage_amplifier": 0 },                    "count_field": "stacks",          "triggers": ["on_status_applied:curse"], "emoji": "🌑", "valence": "debuff" },
 	"leech":   { "status_shape": { "bonus": 0, "double": false },                            "count_field": "",                "triggers": ["on_leech"], "emoji": "🩸", "valence": "buff" },
 	"heal":    { "status_shape": {},                                                          "count_field": "",                "triggers": ["on_heal_applied"], "emoji": "💚", "valence": "buff" },
 	"cleanse": { "status_shape": {},                                                          "count_field": "",                "triggers": [], "emoji": "🫧", "valence": "buff" },

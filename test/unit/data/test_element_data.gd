@@ -69,32 +69,28 @@ func test_find_ids_are_unique() -> void:
 
 # ── effective_damage ──────────────────────────────────────────────────────────
 
-func test_effective_damage_water_level1() -> void:
-	# water: damage=1, tier=1 → 1*1+1 = 2
-	var item := ElementData.find("water").duplicate()
-	item["level"] = 1
-	assert_eq(ElementData.effective_damage(item), 2)
+func test_effective_damage_pure_effect_is_zero() -> void:
+	# Water is pure-effect (not in DAMAGE_DEALERS) → no direct hit damage.
+	assert_eq(ElementData.effective_damage(ElementData.instantiate("water", 1)), 0)
 
 
-func test_effective_damage_scales_with_level() -> void:
-	# water: damage=1, tier=1 → 1*2+1 = 3
-	var item := ElementData.find("water").duplicate()
-	item["level"] = 2
-	assert_eq(ElementData.effective_damage(item), 3)
+func test_effective_damage_fire_is_pure_effect() -> void:
+	assert_eq(ElementData.effective_damage(ElementData.instantiate("fire", 2)), 0)
 
 
-func test_effective_damage_scales_with_tier() -> void:
-	# lava: damage=3, tier=2, level=1 → 3*1+2 = 5
-	var item := ElementData.find("lava").duplicate()
-	item["level"] = 1
-	assert_eq(ElementData.effective_damage(item), 5)
+func test_effective_damage_dealer_is_base_times_level() -> void:
+	# Lava is a damage-dealer (base 3); no tier chip → base × level.
+	assert_eq(ElementData.effective_damage(ElementData.instantiate("lava", 1)), 3)
+	assert_eq(ElementData.effective_damage(ElementData.instantiate("lava", 2)), 6)
 
 
-func test_effective_damage_fire_level1() -> void:
-	# fire: damage=2, tier=1 → 2*1+1 = 3
-	var item := ElementData.find("fire").duplicate()
-	item["level"] = 1
-	assert_eq(ElementData.effective_damage(item), 3)
+# Archetype integrity: every damage-dealer is a real T2+ element with base damage.
+func test_damage_dealers_are_tier2_plus_with_base_damage() -> void:
+	for id: Variant in ElementData.DAMAGE_DEALERS:
+		var def: Dictionary = ElementData.find(id as String)
+		assert_false(def.is_empty(), "unknown damage-dealer id: " + (id as String))
+		assert_gte(def["tier"] as int, 2, (id as String) + " should be T2+")
+		assert_gt(def["damage"] as int, 0, (id as String) + " needs base damage")
 
 
 func test_t2_elements_all_have_price_8() -> void:

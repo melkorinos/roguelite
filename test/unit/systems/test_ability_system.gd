@@ -125,11 +125,11 @@ func test_combat_start_freeze_sets_target_and_last_frozen() -> void:
 	assert_eq(s["opponent_last_frozen_slot"] as int, 0)
 
 
-func test_combat_start_set_status_field_makes_curse_permanent() -> void:
-	var ability: Dictionary = { "trigger": "passive",
-		"effects": [{ "kind": "set_status_field", "status": "curse", "field": "is_permanent", "value": true, "target": "opponent" }] }
+func test_combat_start_set_status_field_sets_curse_amplifier() -> void:
+	var ability: Dictionary = { "trigger": "combat_start",
+		"effects": [{ "kind": "set_status_field", "status": "curse", "field": "damage_amplifier", "value": 2, "target": "opponent" }] }
 	var s: Dictionary = AbilitySystem.resolve_combat_start(_with_ability("player", 0, ability))
-	assert_true(((s["opponent_statuses"] as Dictionary)["curse"] as Dictionary)["is_permanent"] as bool)
+	assert_eq(((s["opponent_statuses"] as Dictionary)["curse"] as Dictionary)["damage_amplifier"] as int, 2)
 
 
 func test_combat_start_does_not_mutate_input() -> void:

@@ -131,6 +131,7 @@ Note: `-gsuffix` is not supported by this GUT version — omit it. `-gdir` must 
 - Coding-first. Slight design awareness.
 - When a code decision might lock future design flexibility, say so explicitly.
 - When design is undecided, propose options — don't commit.
+- **Reporting style: ultra-concise. Sacrifice grammar for brevity. Terse fragments over full sentences.**
 
 ## Skill output — mandatory rule
 

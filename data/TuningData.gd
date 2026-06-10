@@ -38,7 +38,7 @@ const FORGE_MIN_INPUT_LEVEL: int = 2
 const FORGE_RESULT_LEVEL_PENALTY: int = 1
 const FORGE_GOLD_COST: int = 0
 const STARTING_OPTION_COUNT: int = 3
-const STARTING_BUFF_MULTIPLIER: int = 2
+const STARTING_PICK_LEVEL: int = 2        # chosen starting element begins at this Level (a head start; was a ×damage buff, dead now that T1 are pure-effect)
 # Shop slot 0 is always a T1 (forge fuel). Each of the other four slots independently
 # rolls this percent chance to be a higher (unlocked) tier instead of another T1, so
 # the mix varies round to round instead of always being 1×T1 + 4×higher.
@@ -78,8 +78,8 @@ const BATTLE_TIME_LIMIT: float = 30.0
 # in the cooldown path: a balance scalar, not a per-element design value; the result is
 # still rounded to whole deciseconds and floored.
 const COMBAT_COOLDOWN_MULTIPLIER: float = 0.7
-const OPPONENT_BASE_HP: int = 130         # flat base, mirrors BASE_PLAYER_HP; board damage adds on top (G4)
-const OPPONENT_HP_PER_DAMAGE: int = 5
+const OPPONENT_BASE_HP: int = 100         # round-1 opponent HP (placeholder; retune in balance)
+const OPPONENT_HP_GROWTH_PERCENT: int = 15  # +% of base per round: HP = BASE × (1 + pct·(round-1))
 const OPPONENT_HP_MIN: int = 15
 const OPPONENT_TIER_ROUND_BREAKS: Array = [2, 4, 6]   # ≤2→T1, ≤4→T2, ≤6→T3, else T4
 const OPPONENT_SLOTS_BASE: int = 2
@@ -122,7 +122,6 @@ const SHOCK_SLOW_MAX_PERCENT: float = 50.0       # the 50 in 50n/(n+5)
 const SHOCK_SLOW_HALF_STACKS: float = 5.0        # the +5
 const HASTE_REDUCTION_DECISECONDS: int = 3
 const WEAKEN_DURATION_TICKS: int = 3
-const CURSE_DURATION_TICKS: int = 3
-const CURSE_DOT_AMPLIFIER: int = 1
+const CURSE_DOT_AMPLIFIER: int = 1        # Curse v2: damage added per consumed charge (per hit / DOT tick)
 const EFFECTIVE_CD_FLOOR_DECISECONDS: int = 10
 const DOT_TICK_SECONDS: float = 1.0

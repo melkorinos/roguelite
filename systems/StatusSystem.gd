@@ -25,9 +25,9 @@ static func slow_pct(n: int) -> float:
 	return TuningData.SHOCK_SLOW_MAX_PERCENT * float(n) / (float(n) + TuningData.SHOCK_SLOW_HALF_STACKS)
 
 
-# True while a curse is in effect — either ticking down or pinned permanent.
+# True while a curse holds charges (Curse v2: stacks consumed per damaging event).
 static func curse_active(curse: Dictionary) -> bool:
-	return (curse["is_permanent"] as bool) or (curse["ticks_remaining"] as int) > 0
+	return (curse["stacks"] as int) > 0
 
 
 # ── Status Tray readout (in-combat HUD) ───────────────────────────────────────
@@ -86,10 +86,7 @@ static func describe(name: String, statuses: Dictionary) -> String:
 		"weaken":
 			return "Weakened: -%d damage per hit · %ds left" % [(d["stacks"] as int) * TuningData.WEAKEN_DAMAGE_REDUCTION_PER_STACK, d["ticks"] as int]
 		"curse":
-			var dur: String = "permanent" if (d["is_permanent"] as bool) else ("%ds left" % (d["ticks_remaining"] as int))
-			var vuln: int = d["damage_amplifier"] as int
-			var vuln_str: String = (", +%d per hit" % vuln) if vuln > 0 else ""
-			return "Cursed: +%d damage-over-time%s · %s" % [TuningData.CURSE_DOT_AMPLIFIER, vuln_str, dur]
+			return "Cursed: +%d damage per hit/tick · %d charge%s left" % [d["damage_amplifier"] as int, d["stacks"] as int, _plural(d["stacks"] as int)]
 		"leech":
 			var bonus: int = d["bonus"] as int
 			var bonus_str: String = (" +%d" % bonus) if bonus > 0 else ""
@@ -109,7 +106,7 @@ static func chip_badge(name: String, statuses: Dictionary) -> String:
 		return ""
 	var d: Dictionary = statuses[name] as Dictionary
 	if name == "curse":
-		return "∞" if (d["is_permanent"] as bool) else str(d["ticks_remaining"] as int)
+		return str(d["stacks"] as int) if (d["stacks"] as int) > 0 else ""
 	var n: int = 0
 	match name:
 		"burn", "poison", "weaken": n = d["stacks"] as int
@@ -143,46 +140,52 @@ static func effective_cooldown_deciseconds(base_deciseconds: int, own_statuses: 
 
 # Returns { "statuses": Dictionary, "hp_delta": int }.
 # hp_delta is non-zero only for instant self-effects (heal, leech).
-static func apply_effect(statuses: Dictionary, effect: String) -> Dictionary:
+# `potency` (the applying element's Level) scales the quantity applied this call —
+# a Lv-N element applies N stacks / points / heal. Default 1 (instant effects, tests).
+static func apply_effect(statuses: Dictionary, effect: String, potency: int = 1) -> Dictionary:
 	var s: Dictionary = statuses.duplicate(true)
 	var hp_delta: int = 0
+	var p: int = maxi(1, potency)
 
 	match effect:
 		"burn":
 			var d: Dictionary = s["burn"] as Dictionary
-			d["stacks"] = mini((d["stacks"] as int) + 1, MAX_STACKS)
+			d["stacks"] = mini((d["stacks"] as int) + p, MAX_STACKS)
 		"poison":
 			var d: Dictionary = s["poison"] as Dictionary
-			d["stacks"] = mini((d["stacks"] as int) + 1, MAX_STACKS)
+			d["stacks"] = mini((d["stacks"] as int) + p, MAX_STACKS)
 		"armor":
 			var d: Dictionary = s["armor"] as Dictionary
-			d["value"] = mini((d["value"] as int) + 1, MAX_STACKS)
+			d["value"] = mini((d["value"] as int) + p, MAX_STACKS)
 		"plating":
 			var d: Dictionary = s["plating"] as Dictionary
-			d["value"] = mini((d["value"] as int) + 1, MAX_STACKS)
+			d["value"] = mini((d["value"] as int) + p, MAX_STACKS)
 		"blind":
 			var d: Dictionary = s["blind"] as Dictionary
-			d["percent"] = mini((d["percent"] as int) + TuningData.BLIND_PERCENT_PER_STACK, TuningData.BLIND_PERCENT_CAP)
+			d["percent"] = mini((d["percent"] as int) + p * TuningData.BLIND_PERCENT_PER_STACK, TuningData.BLIND_PERCENT_CAP)
 		"shock":
 			var d: Dictionary = s["shock"] as Dictionary
-			d["n"] = mini((d["n"] as int) + 1, MAX_STACKS)
+			d["n"] = mini((d["n"] as int) + p, MAX_STACKS)
 		"slow":
 			var d: Dictionary = s["slow"] as Dictionary
-			d["n"] = mini((d["n"] as int) + 1, MAX_STACKS)
+			d["n"] = mini((d["n"] as int) + p, MAX_STACKS)
 		"haste":
 			var d: Dictionary = s["haste"] as Dictionary
-			d["reduction"] = (d["reduction"] as int) + TuningData.HASTE_REDUCTION_DECISECONDS
+			d["reduction"] = (d["reduction"] as int) + p * TuningData.HASTE_REDUCTION_DECISECONDS
 		"weaken":
 			var d: Dictionary = s["weaken"] as Dictionary
-			d["stacks"] = mini((d["stacks"] as int) + 1, MAX_STACKS)
+			d["stacks"] = mini((d["stacks"] as int) + p, MAX_STACKS)
 			d["ticks"] = TuningData.WEAKEN_DURATION_TICKS + (d["duration_bonus"] as int)
 		"curse":
 			var d: Dictionary = s["curse"] as Dictionary
-			d["ticks_remaining"] = TuningData.CURSE_DURATION_TICKS
+			d["stacks"] = mini((d["stacks"] as int) + p, MAX_STACKS)
+			# Plain curse carries a base per-event amplifier; abilities may raise it.
+			if (d["damage_amplifier"] as int) <= 0:
+				d["damage_amplifier"] = TuningData.CURSE_DOT_AMPLIFIER
 		"heal":
-			hp_delta = TuningData.HEAL_PER_APPLICATION
+			hp_delta = TuningData.HEAL_PER_APPLICATION * p
 		"cleanse":
-			var remove: int = TuningData.CLEANSE_REMOVE_PER_APPLICATION
+			var remove: int = TuningData.CLEANSE_REMOVE_PER_APPLICATION * p
 			var burn_d: Dictionary = s["burn"] as Dictionary
 			burn_d["stacks"] = maxi(0, (burn_d["stacks"] as int) - remove)
 			var poison_d: Dictionary = s["poison"] as Dictionary
@@ -196,7 +199,7 @@ static func apply_effect(statuses: Dictionary, effect: String) -> Dictionary:
 			var blind_d: Dictionary = s["blind"] as Dictionary
 			blind_d["percent"] = maxi(0, (blind_d["percent"] as int) - remove * TuningData.BLIND_PERCENT_PER_STACK)
 		"leech":
-			hp_delta = TuningData.LEECH_PER_APPLICATION
+			hp_delta = TuningData.LEECH_PER_APPLICATION * p
 
 	return { "statuses": s, "hp_delta": hp_delta }
 
@@ -210,13 +213,12 @@ static func tick(statuses: Dictionary) -> Dictionary:
 	var hp_damage: int = 0
 	var events: Array = []
 	var curse: Dictionary = s["curse"] as Dictionary
-	var curse_bonus: int = TuningData.CURSE_DOT_AMPLIFIER if curse_active(curse) else 0
 
 	# Burn: deal damage (armor absorbs at half rate, never below floor), decrement stacks
 	var burn: Dictionary = s["burn"] as Dictionary
 	var burn_stacks: int = burn["stacks"] as int
 	if burn_stacks > 0:
-		var raw_burn: int = burn_stacks * TuningData.BURN_DAMAGE_PER_STACK + (burn["tick_damage_bonus"] as int) + curse_bonus
+		var raw_burn: int = burn_stacks * TuningData.BURN_DAMAGE_PER_STACK + (burn["tick_damage_bonus"] as int)
 		var armor: Dictionary = s["armor"] as Dictionary
 		var armor_val: int = armor["value"] as int
 		var absorbable: int = maxi(0, armor_val - (armor["floor"] as int))
@@ -231,7 +233,7 @@ static func tick(statuses: Dictionary) -> Dictionary:
 	var poison: Dictionary = s["poison"] as Dictionary
 	var poison_stacks: int = poison["stacks"] as int
 	if poison_stacks > 0:
-		hp_damage += poison_stacks * TuningData.POISON_DAMAGE_PER_STACK + (poison["tick_damage_bonus"] as int) + curse_bonus
+		hp_damage += poison_stacks * TuningData.POISON_DAMAGE_PER_STACK + (poison["tick_damage_bonus"] as int)
 		events.append("on_poison_tick")
 
 	# Plating-vs-DOT (Steel): plating shaves the tick total when flagged
@@ -239,17 +241,17 @@ static func tick(statuses: Dictionary) -> Dictionary:
 	if (plating["reduces_dot"] as bool) and hp_damage > 0:
 		hp_damage = maxi(0, hp_damage - (plating["value"] as int))
 
+	# Curse v2: a DOT tick is a damaging event — amplify the tick by damage_amplifier and
+	# consume one curse stack. When stacks reach 0, the curse is spent.
+	if hp_damage > 0 and (curse["stacks"] as int) > 0:
+		hp_damage += curse["damage_amplifier"] as int
+		curse["stacks"] = (curse["stacks"] as int) - 1
+
 	# Weaken: decrement ticks, stacks stay
 	var weaken: Dictionary = s["weaken"] as Dictionary
 	var weaken_ticks: int = weaken["ticks"] as int
 	if weaken_ticks > 0:
 		weaken["ticks"] = weaken_ticks - 1
-
-	# Curse: decrement remaining ticks unless pinned permanent
-	if not (curse["is_permanent"] as bool):
-		var curse_ticks: int = curse["ticks_remaining"] as int
-		if curse_ticks > 0:
-			curse["ticks_remaining"] = curse_ticks - 1
 
 	return { "statuses": s, "damage": hp_damage, "events": events }
 
@@ -283,9 +285,11 @@ static func compute_incoming_damage(raw: int, attacker_statuses: Dictionary, def
 		armor["value"] = armor_val - points_spent
 		dmg -= absorbed
 
-	# Curse: a cursed defender takes a flat vulnerability bonus on every hit
+	# Curse v2: a damaging hit consumes one curse stack and adds damage_amplifier. A hit
+	# mitigated to 0 neither amplifies nor consumes.
 	var curse: Dictionary = def_s["curse"] as Dictionary
-	if curse_active(curse):
+	if dmg > 0 and (curse["stacks"] as int) > 0:
 		dmg += curse["damage_amplifier"] as int
+		curse["stacks"] = (curse["stacks"] as int) - 1
 
 	return { "damage": dmg, "defender_statuses": def_s }

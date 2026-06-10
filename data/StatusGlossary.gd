@@ -12,7 +12,7 @@ const DEFINITIONS: Dictionary = {
 	"armor": "Absorbs incoming physical damage, depleting as it does.",
 	"plating": "Flat reduction to every incoming hit. Never depletes.",
 	"blind": "Chance for the afflicted side's fires to miss (cap 50%).",
-	"curse": "Amplifies damage-over-time and adds vulnerability on the cursed side.",
+	"curse": "Charges that amplify each incoming hit and damage-over-time tick, spent one per damaging event.",
 	"leech": "Heals the attacker for the damage their hit dealt.",
 	"heal": "Restores HP to your side.",
 	"cleanse": "Removes a stack from each debuff on your side.",

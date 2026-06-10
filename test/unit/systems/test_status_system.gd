@@ -39,7 +39,7 @@ func test_empty_statuses_all_numeric_fields_are_zero() -> void:
 	assert_eq((s["haste"] as Dictionary)["reduction"] as int, 0)
 	assert_eq((s["weaken"] as Dictionary)["stacks"] as int, 0)
 	assert_eq((s["weaken"] as Dictionary)["ticks"] as int, 0)
-	assert_eq((s["curse"] as Dictionary)["ticks_remaining"] as int, 0)
+	assert_eq((s["curse"] as Dictionary)["stacks"] as int, 0)
 	assert_eq(s["cooldown_modifier_deciseconds"] as int, 0)
 
 
@@ -109,16 +109,27 @@ func test_apply_weaken_twice_stacks_accumulate_ticks_refresh() -> void:
 	assert_eq((s["weaken"] as Dictionary)["ticks"] as int, 3)
 
 
-func test_apply_curse_sets_ticks() -> void:
-	var s: Dictionary = _apply(_s(), "curse")
-	assert_eq((s["curse"] as Dictionary)["ticks_remaining"] as int, 3)
+func test_apply_effect_potency_scales_quantity() -> void:
+	# potency = applying element's Level → that many stacks/points per application.
+	var burn: Dictionary = (StatusSystem.apply_effect(_s(), "burn", 3) as Dictionary)["statuses"] as Dictionary
+	assert_eq((burn["burn"] as Dictionary)["stacks"] as int, 3)
+	var armor: Dictionary = (StatusSystem.apply_effect(_s(), "armor", 2) as Dictionary)["statuses"] as Dictionary
+	assert_eq((armor["armor"] as Dictionary)["value"] as int, 2)
 
 
-func test_apply_curse_reapply_refreshes_ticks() -> void:
+func test_apply_effect_potency_defaults_to_one() -> void:
+	var s: Dictionary = _apply(_s(), "burn")
+	assert_eq((s["burn"] as Dictionary)["stacks"] as int, 1)
+
+
+func test_apply_curse_adds_a_stack() -> void:
 	var s: Dictionary = _apply(_s(), "curse")
-	s = _tick_s(s)  # ticks_remaining → 2
-	s = _apply(s, "curse")
-	assert_eq((s["curse"] as Dictionary)["ticks_remaining"] as int, 3)
+	assert_eq((s["curse"] as Dictionary)["stacks"] as int, 1)
+
+
+func test_apply_curse_stacks_accumulate() -> void:
+	var s: Dictionary = _apply(_apply(_s(), "curse"), "curse")
+	assert_eq((s["curse"] as Dictionary)["stacks"] as int, 2)
 
 
 # ── apply_effect — instant effects ───────────────────────────────────────────
@@ -310,17 +321,17 @@ func test_tick_weaken_expires_after_3_ticks() -> void:
 	assert_eq((s["weaken"] as Dictionary)["stacks"] as int, 1)  # stacks still present
 
 
-func test_tick_curse_decrements_ticks() -> void:
+func test_tick_consumes_one_curse_stack_per_dot_tick() -> void:
+	# A DOT tick (burn) is a damaging event → amplify + consume one curse charge.
+	var s: Dictionary = _apply(_apply(_s(), "curse"), "burn")
+	s = _tick_s(s)
+	assert_eq((s["curse"] as Dictionary)["stacks"] as int, 0)
+
+
+func test_tick_does_not_consume_curse_without_dot() -> void:
 	var s: Dictionary = _apply(_s(), "curse")
 	s = _tick_s(s)
-	assert_eq((s["curse"] as Dictionary)["ticks_remaining"] as int, 2)
-
-
-func test_tick_curse_expires_after_3_ticks() -> void:
-	var s: Dictionary = _apply(_s(), "curse")
-	for _i: int in 3:
-		s = _tick_s(s)
-	assert_eq((s["curse"] as Dictionary)["ticks_remaining"] as int, 0)
+	assert_eq((s["curse"] as Dictionary)["stacks"] as int, 1)
 
 
 func test_tick_emits_poison_tick_event() -> void:
@@ -351,12 +362,10 @@ func test_tick_does_not_mutate_input() -> void:
 
 # ── curse expansion: permanence + damage amplifier ────────────────────────────
 
-func test_curse_permanent_does_not_tick_down() -> void:
-	var s: Dictionary = _apply(_s(), "curse")
-	(s["curse"] as Dictionary)["is_permanent"] = true
-	for _i: int in 5:
-		s = _tick_s(s)
-	assert_eq((s["curse"] as Dictionary)["ticks_remaining"] as int, 3)
+func test_curse_consumed_by_incoming_hit() -> void:
+	var def: Dictionary = _apply(_s(), "curse")  # stacks 1, base amplifier
+	var r: Dictionary = StatusSystem.compute_incoming_damage(3, _s(), def)
+	assert_eq(((r["defender_statuses"] as Dictionary)["curse"] as Dictionary)["stacks"] as int, 0)
 
 
 func test_curse_damage_amplifier_increases_incoming_while_active() -> void:
@@ -563,10 +572,9 @@ func test_chip_badge_armor_shows_value() -> void:
 	assert_eq(StatusSystem.chip_badge("armor", s), "2")
 
 
-func test_chip_badge_permanent_curse_is_infinity() -> void:
-	var s: Dictionary = _s()
-	(s["curse"] as Dictionary)["is_permanent"] = true
-	assert_eq(StatusSystem.chip_badge("curse", s), "∞")
+func test_chip_badge_curse_shows_stacks() -> void:
+	var s: Dictionary = _apply(_apply(_s(), "curse"), "curse")
+	assert_eq(StatusSystem.chip_badge("curse", s), "2")
 
 
 func test_every_tray_status_has_emoji_and_valence() -> void:

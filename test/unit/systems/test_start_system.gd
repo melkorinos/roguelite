@@ -26,11 +26,11 @@ func test_starting_options_are_distinct() -> void:
 
 # ── apply_starting_pick ───────────────────────────────────────────────────────
 
-func test_apply_starting_pick_grants_buffed_element() -> void:
+func test_apply_starting_pick_grants_element_at_bonus_level() -> void:
 	var s := StartSystem.apply_starting_pick(_state(), "fire")
 	var inv: Array = s["inventory"] as Array
 	assert_eq((inv[0] as Dictionary)["element_id"] as String, "fire")
-	assert_eq((inv[0] as Dictionary)["damage_multiplier"] as int, TuningData.STARTING_BUFF_MULTIPLIER)
+	assert_eq((inv[0] as Dictionary)["level"] as int, TuningData.STARTING_PICK_LEVEL)
 	assert_true(s["starting_pick_done"] as bool)
 
 
@@ -57,18 +57,6 @@ func test_apply_starting_pick_does_not_mutate_input() -> void:
 	assert_null((st["inventory"] as Array)[0])
 
 
-# ── effective_damage multiplier ───────────────────────────────────────────────
-
-func test_effective_damage_doubles_with_multiplier() -> void:
-	var fire := ElementData.find("fire").duplicate()
-	fire["level"] = 1
-	var base: int = ElementData.effective_damage(fire)
-	fire["damage_multiplier"] = 2
-	# multiplier hits the base-damage term only: (dmg*2*level + tier)
-	assert_eq(ElementData.effective_damage(fire), base + (fire["damage"] as int))
-
-
-func test_effective_damage_unchanged_without_multiplier() -> void:
-	var fire := ElementData.find("fire").duplicate()
-	fire["level"] = 2
-	assert_eq(ElementData.effective_damage(fire), (fire["damage"] as int) * 2 + (fire["tier"] as int))
+# (effective_damage multiplier tests removed — the Starting Pick now grants a level head
+# start, not a ×damage buff; damage_multiplier is vestigial. effective_damage archetype
+# behaviour is covered in test_element_data.gd.)

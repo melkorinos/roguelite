@@ -19,8 +19,16 @@ _Avoid_: craft, fuse, combine (too generic — Forge is a specific action)
 ### Pieces and equipment
 
 **Element** *(current prototype term)*:
-The core piece in the current codebase. Bought from the gold shop, placed on the Board, and fires damage during the combat phase. Defined in `ElementData.gd`. In the longer-term design, Elements will split into Units (fighters) and Items (passives on Units), but for the prototype they are unified.
+The core piece in the current codebase. Bought from the gold shop, placed on the Board, and fires on its cooldown during the combat phase. Defined in `ElementData.gd`. Every Element is one of two archetypes (see below). In the longer-term design, Elements will split into Units (fighters) and Items (passives on Units), but for the prototype they are unified.
 _Avoid_: card, item, unit (until the split is implemented)
+
+**Pure-Effect Element**:
+An Element that deals **no direct hit damage** — its Status *is* its damage (burn/poison ticks, etc.). All Tier-1 Elements and most higher-tier Elements are pure-effect. `effective_damage` returns 0 for them. See `docs/adr/0013`.
+_Avoid_: support, utility, caster
+
+**Damage-Dealer**:
+An Element that deals direct hit damage on each fire (`effective_damage = base × level`). A rare privilege of ~20% of Tier-2+ Elements (impact/physical theme, skewed to Tier 4); the set is `ElementData.DAMAGE_DEALERS`. May also apply a Status.
+_Avoid_: attacker, carry, dps
 
 **Unit** *(future)*:
 A piece that occupies a board slot and participates directly in combat. Acquired via the gold shop. Can have passive Abilities. Currently unified with Element in the prototype.
@@ -83,7 +91,7 @@ The effect an Element triggers automatically each time its cooldown expires. Eve
 _Avoid_: ability (reserved for the Ability system), passive, on-hit
 
 **Status**:
-An ongoing condition tracked as a flat dictionary on one player's side, not per-element. A Status has numeric state (stacks, ticks_remaining, value) read and written by StatusSystem. All Elements on one side share the same Status pool.
+An ongoing condition tracked as a flat dictionary on one player's side, not per-element. A Status has numeric state (stacks, value, percent) read and written by StatusSystem. The quantity applied scales with the applying Element's **Level**. All Elements on one side share the same Status pool.
 _Avoid_: buff/debuff (too generic), action, effect
 
 ### Abilities and combat

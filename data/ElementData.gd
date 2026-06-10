@@ -187,9 +187,31 @@ static func instantiate(element_id: String, level: int = 1) -> Dictionary:
 	return instance
 
 
-# Effective damage = base_damage × level + tier. Applies universally (level-up and forge results).
+# Damage-dealers: the only elements that deal direct hit damage. Everyone else is
+# "pure-effect" — its Status IS its damage (burn/poison ticks, etc.). A privilege of
+# some T2+ (impact/physical theme), skewed to higher tiers. See docs/adr (damage redesign).
+const DAMAGE_DEALERS: Dictionary = {
+	# T2
+	"lava": true, "boulder": true, "shrapnel": true, "flint": true, "molten": true, "steel": true, "gore": true,
+	# T3
+	"volcano": true, "obsidian": true, "meteorite": true, "mountain": true, "tsunami": true, "glacier": true, "carnage": true,
+	# T4
+	"iceage": true, "maelstrom": true, "tectonic": true, "supernova": true, "singularity": true,
+	"ragnarok": true, "primordial": true, "aether": true,
+}
+
+
+# Direct hit damage = base × multiplier × level. Pure-effect elements (not in
+# DAMAGE_DEALERS) return 0 — no tier chip, no hit; their Status carries their damage.
+# (`tier` was dropped: a tier change is a new element with its own base. `multiplier`
+# is vestigial — nothing sets it now.)
 static func effective_damage(item: Dictionary) -> int:
+	var id: String = item.get("element_id", item.get("id", "")) as String
+	if not DAMAGE_DEALERS.has(id):
+		return 0
+	var base: int = item.get("damage", 0) as int
+	if base <= 0:
+		return 0
 	var level: int = item.get("level", 1) as int
-	# Starting Pick (and future buffs) can multiply an element's base damage.
 	var multiplier: int = item.get("damage_multiplier", 1) as int
-	return (item["damage"] as int) * multiplier * level + (item["tier"] as int)
+	return base * multiplier * level

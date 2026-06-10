@@ -14,12 +14,13 @@
       "PowerShell(Test-Path*)",
       "PowerShell(Select-String*)",
       "PowerShell(Select-Object*)",
+      "PowerShell(Out-File*)",
       "PowerShell(Measure-Object*)",
       "Bash(mkdir *)",
-      "Edit(.claude/ai-helper/*)",
-      "Edit(.claude/ai-helper/**)",
-      "Edit(.claude/ai-helper/memory.md)",
-      "Edit(.claude/ai-helper/log.md)",
+      "Bash(\"memory.md*)",
+      "Bash(\"log.md*)",
+      "Edit(.claude/**)",
+      "Write(.claude/**)",
       "Edit(data/*.gd)",
       "Edit(systems/*.gd)",
       "Edit(scenes/**/*.gd)",
@@ -27,14 +28,8 @@
       "Edit(CONTEXT.md)",
       "Edit(*.md)",
       "Write(*.md)",
-      "Edit(.claude/**/*.md)",
-      "Write(.claude/**/*.md)",
       "Edit(docs/**/*.md)",
-      "Write(docs/**/*.md)",
-      "Write(.claude/ai-helper/*)",
-      "Write(.claude/ai-helper/**)",
-      "Write(.claude/ai-helper/memory.md)",
-      "Write(.claude/ai-helper/log.md)"
+      "Write(docs/**/*.md)"
     ]
   }
 }

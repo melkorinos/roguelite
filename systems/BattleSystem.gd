@@ -22,12 +22,13 @@ static func simulate_battle(state: Dictionary) -> Dictionary:
 	return s
 
 
-static func compute_opponent_hp(opp_grid: Array) -> int:
-	var total: int = TuningData.OPPONENT_BASE_HP
-	for slot: Variant in opp_grid:
-		if slot != null:
-			total += (slot as Dictionary).get("damage", 1) as int * TuningData.OPPONENT_HP_PER_DAMAGE
-	return maxi(total, TuningData.OPPONENT_HP_MIN)
+# Opponent HP scales by round only (placeholder — to be retuned in the balance pass).
+# Board-independent: with direct damage now a rare privilege, opponent HP no longer keys
+# off the board's `damage` (which is 0 for most elements). Modest base × round growth so a
+# strong build crashes through it. Round 1 = OPPONENT_BASE_HP.
+static func compute_opponent_hp(round_num: int) -> int:
+	var growth: float = 1.0 + float(TuningData.OPPONENT_HP_GROWTH_PERCENT) / 100.0 * float(maxi(0, round_num - 1))
+	return maxi(TuningData.OPPONENT_HP_MIN, int(round(float(TuningData.OPPONENT_BASE_HP) * growth)))
 
 
 static func tick_battle(state: Dictionary, delta: float) -> Dictionary:
@@ -188,7 +189,9 @@ static func _fire_element_once(s: Dictionary, side: String, elem: Dictionary, sl
 	var opp_hp_key: String = opp_k["hp"] as String
 	var raw: int = ElementData.effective_damage(elem)
 	var dmg: int = raw
-	if use_effects:
+	# Pure-effect elements (raw == 0) skip the whole damage block — no mitigation, no
+	# armour-strip, no curse-vulnerability — and just fire a 0-damage event + their effect.
+	if raw > 0 and use_effects:
 		var armor_before: int = ((s[opp_statuses_key] as Dictionary)["armor"] as Dictionary)["value"] as int
 		var hit: Dictionary = StatusSystem.compute_incoming_damage(raw, s[own_statuses_key] as Dictionary, s[opp_statuses_key] as Dictionary)
 		dmg = hit["damage"] as int
@@ -219,7 +222,7 @@ static func _fire_element_once(s: Dictionary, side: String, elem: Dictionary, sl
 			var entry: Dictionary = chance_entry as Dictionary
 			if combat_rng.randf() * 100.0 < float(entry["chance"] as int):
 				var statuses_key: String = own_statuses_key if (entry.get("target", "opponent") as String) == "own" else opp_statuses_key
-				var res: Dictionary = StatusSystem.apply_effect(s[statuses_key] as Dictionary, entry["status"] as String)
+				var res: Dictionary = StatusSystem.apply_effect(s[statuses_key] as Dictionary, entry["status"] as String, entry.get("level", 1) as int)
 				s[statuses_key] = res["statuses"] as Dictionary
 				_tally_effect(slot_stats, entry["status"] as String)
 

@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Element Card — Design Brief v1 · 2026-06-09</title>
+<style>
+
+/* ─────────────────────────────────────────────────────────────────────────
+   DESIGN TOKENS
+   All names intended to map 1-to-1 back into ThemeData.gd + UIScale.gd.
+   ★ = new constant not yet in those files — add during implementation.
+   ───────────────────────────────────────────────────────────────────────── */
+:root {
+  /* Tier fill — ThemeData.TIER_N_BG (Godot Color → CSS hex) */
+  --t1-bg:     #193821;   /* Color(0.10, 0.22, 0.13) */
+  --t2-bg:     #172940;   /* Color(0.09, 0.16, 0.30) */
+  --t3-bg:     #2e1a47;   /* Color(0.18, 0.10, 0.28) */
+  --t4-bg:     #3d2b0a;   /* Color(0.24, 0.17, 0.04) */
+
+  /* Tier border L1 — ThemeData.TIER_N_BORDER */
+  --t1-b:  #73cc73;       /* Color(0.45, 0.80, 0.45) */
+  --t2-b:  #5999fa;       /* Color(0.35, 0.60, 0.98) */
+  --t3-b:  #b86bff;       /* Color(0.72, 0.42, 1.00) */
+  --t4-b:  #fabd33;       /* Color(0.98, 0.74, 0.20) */
+
+  /* Level luminosity — border brightens + glow intensifies per level
+     New ThemeData group: CARD_LVL2_GLOW / CARD_LVL3_GLOW ★ */
+  --t1-b-l2: #92e092;  --t1-glow-l2: rgba(115,204,115,0.35);
+  --t1-b-l3: #b0f0b0;  --t1-glow-l3: rgba(115,204,115,0.60);
+  --t2-b-l2: #7ab4ff;  --t2-glow-l2: rgba(89,153,250,0.35);
+  --t2-b-l3: #9fcfff;  --t2-glow-l3: rgba(89,153,250,0.60);
+  --t3-b-l2: #cc8fff;  --t3-glow-l2: rgba(184,107,255,0.35);
+  --t3-b-l3: #ddb0ff;  --t3-glow-l3: rgba(184,107,255,0.60);
+  --t4-b-l2: #ffd060;  --t4-glow-l2: rgba(250,189,51,0.35);
+  --t4-b-l3: #ffe590;  --t4-glow-l3: rgba(250,189,51,0.60);
+
+  /* Charge bar — ThemeData.BATTLE_PROGRESS_* */
+  --charge-bg:   #140f1a;   /* Color(0.08, 0.06, 0.10) */
+  --charge-fill: #4da6ff;   /* Color(0.30, 0.65, 1.00) */
+
+  /* Empty slot — ThemeData.SLOT_BG_EMPTY / SLOT_BORDER_EMPTY */
+  --slot-empty-bg:     #1a1a24;   /* Color(0.10, 0.10, 0.14) */
+  --slot-empty-border: #474758;   /* Color(0.28, 0.28, 0.36) */
+
+  /* Text — ThemeData label constants */
+  --text-primary:  #e8eaf4;
+  --text-dim:      #9a9cb8;
+  --text-stat:     #c8cae0;
+  --text-trigger:  #8fd3ff;   /* ThemeData.COLOR_COMP_TRIGGER */
+  --text-ability:  #c8caf2;   /* ThemeData.COLOR_COMP_ABILITY */
+  --text-kw:       #8fd3ff;   /* keyword link color (same as trigger) */
+
+  /* Tier badge background — ThemeData.CARD_TIER_BADGE_BG ★ */
+  --badge-bg: rgba(0,0,0,0.50);
+
+  /* Price badge text — ThemeData.CARD_PRICE_COLOR ★
+     (reuses EVENT_TITLE_COLOR warm gold: Color(0.92, 0.82, 0.45)) */
+  --price-color: #ebcf73;
+  --price-badge-bg: rgba(0,0,0,0.55);
+
+  /* Card geometry */
+  --card-w:      130px;
+  --card-radius: 8px;
+
+  /* Font sizes — UIScale.gd constants
+     Current code values shown in parens; new ★ constants needed */
+  --fs-emoji:    46px;   /* UIScale.SLOT_EMOJI = 52 (slightly smaller for portrait) */
+  --fs-name:     13px;   /* UIScale.SLOT_NAME  = 14 */
+  --fs-stat-val: 11px;   /* UIScale.CARD_STAT  ★ */
+  --fs-stat-lbl:  9px;   /* UIScale.CARD_STAT_LABEL ★ */
+  --fs-trigger:  10px;   /* UIScale.CARD_TRIGGER ★ (COMP_TRIGGER=11 is close) */
+  --fs-ability:  10px;   /* UIScale.CARD_ABILITY ★ (COMP_ABILITY=11 is close) */
+  --fs-badge:    10px;   /* UIScale.CARD_TIER_BADGE ★ */
+  --fs-price:    11px;   /* UIScale.CARD_PRICE ★ (SHOP_LABEL=18 is too big) */
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   PAGE CHROME
+   ───────────────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #0a0c18;
+  color: var(--text-primary);
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  padding: 48px 56px 80px;
+  line-height: 1.4;
+}
+
+h1 {
+  font-size: 20px; font-weight: 700;
+  color: #c0a0ff;
+  margin-bottom: 5px;
+  letter-spacing: 0.01em;
+}
+.page-sub {
+  font-size: 12px; color: var(--text-dim);
+  margin-bottom: 52px;
+}
+code { font-family: 'Consolas', monospace; font-size: 0.9em; color: #9898c8; }
+
+h2 {
+  font-size: 11px; font-weight: 700;
+  color: #7070a0;
+  text-transform: uppercase; letter-spacing: 0.1em;
+  margin-bottom: 22px; margin-top: 52px;
+  padding-bottom: 7px;
+  border-bottom: 1px solid #1e1e30;
+}
+h2:first-of-type { margin-top: 0; }
+
+.row {
+  display: flex;
+  gap: 28px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.card-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.card-label {
+  font-size: 10px; color: var(--text-dim);
+  text-align: center; max-width: 130px;
+  line-height: 1.4;
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────
+   ELEMENT CARD — BASE
+   Portrait layout, ~130 × 195 px.
+   Items 1-13 from the content inventory are annotated below.
+   ───────────────────────────────────────────────────────────────────────── */
+.card {
+  width: var(--card-w);
+  border-radius: var(--card-radius);
+  border: 2px solid transparent;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex-shrink: 0;
+  /* Item 1 — background  Item 2 — border set by tier class */
+}
+
+/* ── Item 13 — Charge Bar (battle context only, top strip) ────────────── */
+.charge-bar {
+  width: 100%;
+  height: 6px;
+  background: var(--charge-bg);
+  flex-shrink: 0;
+}
+.charge-bar .fill {
+  height: 100%;
+  background: var(--charge-fill);
+  transition: width 0.08s linear;
+}
+
+/* ── Card body (everything below the charge bar) ───────────────────────── */
+.card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 7px 8px 28px 8px;  /* bottom pad leaves room for price badge */
+  position: relative;
+}
+
+/* ── Item 6 — Tier badge (top-right corner) ────────────────────────────── */
+.tier-badge {
+  position: absolute;
+  top: 6px; right: 6px;
+  font-size: var(--fs-badge);
+  font-weight: 700;
+  color: var(--text-primary);
+  background: var(--badge-bg);
+  border-radius: 4px;
+  padding: 2px 5px;
+  line-height: 1.1;
+  letter-spacing: 0.04em;
+  border: 1px solid rgba(255,255,255,0.10);
+}
+
+/* ── Item 4 — Emoji / icon ─────────────────────────────────────────────── */
+.card-icon {
+  font-size: var(--fs-emoji);
+  text-align: center;
+  line-height: 1;
+  padding: 8px 0 4px 0;
+  flex-shrink: 0;
+}
+
+/* ── Item 5 — Element name ─────────────────────────────────────────────── */
+.card-name {
+  font-size: var(--fs-name);
+  font-weight: 600;
+  text-align: center;
+  color: var(--text-primary);
+  margin-bottom: 7px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Items 7 + 9 — Stats row (Cooldown · Eff. Dmg) ────────────────────── */
+.stats-row {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  margin-bottom: 7px;
+  padding: 0 2px;
+}
+.stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+.stat-icon { font-size: 9px; line-height: 1; opacity: 0.75; }
+.stat-value {
+  font-size: var(--fs-stat-val);
+  font-weight: 700;
+  color: var(--text-stat);
+  line-height: 1;
+}
+.stat-label {
+  font-size: var(--fs-stat-lbl);
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  line-height: 1;
+}
+
+/* ── Separator between stats and abilities ─────────────────────────────── */
+.sep {
+  height: 1px;
+  background: rgba(255,255,255,0.08);
+  margin: 0 0 6px 0;
+}
+
+/* ── Items 10 + 11 — Abilities Panel ──────────────────────────────────── */
+.abilities {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.trigger-label {
+  font-size: var(--fs-trigger);
+  font-weight: 700;
+  color: var(--text-trigger);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+}
+.ability-text {
+  font-size: var(--fs-ability);
+  color: var(--text-ability);
+  line-height: 1.38;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+/* keyword [link] styling inside ability text */
+.kw {
+  color: var(--text-kw);
+  text-decoration: underline;
+  text-decoration-color: rgba(143,211,255,0.35);
+  text-underline-offset: 1px;
+}
+.ability-none { font-size: var(--fs-ability); color: #555570; font-style: italic; }
+
+/* ── Item 12 — Price badge (shop context only, bottom-right) ───────────── */
+.price-badge {
+  position: absolute;
+  bottom: 7px; right: 7px;
+  font-size: var(--fs-price);
+  font-weight: 700;
+  color: var(--price-color);
+  background: var(--price-badge-bg);
+  border-radius: 4px;
+  padding: 2px 6px;
+  line-height: 1.1;
+  border: 1px solid rgba(235,207,115,0.25);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   TIER CLASSES — Items 1 + 2 (background + border color)
+   ───────────────────────────────────────────────────────────────────────── */
+.t1 { background: var(--t1-bg); border-color: var(--t1-b); }
+.t2 { background: var(--t2-bg); border-color: var(--t2-b); }
+.t3 { background: var(--t3-bg); border-color: var(--t3-b); }
+.t4 { background: var(--t4-bg); border-color: var(--t4-b); }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   LEVEL LUMINOSITY — Item 3
+   L1 = base border, no glow.
+   L2 = border brightens ~25%, soft outer glow.
+   L3 = border brightens ~50%, strong outer glow. Border width stays 2px.
+   ───────────────────────────────────────────────────────────────────────── */
+.lv2.t1 { border-color: var(--t1-b-l2); box-shadow: 0 0 9px 1px var(--t1-glow-l2); }
+.lv2.t2 { border-color: var(--t2-b-l2); box-shadow: 0 0 9px 1px var(--t2-glow-l2); }
+.lv2.t3 { border-color: var(--t3-b-l2); box-shadow: 0 0 9px 1px var(--t3-glow-l2); }
+.lv2.t4 { border-color: var(--t4-b-l2); box-shadow: 0 0 9px 1px var(--t4-glow-l2); }
+
+.lv3.t1 { border-color: var(--t1-b-l3); box-shadow: 0 0 16px 3px var(--t1-glow-l3); }
+.lv3.t2 { border-color: var(--t2-b-l3); box-shadow: 0 0 16px 3px var(--t2-glow-l3); }
+.lv3.t3 { border-color: var(--t3-b-l3); box-shadow: 0 0 16px 3px var(--t3-glow-l3); }
+.lv3.t4 { border-color: var(--t4-b-l3); box-shadow: 0 0 16px 3px var(--t4-glow-l3); }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   CARD STATES
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* Empty slot */
+.card-empty {
+  background: var(--slot-empty-bg);
+  border-color: var(--slot-empty-border);
+  min-height: 195px;
+}
+.card-empty .empty-glyph {
+  font-size: 22px; color: #3a3a50;
+  text-align: center;
+  margin: auto;
+  padding: 80px 0;
+}
+
+/* Unaffordable (shop — not enough gold) */
+.unaffordable { filter: brightness(0.55) saturate(0.45); }
+
+/* Frozen (battle context) */
+.frozen { filter: brightness(0.65) saturate(0.35) hue-rotate(155deg); }
+.frozen .charge-bar .fill { opacity: 0.35; }
+.frozen::after {
+  content: '❄';
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 38px;
+  opacity: 0.65;
+  pointer-events: none;
+  z-index: 2;
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────
+   TOKEN TABLE
+   ───────────────────────────────────────────────────────────────────────── */
+.token-table {
+  border-collapse: collapse;
+  font-size: 11.5px;
+  margin-top: 16px;
+  width: 100%;
+  max-width: 820px;
+}
+.token-table th {
+  text-align: left; color: #7070a0;
+  font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: 0.07em;
+  padding: 5px 20px 5px 0;
+  border-bottom: 1px solid #2a2a40;
+}
+.token-table td {
+  padding: 4px 20px 4px 0;
+  color: #c0c0e0;
+  border-bottom: 1px solid #16161e;
+  vertical-align: middle;
+}
+.token-table td.mono { font-family: 'Consolas', monospace; font-size: 10.5px; color: #8080c0; }
+.token-table tr.new-token td.mono::after { content: ' ★'; color: #c0a060; }
+.token-table .swatch {
+  display: inline-block; width: 11px; height: 11px;
+  border-radius: 2px; vertical-align: middle;
+  margin-right: 6px; border: 1px solid rgba(255,255,255,0.12);
+}
+.note { font-size: 10.5px; color: #555570; margin-top: 6px; }
+
+</style>
+</head>
+<body>
+
+<h1>Element Card — Design Brief v1</h1>
+<p class="page-sub">
+  Portrait card spec for the Element Card redesign. All tokens map to <code>ThemeData.gd</code> + <code>UIScale.gd</code>.
+  Items numbered 1–13 match the content inventory from the grilling session. Produced 2026-06-09.
+</p>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     SECTION 1 — All four tiers (Level 1, inventory context — no price, no charge)
+     Shows: items 1, 2, 3 (L1 base), 4, 5, 6, 7, 9, 10, 11
+     ═══════════════════════════════════════════════════════════════════════ -->
+<h2>Section 1 — All four tiers &nbsp;·&nbsp; Level 1 &nbsp;·&nbsp; Inventory context</h2>
+<div class="row">
+
+  <!-- T1 Fire -->
+  <div class="card-wrap">
+    <div class="card t1">
+      <div class="card-body">
+        <div class="tier-badge">T1</div>
+        <div class="card-icon">🔥</div>
+        <div class="card-name">Fire</div>
+        <div class="stats-row">
+          <div class="stat">
+            <div class="stat-icon">⏱</div>
+            <div class="stat-value">2.5s</div>
+            <div class="stat-label">CD</div>
+          </div>
+          <div class="stat">
+            <div class="stat-icon">💥</div>
+            <div class="stat-value">3</div>
+            <div class="stat-label">DMG</div>
+          </div>
+        </div>
+        <div class="sep"></div>
+        <div class="abilities">
+          <div class="trigger-label">On Fire</div>
+          <div class="ability-text">Apply 1 <span class="kw">[burn]</span> to the opponent.</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-label">T1 Common<br>Fire 🔥</div>
+  </div>
+
+  <!-- T2 Steam -->
+  <div class="card-wrap">
+    <div class="card t2">
+      <div class="card-body">
+        <div class="tier-badge">T2</div>
+        <div class="card-icon">♨️</div>
+        <div class="card-name">Steam</div>
+        <div class="stats-row">
+          <div class="stat">
+            <div class="stat-icon">⏱</div>
+            <div class="stat-value">3.5s</div>
+            <div class="stat-label">CD</div>
+          </div>
+          <div class="stat">
+            <div class="stat-icon">💥</div>
+            <div class="stat-value">4</div>
+            <div class="stat-label">DMG</div>
+          </div>
+        </div>
+        <div class="sep"></div>
+        <div class="abilities">
+          <div class="trigger-label">Reactive</div>
+          <div class="ability-text">When <span class="kw">[burn]</span> is applied, deal 1 bonus damage.</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-label">T2 Rare<br>Steam ♨️</div>
+  </div>
+
+  <!-- T3 Inferno -->
+  <div class="card-wrap">
+    <div class="card t3">
+      <div class="card-body">
+        <div class="tier-badge">T3</div>
+        <div class="card-icon">🌋</div>
+        <div class="card-name">Inferno</div>
+        <div class="stats-row">
+          <div class="stat">
+            <div class="stat-icon">⏱</div>
+            <div class="stat-value">4.5s</div>
+            <div class="stat-label">CD</div>
+          </div>
+          <div class="stat">
+            <div class="stat-icon">💥</div>
+            <div class="stat-value">7</div>
+            <div class="stat-label">DMG</div>
+          </div>
+        </div>
+        <div class="sep"></div>
+        <div class="abilities">
+          <div class="trigger-label">Every 6s</div>
+          <div class="ability-text">Apply 3 <span class="kw">[burn]</span> + 1 <span class="kw">[curse]</span> to opponent.</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-label">T3 Epic<br>Inferno 🌋</div>
+  </div>
+
+  <!-- T4 Maelstrom -->
+  <div class="card-wrap">
+    <div class="card t4">
+      <div class="card-body">
+        <div class="tier-badge">T4</div>
+        <div class="card-icon">🌪️</div>
+        <div class="card-name">Maelstrom</div>
+        <div class="stats-row">
+          <div class="stat">
+            <div class="stat-icon">⏱</div>
+            <div class="stat-value">5.0s</div>
+            <div class="stat-label">CD</div>
+          </div>
+          <div class="stat">
+            <div class="stat-icon">💥</div>
+            <div class="stat-value">10</div>
+            <div class="stat-label">DMG</div>
+          </div>
+        </div>
+        <div class="sep"></div>
+        <div class="abilities">
+          <div class="trigger-label">Combat Start</div>
+          <div class="ability-text ability-none">— ability design pending —</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-label">T4 Phenomenon<br>Maelstrom 🌪️</div>
+  </div>
+
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     SECTION 2 — Level luminosity (item 3)
+     Same T1 Fire card at L1, L2, L3 to show border glow progression.
+     Also T4 at L3 to show gold glow on the legendary tier.
+     ═══════════════════════════════════════════════════════════════════════ -->
+<h2>Section 2 — Level luminosity &nbsp;·&nbsp; T1 Fire L1 → L2 → L3 &nbsp;+&nbsp; T4 Maelstrom L3</h2>
+<div class="row">
+
+  <!-- T1 L1 -->
+  <div class="card-wrap">
+    <div class="card t1">
+      <div class="card-body">
+        <div class="tier-badge">T1</div>
+        <div class="card-icon">🔥</div>
+        <div class="card-name">Fire</div>
+        <div class="stats-row">
+          <div class="stat"><div class="stat-icon">⏱</div><div class="stat-value">2.5s</div><div class="stat-label">CD</div></div>
+          <div class="stat"><div class="stat-icon">💥</div><div class="stat-value">3</div><div class="stat-label">DMG</div></div>
+        </div>
+        <div class="sep"></div>
+        <div class="abilities">
+          <div class="trigger-label">On Fire</div>
+          <div class="ability-text">Apply 1 <span class="kw">[burn]</span> to the opponent.</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-label">Level 1<br>base border, no glow</div>
+  </div>
+
+  <!-- T1 L2 -->
+  <div class="card-wrap">
+    <div class="card t1 lv2">
+      <div class="card-body">
+        <div class="tier-badge">T1</div>
+        <div class="card-icon">🔥</div>
+        <div class="card-name">Fire</div>
+        <div class="stats-row">
+          <div class="stat"><div class="stat-icon">⏱</div><div class="stat-value">2.5s</div><div class="stat-label">CD</div></div>
+          <div class="stat"><div class="stat-icon">💥</div><div class="stat-value">5</div><div class="stat-label">DMG</div></div>
+        </div>
+        <div class="sep"></div>
+        <div class="abilities">
+          <div class="trigger-label">On Fire</div>
+          <div class="ability-text">Apply 1 <span class="kw">[burn]</span> to the opponent.</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-label">Level 2<br>border +25%, soft glow</div>
+  </div>
+
+  <!-- T1 L3 -->
+  <div class="card-wrap">
+    <div class="card t1 lv3">
+      <div class="card-body">
+        <div class="tier-badge">T1</div>
+        <div class="card-icon">🔥</div>
+        <div class="card-name">Fire</div>
+        <div class="stats-row">
+          <div class="stat"><div class="stat-icon">⏱</div><div class="stat-value">2.5s</div><div class="stat-label">CD</div></div>
+          <div class="stat"><div class="stat-icon">💥</div><div class="stat-value">7</div><div class="stat-label">DMG</div></div>
+        </div>
+        <div class="sep"></div>
+        <div class="abilities">
+          <div class="trigger-label">On Fire</div>
+          <div class="ability-text">Apply 1 <span class="kw">[burn]</span> to the opponent.</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-label">Level 3<br>border +50%, strong glow</div>
+  </div>
+
+  <!-- T4 L3 — legendary glow -->
+  <div class="card-wrap">
+    <div class="card t4 lv3">
+      <div class="card-body">
+        <div class="tier-badge">T4</div>
+        <div class="card-icon">🌪️</div>
+        <div class="card-name">Maelstrom</div>
+        <div class="stats-row">
+          <div class="stat"><div class="stat-icon">⏱</div><div class="stat-value">5.0s</div><div class="stat-label">CD</div></div>
+          <div class="stat"><div class="stat-icon">💥</div><div class="stat-value">22</div><div class="stat-label">DMG</div></div>
+        </div>
+        <div class="sep"></div>
+        <div class="abilities">
+          <div class="trigger-label">Combat Start</div>
+          <div class="ability-text ability-none">— ability design pending —</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-label">T4 Level 3<br>legendary gold glow</div>
+  </div>
+
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     SECTION 3 — Contexts: shop / inventory / battle
+     T2 Steam L1. Shows item 12 (price badge) and item 13 (charge bar).
+     ═══════════════════════════════════════════════════════════════════════ -->
+<h2>Section 3 — Three contexts &nbsp;·&nbsp; T2 Steam L1</h2>
+<div class="row">
+
+  <!-- Shop — price badge visible (item 12) -->
+  <div class="card-wrap">
+    <div class="card t2">
+      <div class="card-body">
+        <div class="tier-badge">T2</div>
+        <div class="card-icon">♨️</div>
+        <div class="card-name">Steam</div>
+        <div class="stats-row">
+          <div class="stat"><div class="stat-icon">⏱</div><div class="stat-value">3.5s</div><div class="stat-label">CD</div></div>
+          <div class="stat"><div class="stat-icon">💥</div><div class="stat-value">4</div><div class="stat-label">DMG</div></div>
+        </div>
+        <div class="sep"></div>
+        <div class="abilities">
+          <div class="trigger-label">Reactive</div>
+          <div class="ability-text">When <span class="kw">[burn]</span> is applied, deal 1 bonus damage.</div>
+        </div>
+        <div class="price-badge">8g</div>
+      </div>
+    </div>
+    <div class="card-label">Shop context<br>price badge visible</div>
+  </div>
+
+  <!-- Shop — unaffordable -->
+  <div class="card-wrap">
+    <div class="card t2 unaffordable">
+      <div class="card-body">
+        <div class="tier-badge">T2</div>
+        <div class="card-icon">♨️</div>
+        <div class="card-name">Steam</div>
+        <div class="stats-row">
+          <div class="stat"><div class="stat-icon">⏱</div><div class="stat-value">3.5s</div><div class="stat-label">CD</div></div>
+          <div class="stat"><div class="stat-icon">💥</div><div class="stat-value">4</div><div class="stat-label">DMG</div></div>
+        </div>
+        <div class="sep"></div>
+        <div class="abilities">
+          <div class="trigger-label">Reactive</div>
+          <div class="ability-text">When <span class="kw">[burn]</span> is applied, deal 1 bonus damage.</div>
+        </div>
+        <div class="price-badge">8g</div>
+      </div>
+    </div>
+    <div class="card-label">Shop · unaffordable<br>desaturate + dim</div>
+  </div>
+
+  <!-- Inventory — clean (no price, no charge) -->
+  <div class="card-wrap">
+    <div class="card t2">
+      <div class="card-body">
+        <div class="tier-badge">T2</div>
+        <div class="card-icon">♨️</div>
+        <div class="card-name">Steam</div>
+        <div class="stats-row">
+          <div class="stat"><div class="stat-icon">⏱</div><div class="stat-value">3.5s</div><div class="stat-label">CD</div></div>
+          <div class="stat"><div class="stat-icon">💥</div><div class="stat-value">4</div><div class="stat-label">DMG</div></div>
+        </div>
+        <div class="sep"></div>
+        <div class="abilities">
+          <div class="trigger-label">Reactive</div>
+          <div class="ability-text">When <span class="kw">[burn]</span> is applied, deal 1 bonus damage.</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-label">Inventory context<br>clean — no price, no charge</div>
+  </div>
+
+  <!-- Battle — charge bar at 65% (item 13) -->
+  <div class="card-wrap">
+    <div class="card t2">
+      <div class="charge-bar"><div class="fill" style="width:65%"></div></div>
+      <div class="card-body">
+        <div class="tier-badge">T2</div>
+        <div class="card-icon">♨️</div>
+        <div class="card-name">Steam</div>
+        <div class="stats-row">
+          <div class="stat"><div class="stat-icon">⏱</div><div class="stat-value">3.5s</div><div class="stat-label">CD</div></div>
+          <div class="stat"><div class="stat-icon">💥</div><div class="stat-value">4</div><div class="stat-label">DMG</div></div>
+        </div>
+        <div class="sep"></div>
+        <div class="abilities">
+          <div class="trigger-label">Reactive</div>
+          <div class="ability-text">When <span class="kw">[burn]</span> is applied, deal 1 bonus damage.</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-label">Battle context<br>charge bar 65%</div>
+  </div>
+
+  <!-- Battle — frozen state -->
+  <div class="card-wrap">
+    <div class="card t2 frozen">
+      <div class="charge-bar"><div class="fill" style="width:30%"></div></div>
+      <div class="card-body">
+        <div class="tier-badge">T2</div>
+        <div class="card-icon">♨️</div>
+        <div class="card-name">Steam</div>
+        <div class="stats-row">
+          <div class="stat"><div class="stat-icon">⏱</div><div class="stat-value">3.5s</div><div class="stat-label">CD</div></div>
+          <div class="stat"><div class="stat-icon">💥</div><div class="stat-value">4</div><div class="stat-label">DMG</div></div>
+        </div>
+        <div class="sep"></div>
+        <div class="abilities">
+          <div class="trigger-label">Reactive</div>
+          <div class="ability-text">When <span class="kw">[burn]</span> is applied, deal 1 bonus damage.</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-label">Battle · frozen<br>desaturate + ❄ overlay</div>
+  </div>
+
+  <!-- Empty slot -->
+  <div class="card-wrap">
+    <div class="card card-empty">
+      <div class="empty-glyph">＋</div>
+    </div>
+    <div class="card-label">Empty slot<br>neutral fill</div>
+  </div>
+
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     SECTION 4 — Design token reference
+     ═══════════════════════════════════════════════════════════════════════ -->
+<h2>Section 4 — Design tokens &nbsp;·&nbsp; ThemeData.gd + UIScale.gd mapping</h2>
+
+<table class="token-table">
+  <thead>
+    <tr>
+      <th style="width:210px">Token name</th>
+      <th style="width:160px">Value</th>
+      <th>Purpose</th>
+      <th>Maps to</th>
+    </tr>
+  </thead>
+  <tbody>
+
+    <tr><td colspan="4" style="color:#555570;padding-top:10px;font-size:10px;text-transform:uppercase;letter-spacing:.06em">Tier fills</td></tr>
+    <tr><td class="mono">TIER_1_BG</td><td><span class="swatch" style="background:#193821"></span>#193821</td><td>T1 card background</td><td>ThemeData.TIER_1_BG (exists)</td></tr>
+    <tr><td class="mono">TIER_2_BG</td><td><span class="swatch" style="background:#172940"></span>#172940</td><td>T2 card background</td><td>ThemeData.TIER_2_BG (exists)</td></tr>
+    <tr><td class="mono">TIER_3_BG</td><td><span class="swatch" style="background:#2e1a47"></span>#2e1a47</td><td>T3 card background</td><td>ThemeData.TIER_3_BG (exists)</td></tr>
+    <tr><td class="mono">TIER_4_BG</td><td><span class="swatch" style="background:#3d2b0a"></span>#3d2b0a</td><td>T4 card background</td><td>ThemeData.TIER_4_BG (exists)</td></tr>
+
+    <tr><td colspan="4" style="color:#555570;padding-top:10px;font-size:10px;text-transform:uppercase;letter-spacing:.06em">Tier borders (Level 1 base)</td></tr>
+    <tr><td class="mono">TIER_1_BORDER</td><td><span class="swatch" style="background:#73cc73"></span>#73cc73</td><td>T1 border at L1</td><td>ThemeData.TIER_1_BORDER (exists)</td></tr>
+    <tr><td class="mono">TIER_2_BORDER</td><td><span class="swatch" style="background:#5999fa"></span>#5999fa</td><td>T2 border at L1</td><td>ThemeData.TIER_2_BORDER (exists)</td></tr>
+    <tr><td class="mono">TIER_3_BORDER</td><td><span class="swatch" style="background:#b86bff"></span>#b86bff</td><td>T3 border at L1</td><td>ThemeData.TIER_3_BORDER (exists)</td></tr>
+    <tr><td class="mono">TIER_4_BORDER</td><td><span class="swatch" style="background:#fabd33"></span>#fabd33</td><td>T4 border at L1</td><td>ThemeData.TIER_4_BORDER (exists)</td></tr>
+
+    <tr><td colspan="4" style="color:#555570;padding-top:10px;font-size:10px;text-transform:uppercase;letter-spacing:.06em">Level luminosity — new constants ★</td></tr>
+    <tr class="new-token"><td class="mono">TIER_N_BORDER_LV2</td><td>border +25% lightness</td><td>L2 border brightening per tier</td><td>new ThemeData group</td></tr>
+    <tr class="new-token"><td class="mono">TIER_N_BORDER_LV3</td><td>border +50% lightness</td><td>L3 border brightening per tier</td><td>new ThemeData group</td></tr>
+    <tr class="new-token"><td class="mono">CARD_LVL2_GLOW_ALPHA</td><td>0.35</td><td>Glow shadow opacity at L2</td><td>new ThemeData constant</td></tr>
+    <tr class="new-token"><td class="mono">CARD_LVL3_GLOW_ALPHA</td><td>0.60</td><td>Glow shadow opacity at L3</td><td>new ThemeData constant</td></tr>
+    <tr class="new-token"><td class="mono">CARD_LVL2_GLOW_SIZE</td><td>9px (Godot shadow)</td><td>Outer glow spread at L2</td><td>new ThemeData constant</td></tr>
+    <tr class="new-token"><td class="mono">CARD_LVL3_GLOW_SIZE</td><td>16px (Godot shadow)</td><td>Outer glow spread at L3</td><td>new ThemeData constant</td></tr>
+
+    <tr><td colspan="4" style="color:#555570;padding-top:10px;font-size:10px;text-transform:uppercase;letter-spacing:.06em">Charge bar</td></tr>
+    <tr><td class="mono">BATTLE_PROGRESS_BG</td><td><span class="swatch" style="background:#140f1a"></span>#140f1a</td><td>Charge bar tray</td><td>ThemeData.BATTLE_PROGRESS_BG (exists)</td></tr>
+    <tr><td class="mono">BATTLE_PROGRESS_FILL</td><td><span class="swatch" style="background:#4da6ff"></span>#4da6ff</td><td>Charge bar fill</td><td>ThemeData.BATTLE_PROGRESS_FILL (exists)</td></tr>
+
+    <tr><td colspan="4" style="color:#555570;padding-top:10px;font-size:10px;text-transform:uppercase;letter-spacing:.06em">Tier badge — new constants ★</td></tr>
+    <tr class="new-token"><td class="mono">CARD_TIER_BADGE_BG</td><td>rgba(0,0,0, 0.50)</td><td>Tier badge pill background</td><td>new ThemeData constant</td></tr>
+
+    <tr><td colspan="4" style="color:#555570;padding-top:10px;font-size:10px;text-transform:uppercase;letter-spacing:.06em">Price badge — new constant ★</td></tr>
+    <tr class="new-token"><td class="mono">CARD_PRICE_COLOR</td><td><span class="swatch" style="background:#ebcf73"></span>#ebcf73</td><td>Price badge gold text</td><td>repurpose ThemeData.EVENT_TITLE_COLOR</td></tr>
+
+    <tr><td colspan="4" style="color:#555570;padding-top:10px;font-size:10px;text-transform:uppercase;letter-spacing:.06em">Font sizes — UIScale.gd</td></tr>
+    <tr><td class="mono">SLOT_EMOJI</td><td>46–52px</td><td>Element icon emoji</td><td>UIScale.SLOT_EMOJI = 52 (may tune down)</td></tr>
+    <tr><td class="mono">SLOT_NAME</td><td>13px</td><td>Element name label</td><td>UIScale.SLOT_NAME = 14 (close)</td></tr>
+    <tr class="new-token"><td class="mono">CARD_STAT</td><td>11px</td><td>Stat value (2.5s, 4)</td><td>new UIScale constant</td></tr>
+    <tr class="new-token"><td class="mono">CARD_STAT_LABEL</td><td>9px</td><td>Stat key label (CD, DMG)</td><td>new UIScale constant</td></tr>
+    <tr class="new-token"><td class="mono">CARD_TRIGGER</td><td>10px</td><td>Ability trigger label</td><td>new UIScale constant (COMP_TRIGGER=11 is close)</td></tr>
+    <tr class="new-token"><td class="mono">CARD_ABILITY</td><td>10px</td><td>Ability description text</td><td>new UIScale constant (COMP_ABILITY=11 is close)</td></tr>
+    <tr class="new-token"><td class="mono">CARD_TIER_BADGE</td><td>10px</td><td>"T1"/"T2" badge text</td><td>new UIScale constant</td></tr>
+    <tr class="new-token"><td class="mono">CARD_PRICE</td><td>11px</td><td>Price badge "8g" text</td><td>new UIScale constant (SHOP_LABEL=18 is too large)</td></tr>
+
+  </tbody>
+</table>
+<p class="note" style="margin-top:10px">★ = new constant not yet in <code>ThemeData.gd</code> / <code>UIScale.gd</code> — add during implementation pass.</p>
+
+</body>
+</html>
