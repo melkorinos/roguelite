@@ -1,5 +1,8 @@
 # Development Log
 
+## 2026-06-11 — Arch cleanup: GameState.create → CombatState.reset dedup; cleanup triage
+- `GameState.create()` no longer hand-rolls the per-combat field literals (timers/frozen/ability-timers/status pools/battle_stats/event+command queues) — it builds the run-state dict then `return CombatState.reset(state, GRID_BASE_SLOTS)`, the same factory `to_battle` uses. ~16 duplicated keys removed → one source of truth for the combat shape. **551/551**, import+boot 0. F5 backlog marked done (playtested). Triaged the rest of the arch-cleanup list (handoff): DPS-math **rejected** (Compendium theoretical `dmg/cooldown` vs Battle Summary empirical `dealt/elapsed` — distinct, keep separate); recipe-row renderer + Shop render-churn need F5; EffectRegistry status-schema + Status field readers are bigger; combat-name constants/Ghost factory/result_text/undo-leak low-value or unconfirmed without the review doc.
+
 ## 2026-06-11 — Grid Growth implemented (grilled; ADR 0014) — feature 5
 - Board grows during a run to reward leveling. **Trigger:** first time you *own* (inventory/grid/bench) a tier-T element at level ≥ L → +1 Battle Slot, once per run, path-agnostic (Merge OR Forge result). Table `TuningData.GRID_GROWTH_TRIGGERS` = **T2→Lv2 (5th slot), T3→Lv2 (6th slot)** (T1→Lv2 cut as too cheap), `GRID_BASE_SLOTS=4`, `GRID_HARD_MAX=8` (no 9). Reachable now = 6.
 - **G4 debt closed (simple):** opponent board now round-scaled too — `OpponentProvider._day_seeded_grid` sizes the grid from `_max_slots_for_round` (was capped at 4 by a 4-slot array), `OPPONENT_SLOTS_ROUND_BREAKS=[1,3,5,8]` → 2/3/4/5/6 slots, capped `GRID_HARD_MAX`; tracks the forge climb (5th ≈ r6, 6th ≈ r9). Fixed 2 opponent-provider tests that hard-assumed a 4-slot grid.

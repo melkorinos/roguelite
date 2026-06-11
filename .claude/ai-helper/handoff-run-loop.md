@@ -32,11 +32,14 @@ complete**; what remains is balance tuning + F5 polish + the deferred backlog.
 ## Ready for pickup
 1. **G4 balance pass** — the headline. Decisions locked (below); tune empirically via
    `BattleSystem.simulate_battle()`. Start with an element-stat sim sweep + the opp-HP plateau fix.
-2. **F5 eyeball backlog** — logic is unit-tested, pixels are not (checklist below).
-3. **Arch cleanups (small, unit-testable, no design needed):** `create()`→`CombatState.reset()` dedup;
-   shared recipe-row renderer; Shop render-churn; the deferred review-#6 items (Status field readers,
-   `PhaseSystem.result_text`, combat-name constants, EffectRegistry-canonical status schema; smaller:
-   undo-capture leak, Ghost factory, DPS math).
+2. ~~F5 eyeball backlog~~ — ✅ playtested 2026-06-11 (checklist below kept for regression reference).
+3. **Arch cleanups** — `create()`→`CombatState.reset()` dedup **✅ done 2026-06-11**. Remaining, triaged:
+   - *Need F5 (UI):* shared recipe-row renderer (Compendium + Shop/TooltipCard); Shop render-churn.
+   - *Bigger than a cleanup:* EffectRegistry-canonical status schema (#5); Status field readers (#2).
+   - *Rejected — not a safe dedup:* DPS math (Compendium = theoretical `dmg/cooldown` raw vs Battle
+     Summary = empirical `dealt/elapsed`; different concepts, must stay separate).
+   - *Low value / unconfirmed (need the review doc to scope):* combat-name constants (cosmetic churn),
+     Ghost factory, `PhaseSystem.result_text` (#3), undo-capture leak (undo path reads correct on inspection).
 4. **PlatformLayer autoload** (SteamAdapter + NoOpAdapter for web) — last Steam seam, self-contained, no
    backend needed.
 
