@@ -132,6 +132,18 @@ func test_apply_curse_stacks_accumulate() -> void:
 	assert_eq((s["curse"] as Dictionary)["stacks"] as int, 2)
 
 
+# ── apply_effect — per-source attribution ledger (Contribution Bars) ──────────
+# A DOT status pool is shared across appliers, but each application records the
+# stacks it added under its source slot in `by_source`, so tick damage can later
+# be split back to the element that laid each stack.
+
+func test_apply_burn_records_stacks_under_source_slot() -> void:
+	var r: Dictionary = StatusSystem.apply_effect(_s(), "burn", 2, 3)  # potency 2, source slot 3
+	var burn: Dictionary = (r["statuses"] as Dictionary)["burn"] as Dictionary
+	assert_eq(burn["stacks"] as int, 2, "aggregate stacks unchanged by attribution")
+	assert_eq((burn["by_source"] as Dictionary)[3] as int, 2, "source slot 3 credited its 2 stacks")
+
+
 # ── apply_effect — instant effects ───────────────────────────────────────────
 
 func test_apply_heal_hp_delta_is_1() -> void:
@@ -268,6 +280,119 @@ func test_tick_burn_expires_at_zero_and_deals_no_damage() -> void:
 func test_tick_burn_with_curse_deals_bonus() -> void:
 	var s: Dictionary = _apply(_apply(_s(), "burn"), "curse")
 	assert_eq(_tick_dmg(s), 2)  # stacks=1 + curse_bonus=1
+
+
+# ── tick — per-source attribution (Contribution Bars) ─────────────────────────
+
+func test_tick_burn_attributes_damage_to_source_slots() -> void:
+	# slot 0 lays 3 burn stacks, slot 1 lays 1 → tick deals 4, split 3:1 by source.
+	var s: Dictionary = _s()
+	s = (StatusSystem.apply_effect(s, "burn", 3, 0) as Dictionary)["statuses"] as Dictionary
+	s = (StatusSystem.apply_effect(s, "burn", 1, 1) as Dictionary)["statuses"] as Dictionary
+	var r: Dictionary = StatusSystem.tick(s)
+	assert_eq(r["damage"] as int, 4 * TuningData.BURN_DAMAGE_PER_STACK)
+	var burn_attr: Dictionary = (r["attribution"] as Dictionary)["burn"] as Dictionary
+	assert_eq(burn_attr[0] as int, 3 * TuningData.BURN_DAMAGE_PER_STACK, "slot 0 credited 3 stacks' worth")
+	assert_eq(burn_attr[1] as int, 1 * TuningData.BURN_DAMAGE_PER_STACK, "slot 1 credited 1 stack's worth")
+
+
+func test_tick_burn_decrement_draws_down_largest_source() -> void:
+	# by_source {0:3, 1:1}; the per-tick -1 stack comes off the largest source (slot 0).
+	var s: Dictionary = _s()
+	s = (StatusSystem.apply_effect(s, "burn", 3, 0) as Dictionary)["statuses"] as Dictionary
+	s = (StatusSystem.apply_effect(s, "burn", 1, 1) as Dictionary)["statuses"] as Dictionary
+	s = _tick_s(s)
+	var burn: Dictionary = s["burn"] as Dictionary
+	assert_eq(burn["stacks"] as int, 3, "aggregate dropped by 1")
+	var by_source: Dictionary = burn["by_source"] as Dictionary
+	assert_eq(by_source[0] as int, 2, "largest source (slot 0) lost the stack")
+	assert_eq(by_source[1] as int, 1, "slot 1 untouched")
+
+
+func test_tick_poison_attributes_damage_to_source_slots() -> void:
+	# poison stacks never decrease, so by_source is stable; split mirrors burn.
+	var s: Dictionary = _s()
+	s = (StatusSystem.apply_effect(s, "poison", 1, 2) as Dictionary)["statuses"] as Dictionary
+	s = (StatusSystem.apply_effect(s, "poison", 3, 5) as Dictionary)["statuses"] as Dictionary
+	var r: Dictionary = StatusSystem.tick(s)
+	assert_eq(r["damage"] as int, 4 * TuningData.POISON_DAMAGE_PER_STACK)
+	var attr: Dictionary = (r["attribution"] as Dictionary)["poison"] as Dictionary
+	assert_eq(attr[2] as int, 1 * TuningData.POISON_DAMAGE_PER_STACK, "slot 2 credited 1 stack")
+	assert_eq(attr[5] as int, 3 * TuningData.POISON_DAMAGE_PER_STACK, "slot 5 credited 3 stacks")
+
+
+func test_cleanse_draws_down_burn_source_ledger() -> void:
+	# cleanse removes a stack from the aggregate; the ledger must follow (largest-first).
+	var s: Dictionary = _s()
+	s = (StatusSystem.apply_effect(s, "burn", 3, 0) as Dictionary)["statuses"] as Dictionary
+	s = (StatusSystem.apply_effect(s, "burn", 1, 1) as Dictionary)["statuses"] as Dictionary
+	s = _apply(s, "cleanse")
+	var burn: Dictionary = s["burn"] as Dictionary
+	assert_eq(burn["stacks"] as int, 3, "aggregate cleansed by 1")
+	var by_source: Dictionary = burn["by_source"] as Dictionary
+	assert_eq(by_source[0] as int, 2, "largest source lost the cleansed stack")
+	assert_eq(by_source[1] as int, 1, "slot 1 untouched")
+
+
+func test_apply_into_full_pool_credits_only_real_added_stacks() -> void:
+	# Pool already at MAX_STACKS from slot 0; slot 1 applying more lands nothing,
+	# so the ledger stays in sync (sum == aggregate) and slot 1 is credited 0.
+	var s: Dictionary = _s()
+	s = (StatusSystem.apply_effect(s, "burn", StatusSystem.MAX_STACKS, 0) as Dictionary)["statuses"] as Dictionary
+	s = (StatusSystem.apply_effect(s, "burn", 5, 1) as Dictionary)["statuses"] as Dictionary
+	var burn: Dictionary = s["burn"] as Dictionary
+	assert_eq(burn["stacks"] as int, StatusSystem.MAX_STACKS, "aggregate capped")
+	var by_source: Dictionary = burn["by_source"] as Dictionary
+	assert_eq(by_source[0] as int, StatusSystem.MAX_STACKS, "slot 0 holds the full pool")
+	assert_false(by_source.has(1), "slot 1 credited nothing — pool was full")
+
+
+func test_compute_incoming_damage_attributes_blocked_to_armor_source() -> void:
+	# Defender slot 4 laid 5 armor; a 3-damage hit is fully absorbed → slot 4 is
+	# credited 3 HP blocked, and its armor ledger depletes by the points spent.
+	var def_s: Dictionary = _s()
+	def_s = (StatusSystem.apply_effect(def_s, "armor", 5, 4) as Dictionary)["statuses"] as Dictionary
+	var r: Dictionary = StatusSystem.compute_incoming_damage(3, _s(), def_s)
+	assert_eq(r["damage"] as int, 0, "hit fully absorbed")
+	var blocked: Dictionary = r["blocked_by_source"] as Dictionary
+	assert_eq(blocked[4] as int, 3 * TuningData.ARMOR_ABSORB_PER_POINT, "slot 4 credited the HP it blocked")
+	var armor_after: Dictionary = (r["defender_statuses"] as Dictionary)["armor"] as Dictionary
+	assert_eq(armor_after["value"] as int, 2, "armor spent 3 points")
+	assert_eq((armor_after["by_source"] as Dictionary)[4] as int, 2, "ledger follows the spend")
+
+
+func test_tick_armor_absorbing_burn_credits_blocked_to_armor_source() -> void:
+	# Armor that soaks burn-tick damage is the defender's Contribution, and its ledger
+	# must deplete by the points spent (kept in sync with the aggregate).
+	var s: Dictionary = _s()
+	s = (StatusSystem.apply_effect(s, "burn", 2, 0) as Dictionary)["statuses"] as Dictionary
+	s = (StatusSystem.apply_effect(s, "armor", 2, 3) as Dictionary)["statuses"] as Dictionary
+	var r: Dictionary = StatusSystem.tick(s)
+	# raw_burn = 2, absorbed = min(2, 2/2) = 1
+	assert_eq((r["blocked_by_source"] as Dictionary)[3] as int, 1, "armor slot 3 credited 1 blocked")
+	var armor: Dictionary = (r["statuses"] as Dictionary)["armor"] as Dictionary
+	assert_eq((armor["by_source"] as Dictionary)[3] as int, 1, "armor ledger spent 1 point")
+
+
+func test_tick_plating_reducing_dot_credits_blocked_to_plating_source() -> void:
+	# Steel's plating shaves the DOT tick total; the shaved HP is a Damage Blocked
+	# Contribution credited to the plating element.
+	var s: Dictionary = _s()
+	s = (StatusSystem.apply_effect(s, "poison", 3, 0) as Dictionary)["statuses"] as Dictionary
+	s = (StatusSystem.apply_effect(s, "plating", 2, 4) as Dictionary)["statuses"] as Dictionary
+	(s["plating"] as Dictionary)["reduces_dot"] = true
+	var r: Dictionary = StatusSystem.tick(s)
+	# poison dealt 3, plating shaves 2 → blocked 2
+	assert_eq((r["blocked_by_source"] as Dictionary)[4] as int, 2, "plating slot 4 credited 2 blocked")
+
+
+func test_compute_incoming_damage_credits_plating_blocked() -> void:
+	# Plating's flat reduction on a direct hit is also Damage Blocked.
+	var def_s: Dictionary = _s()
+	def_s = (StatusSystem.apply_effect(def_s, "plating", 2, 7) as Dictionary)["statuses"] as Dictionary
+	var r: Dictionary = StatusSystem.compute_incoming_damage(5, _s(), def_s)
+	assert_eq((r["blocked_by_source"] as Dictionary)[7] as int, 2 * TuningData.PLATING_REDUCTION_PER_POINT,
+		"plating slot 7 credited its flat reduction")
 
 
 func test_tick_burn_with_armor_absorbs_at_half_rate() -> void:

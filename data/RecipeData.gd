@@ -110,13 +110,11 @@ const RECIPES: Array[Dictionary] = [
 		{ "a": "sea",        "b": "freeze",     "result": "glacier"      },
 		{ "a": "blackice",   "b": "razorwind",  "result": "blizzard"     },
 		{ "a": "hail",       "b": "razorwind",  "result": "blizzard"     },
-		{ "a": "gust",       "b": "hail",       "result": "blizzard"     },
 		{ "a": "permafrost", "b": "chill",      "result": "tundra"       },
 		{ "a": "permafrost", "b": "wither",     "result": "tundra"       },
 		{ "a": "boulder",    "b": "freeze",     "result": "tundra"       },
 		# ══ Tier 3 — Nature cluster ═══════════════════════════════════════════════
 		{ "a": "bloom",      "b": "root",       "result": "rainforest"   },
-		{ "a": "forest",     "b": "bloom",      "result": "rainforest"   },
 		{ "a": "rain",       "b": "forest",     "result": "rainforest"   },
 		{ "a": "forest",     "b": "shade",      "result": "ancientgrove" },
 		{ "a": "ironwood",   "b": "wildrot",    "result": "ancientgrove" },
@@ -125,7 +123,6 @@ const RECIPES: Array[Dictionary] = [
 		{ "a": "sea",        "b": "gust",       "result": "hurricane"    },
 		{ "a": "surge",      "b": "gust",       "result": "hurricane"    },
 		{ "a": "plasma",     "b": "static",     "result": "tempest"      },
-		{ "a": "arc",        "b": "surge",      "result": "tempest"      },
 		{ "a": "plasma",     "b": "hail",       "result": "tempest"      },
 		# ══ Tier 3 — Earth cluster ════════════════════════════════════════════════
 		{ "a": "boulder",    "b": "flint",      "result": "mountain"     },
@@ -140,10 +137,8 @@ const RECIPES: Array[Dictionary] = [
 		{ "a": "void",       "b": "miasma",     "result": "voidrift"     },
 		{ "a": "voidspark",  "b": "void",       "result": "voidrift"     },
 		# ══ Tier 3 — Fungus cluster ═══════════════════════════════════════════════
-		{ "a": "mycelium",   "b": "murk",       "result": "plague"       },
 		{ "a": "cryptbloom", "b": "murk",       "result": "plague"       },
 		{ "a": "rootrot",    "b": "haze",       "result": "plague"       },
-		{ "a": "rootrot",    "b": "wildrot",    "result": "underrot"     },
 		{ "a": "moldsteel",  "b": "rootrot",    "result": "underrot"     },
 		# ══ Tier 3 — Fire cluster ════════════════════════════════════════════════
 		{ "a": "blaze",      "b": "blight",     "result": "inferno"      },
@@ -157,23 +152,17 @@ const RECIPES: Array[Dictionary] = [
 		{ "a": "gore",       "b": "sparkblood", "result": "carnage"      },
 		# ══ Tier 3 — Metal cluster ═══════════════════════════════════════════════
 		{ "a": "steel",      "b": "void",       "result": "meteorite"    },
-		{ "a": "steel",      "b": "radiance",   "result": "meteorite"    },
 		{ "a": "molten",     "b": "plasma",     "result": "meteorite"    },
 		# ══ Tier 4 — Frost cluster ════════════════════════════════════════════════
 		{ "a": "glacier",    "b": "blizzard",   "result": "iceage"       },
 		{ "a": "glacier",    "b": "tundra",     "result": "iceage"       },
 		{ "a": "blizzard",   "b": "mountain",   "result": "iceage"       },
 		# ══ Tier 4 — Storm cluster ════════════════════════════════════════════════
-		{ "a": "hurricane",  "b": "tempest",    "result": "maelstrom"    },
-		{ "a": "hurricane",  "b": "blizzard",   "result": "maelstrom"    },
 		{ "a": "storm",      "b": "tempest",    "result": "maelstrom"    },
 		# ══ Tier 4 — Earth cluster ════════════════════════════════════════════════
-		{ "a": "mountain",   "b": "tsunami",    "result": "tectonic"     },
-		{ "a": "mountain",   "b": "volcano",    "result": "tectonic"     },
 		{ "a": "obsidian",   "b": "mountain",   "result": "tectonic"     },
 		# ══ Tier 4 — Fire / Stellar cluster ══════════════════════════════════════
 		{ "a": "inferno",    "b": "tempest",    "result": "supernova"    },
-		{ "a": "inferno",    "b": "meteorite",  "result": "supernova"    },
 		{ "a": "inferno",    "b": "volcano",    "result": "supernova"    },
 		# ══ Tier 4 — Void cluster ════════════════════════════════════════════════
 		{ "a": "voidrift",   "b": "eclipse",    "result": "singularity"  },
@@ -185,7 +174,6 @@ const RECIPES: Array[Dictionary] = [
 		{ "a": "ancientgrove","b": "plant",     "result": "worldtree"    },
 		# ══ Tier 4 — Fungus cluster ═══════════════════════════════════════════════
 		{ "a": "plague",     "b": "underrot",   "result": "pandemic"     },
-		{ "a": "plague",     "b": "carnage",    "result": "pandemic"     },
 		{ "a": "underrot",   "b": "ancientgrove","result": "pandemic"    },
 		# ══ Tier 4 — Blood / War cluster ═════════════════════════════════════════
 		{ "a": "hemorrhage", "b": "carnage",    "result": "ragnarok"     },
@@ -193,11 +181,9 @@ const RECIPES: Array[Dictionary] = [
 		{ "a": "hemorrhage", "b": "plague",     "result": "ragnarok"     },
 		# ══ Tier 4 — Genesis cluster ══════════════════════════════════════════════
 		{ "a": "tsunami",    "b": "volcano",    "result": "primordial"   },
-		{ "a": "inferno",    "b": "tsunami",    "result": "primordial"   },
 		{ "a": "volcano",    "b": "volcano",    "result": "primordial"   },
 		# ══ Tier 4 — Transcendent cluster ════════════════════════════════════════
 		{ "a": "eclipse",    "b": "meteorite",  "result": "aether"       },
-		{ "a": "eclipse",    "b": "rainforest", "result": "aether"       },
 		{ "a": "tempest",    "b": "voidrift",   "result": "aether"       },
 		# ══ Dead-end elimination (ADR 0010) ═══════════════════════════════════════
 		# Every former forward dead-end now feeds ≥1 higher recipe, routed up through
@@ -226,6 +212,22 @@ const RECIPES: Array[Dictionary] = [
 		{ "a": "acid",           "b": "plague",     "result": "pandemic"     },
 		{ "a": "ash",            "b": "inferno",    "result": "supernova"    },
 		{ "a": "rainbow",        "b": "eclipse",    "result": "aether"       },
+		# ══ Tier 3 — second paths (recipe rebalance 2026-06-11): give every single-gated
+		# original-cross T3 a 2nd discovery path; `arc+surge` rerouted here off Tempest.
+		{ "a": "steam", "b": "smoke", "result": "cloud" },
+		{ "a": "lava", "b": "rain", "result": "geyser" },
+		{ "a": "smoke", "b": "sea", "result": "fog" },
+		{ "a": "arc", "b": "surge", "result": "storm" },
+		{ "a": "mud", "b": "root", "result": "plant" },
+		{ "a": "mud", "b": "forest", "result": "swamp" },
+		{ "a": "mud", "b": "lava", "result": "brick" },
+		{ "a": "smoke", "b": "lava", "result": "ash" },
+		{ "a": "smoke", "b": "mud", "result": "acid" },
+		{ "a": "lava", "b": "freeze", "result": "obsidian" },
+		{ "a": "lava", "b": "lava", "result": "volcano" },
+		{ "a": "dust", "b": "dust", "result": "sand" },
+		{ "a": "dust", "b": "smoke", "result": "sandstorm" },
+		{ "a": "dust", "b": "sea", "result": "clay" },
 	]
 
 

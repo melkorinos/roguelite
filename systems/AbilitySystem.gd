@@ -91,7 +91,7 @@ static func _source_level(state: Dictionary, source_side: String, source_slot: i
 # Returns a { status_name: count } map of the status applications made (for the
 # Summary breakdown). deal_damage / modify_cooldown / set_status_field apply no
 # named status and return {}.
-static func _apply_atom(state: Dictionary, effect: Dictionary, source_side: String, potency: int = 1) -> Dictionary:
+static func _apply_atom(state: Dictionary, effect: Dictionary, source_side: String, potency: int = 1, source_slot: int = -1) -> Dictionary:
 	var kind: String = effect.get("kind", "") as String
 	match kind:
 		"apply_status":
@@ -101,7 +101,7 @@ static func _apply_atom(state: Dictionary, effect: Dictionary, source_side: Stri
 			var status: String = effect["status"] as String
 			var amount: int = effect.get("amount", 1) as int
 			for _n: int in amount:
-				var result: Dictionary = StatusSystem.apply_effect(statuses, status, potency)
+				var result: Dictionary = StatusSystem.apply_effect(statuses, status, potency, source_slot)
 				statuses = result["statuses"] as Dictionary
 				state[keys["hp"]] = (state[keys["hp"]] as int) + (result["hp_delta"] as int)
 			state[keys["statuses"]] = statuses
@@ -172,15 +172,34 @@ static func _apply_atom(state: Dictionary, effect: Dictionary, source_side: Stri
 # Lv-N element applies N stacks/points. Derived from source_slot; 1 when unknown.
 static func _apply_effects(state: Dictionary, effects: Array, source_side: String, source_slot: int = -1) -> void:
 	var potency: int = _source_level(state, source_side, source_slot)
+	# Own-side HP delta over this application is the source element's healing (heal +
+	# leech) — credited to its heal Contribution. Raw, so overheal counts.
+	var own_hp_key: String = _side_keys(source_side)["hp"] as String
+	var hp_before: int = state[own_hp_key] as int
 	var applied: Dictionary = {}
 	for effect: Variant in effects:
 		var e: Dictionary = effect as Dictionary
 		if _conditions_met(state, e.get("when", []) as Array, source_side):
-			var made: Dictionary = _apply_atom(state, e, source_side, potency)
+			var made: Dictionary = _apply_atom(state, e, source_side, potency, source_slot)
 			for status: Variant in made:
 				applied[status] = (applied.get(status, 0) as int) + (made[status] as int)
 	if source_slot >= 0 and not applied.is_empty():
 		_record_effects(state, source_side, source_slot, applied)
+	var healed: int = (state[own_hp_key] as int) - hp_before
+	if source_slot >= 0 and healed > 0:
+		_credit_heal_contrib(state, source_side, source_slot, healed)
+
+
+# Credits `healed` HP to the source element's heal Contribution row (green bar).
+static func _credit_heal_contrib(state: Dictionary, side: String, slot: int, healed: int) -> void:
+	var battle_stats: Dictionary = state.get("battle_stats", {}) as Dictionary
+	if not battle_stats.has(side):
+		return
+	var rows: Array = battle_stats[side] as Array
+	if slot < 0 or slot >= rows.size():
+		return
+	var contrib: Dictionary = (rows[slot] as Dictionary)["contrib"] as Dictionary
+	contrib["heal"] = (contrib["heal"] as int) + healed
 
 
 static func _record_effects(state: Dictionary, side: String, slot: int, applied: Dictionary) -> void:

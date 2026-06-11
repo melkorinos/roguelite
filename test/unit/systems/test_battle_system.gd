@@ -66,6 +66,74 @@ func test_tick_battle_player_damages_opponent_at_cooldown() -> void:
 	assert_lt(s["opponent_hp"] as int, state["opponent_hp"] as int)
 
 
+func test_tick_battle_attributes_poison_tick_to_firing_slot_contrib() -> void:
+	# Fungus (slot 0) fires and poisons the opponent; the next status tick deals the
+	# poison damage, which is credited back to slot 0 as a poison Contribution.
+	var empty_opp: Dictionary = { "grid": [null, null, null, null], "round": 1 }
+	var state := PhaseSystem.to_battle(_state_with_player_element("fungus"), empty_opp)
+	state = BattleSystem.tick_battle(state, 3.5)  # fungus cooldown → fires, applies poison
+	state = BattleSystem.tick_battle(state, 1.0)  # status tick → poison deals damage
+	var row: Dictionary = ((state["battle_stats"] as Dictionary)["player"] as Array)[0] as Dictionary
+	var contrib: Dictionary = row["contrib"] as Dictionary
+	assert_gt(contrib["poison"] as int, 0, "poison tick damage credited to the firing element's contrib")
+
+
+func test_tick_battle_attributes_direct_hit_to_firing_slot_contrib() -> void:
+	# A damage-dealer's direct hit is credited to its contrib.direct (red bar).
+	var state := PhaseSystem.to_battle(_state_with_player_element(DEALER), _fixture())
+	state = BattleSystem.tick_battle(state, _dealer_cooldown())
+	var row: Dictionary = ((state["battle_stats"] as Dictionary)["player"] as Array)[0] as Dictionary
+	assert_gt((row["contrib"] as Dictionary)["direct"] as int, 0, "direct damage credited to contrib.direct")
+
+
+func test_tick_battle_attributes_blocked_to_defender_armor_contrib() -> void:
+	# Player slot 0 holds armor; the opponent damage-dealer's hit is absorbed and the
+	# prevented HP is credited to the defending element as a Damage Blocked Contribution.
+	var state := PhaseSystem.to_battle(_state_with_player_element("earth"), _dealer_opponent())
+	var armor: Dictionary = (state["player_statuses"] as Dictionary)["armor"] as Dictionary
+	armor["value"] = 10
+	armor["by_source"] = { 0: 10 }
+	state = BattleSystem.tick_battle(state, _dealer_cooldown())
+	var row: Dictionary = ((state["battle_stats"] as Dictionary)["player"] as Array)[0] as Dictionary
+	assert_gt((row["contrib"] as Dictionary)["blocked"] as int, 0, "absorbed damage credited to contrib.blocked")
+
+
+func test_tick_battle_attributes_heal_to_firing_slot_contrib() -> void:
+	# Nature (slot 0) heals its own side on fire; the HP restored is credited to its
+	# contrib.heal (green bar). Raw amount — overheal included.
+	var state := PhaseSystem.to_battle(_state_with_player_element("nature"), _fixture())
+	state = BattleSystem.tick_battle(state, 3.5)  # nature cooldown
+	var row: Dictionary = ((state["battle_stats"] as Dictionary)["player"] as Array)[0] as Dictionary
+	assert_gt((row["contrib"] as Dictionary)["heal"] as int, 0, "healed HP credited to contrib.heal")
+
+
+func test_contrib_attribution_is_deterministic() -> void:
+	# Same board + same seed → identical Contribution rows, so a Replay reproduces the
+	# bars exactly. Runs two full simulations from the same seeded state and compares.
+	var base := PhaseSystem.to_battle(_state_with_player_element("fungus"), _fixture())
+	var run_a := BattleSystem.simulate_battle(base.duplicate(true))
+	var run_b := BattleSystem.simulate_battle(base.duplicate(true))
+	assert_eq(JSON.stringify(run_a["battle_stats"]), JSON.stringify(run_b["battle_stats"]),
+		"identical seed reproduces identical attribution")
+
+
+func test_tick_battle_credits_dot_blocked_to_defender_plating_contrib() -> void:
+	# Player takes poison but slot-0 plating shaves the tick — the prevented HP is a
+	# Damage Blocked Contribution on the player's defending element.
+	var state := PhaseSystem.to_battle(_state_with_player_element("earth"), _dealer_opponent())
+	var ps: Dictionary = state["player_statuses"] as Dictionary
+	var poison: Dictionary = ps["poison"] as Dictionary
+	poison["stacks"] = 3
+	poison["by_source"] = { 1: 3 }
+	var plating: Dictionary = ps["plating"] as Dictionary
+	plating["value"] = 2
+	plating["reduces_dot"] = true
+	plating["by_source"] = { 0: 2 }
+	state = BattleSystem.tick_battle(state, 1.0)  # one status tick
+	var row: Dictionary = ((state["battle_stats"] as Dictionary)["player"] as Array)[0] as Dictionary
+	assert_gt((row["contrib"] as Dictionary)["blocked"] as int, 0, "DOT blocked by plating credited to defender")
+
+
 func test_tick_battle_does_not_fire_before_cooldown() -> void:
 	var state := PhaseSystem.to_battle(_state_with_player_element(DEALER), _fixture())
 	# Tick just under the EFFECTIVE cooldown (base × the global firing-rate dial).

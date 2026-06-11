@@ -32,9 +32,16 @@ static func empty_slots(count: int = SLOT_COUNT) -> Array:
 	return result
 
 
-# One per-element Battle Summary stat row.
+# One per-element Battle Summary stat row. `contrib` holds the HP-magnitude
+# Contribution buckets (for the live Contribution Bars) attributed to this element:
+# direct hit damage, poison/burn DOT (split per-source from the shared pool), HP
+# healed, and Damage Blocked by this element's armor. Distinct from `damage` (direct
+# only) and the effect-application counts.
 static func empty_stat_row() -> Dictionary:
-	return { "fires": 0, "damage": 0, "effects": 0, "effects_by_status": {} }
+	return {
+		"fires": 0, "damage": 0, "effects": 0, "effects_by_status": {},
+		"contrib": { "direct": 0, "poison": 0, "burn": 0, "heal": 0, "blocked": 0 },
+	}
 
 
 # `count` fresh stat rows for one side.

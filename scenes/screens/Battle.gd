@@ -15,6 +15,15 @@ var _opp_hp_bar: ProgressBar
 # Status Tray: status name → its chip Control, per side. Built once, toggled per render.
 var _player_chips: Dictionary = {}
 var _opp_chips: Dictionary = {}
+# Contribution Bars (live, player-only): one segmented bar per occupied player slot,
+# normalised to a single running max (the largest element total this combat).
+var _contrib_panel: PanelContainer
+var _contrib_button: Button
+var _contrib_rows: Array = []   # [{ slot, bg: Panel, segments: {type: ColorRect}, displayed: {type: float} }]
+var _contrib_max: float = 1.0   # running max element total; monotonic within this combat
+var _contrib_visible: bool = true
+const CONTRIB_BAR_WIDTH: float = 150.0
+const CONTRIB_BAR_HEIGHT: float = 16.0
 
 
 func _ready() -> void:
@@ -41,6 +50,7 @@ func _ready() -> void:
 
 	_build_grids()
 	_build_status_trays()
+	_build_contrib_panel()
 	_render()
 
 
@@ -115,6 +125,114 @@ func _update_tray(chips: Dictionary, statuses: Dictionary) -> void:
 		chip.visible = active
 		if active:
 			chip.set_data(StatusSystem.chip_badge(status_name, statuses), StatusSystem.describe(status_name, statuses))
+
+
+# Builds the right-gutter Contribution Bars panel (one row per OCCUPIED player slot)
+# plus the in-combat toggle in the controls row. Rows are built once — the board is
+# fixed for the combat — and their segment widths are updated each frame in _render.
+func _build_contrib_panel() -> void:
+	_contrib_visible = SettingsManager.get_contribution_bars()
+
+	# Toggle button, in the controls row (visible during combat, unlike the result-only Summary).
+	_contrib_button = Button.new()
+	_contrib_button.text = "📊 Bars"
+	_contrib_button.pressed.connect(_on_contrib_toggle)
+	$VBox/ControlsRow.add_child(_contrib_button)
+
+	_contrib_panel = PanelContainer.new()
+	var bg := StyleBoxFlat.new()
+	bg.bg_color = ThemeData.CONTRIB_PANEL_BG
+	bg.set_corner_radius_all(6)
+	bg.set_content_margin_all(8)
+	_contrib_panel.add_theme_stylebox_override("panel", bg)
+	_contrib_panel.custom_minimum_size = Vector2(CONTRIB_BAR_WIDTH + 48.0, 0)
+	_contrib_panel.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	$VBox/BattleRow.add_child(_contrib_panel)  # rightmost child → right gutter
+
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 6)
+	_contrib_panel.add_child(vbox)
+	var title := Label.new()
+	title.text = "CONTRIBUTION"
+	title.add_theme_color_override("font_color", ThemeData.COLOR_PLAYER_SIDE)
+	vbox.add_child(title)
+
+	_contrib_rows.clear()
+	var grid: Array = GameManager.state["battle_grid"] as Array
+	for i: int in grid.size():
+		if grid[i] == null:
+			continue
+		var elem: Dictionary = grid[i] as Dictionary
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 6)
+		var emoji := Label.new()
+		emoji.text = elem.get("emoji", "?") as String
+		emoji.custom_minimum_size = Vector2(22, 0)
+		row.add_child(emoji)
+		var bar_bg := Panel.new()
+		bar_bg.custom_minimum_size = Vector2(CONTRIB_BAR_WIDTH, CONTRIB_BAR_HEIGHT)
+		bar_bg.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		var bar_style := StyleBoxFlat.new()
+		bar_style.bg_color = ThemeData.CONTRIB_BAR_BG
+		bar_style.set_border_width_all(1)
+		bar_style.border_color = ThemeData.CONTRIB_BAR_BORDER
+		bar_style.set_corner_radius_all(3)
+		bar_bg.add_theme_stylebox_override("panel", bar_style)
+		var segments: Dictionary = {}
+		var displayed: Dictionary = {}
+		for seg_type: Variant in ThemeData.CONTRIB_SEGMENT_ORDER:
+			var seg := ColorRect.new()
+			seg.color = ThemeData.CONTRIB_COLORS[seg_type] as Color
+			seg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			seg.size = Vector2(0, CONTRIB_BAR_HEIGHT)
+			bar_bg.add_child(seg)
+			segments[seg_type] = seg
+			displayed[seg_type] = 0.0
+		row.add_child(bar_bg)
+		vbox.add_child(row)
+		_contrib_rows.append({ "slot": i, "bg": bar_bg, "segments": segments, "displayed": displayed })
+
+
+func _on_contrib_toggle() -> void:
+	AudioManager.play("click")
+	_contrib_visible = not _contrib_visible
+	SettingsManager.set_contribution_bars(_contrib_visible)
+	_update_contrib_bars(GameManager.state, true)
+
+
+# Re-lays out each bar's stacked segments from this side's contrib rows. A single
+# running max (largest element total this combat) scales every bar, so the biggest
+# contributor fills the bar and the rest read relative to it. Snaps on result, else
+# eases toward the target for smooth growth.
+func _update_contrib_bars(s: Dictionary, snap: bool) -> void:
+	_contrib_panel.visible = _contrib_visible
+	if not _contrib_visible:
+		return
+	var rows: Array = (s["battle_stats"] as Dictionary)["player"] as Array
+	# Pass 1: refresh the running max from each element's total contribution.
+	for entry: Variant in _contrib_rows:
+		var contrib: Dictionary = (rows[(entry as Dictionary)["slot"] as int] as Dictionary)["contrib"] as Dictionary
+		var total: float = 0.0
+		for seg_type: Variant in ThemeData.CONTRIB_SEGMENT_ORDER:
+			total += float(contrib[seg_type] as int)
+		_contrib_max = maxf(_contrib_max, total)
+	var denom: float = maxf(_contrib_max, 1.0)
+	# Pass 2: stack the segments left→right at their normalised widths.
+	for entry: Variant in _contrib_rows:
+		var row: Dictionary = entry as Dictionary
+		var contrib: Dictionary = (rows[row["slot"] as int] as Dictionary)["contrib"] as Dictionary
+		var displayed: Dictionary = row["displayed"] as Dictionary
+		var segments: Dictionary = row["segments"] as Dictionary
+		var x: float = 0.0
+		for seg_type: Variant in ThemeData.CONTRIB_SEGMENT_ORDER:
+			var target: float = float(contrib[seg_type] as int)
+			var disp: float = target if snap else lerpf(displayed[seg_type] as float, target, 0.25)
+			displayed[seg_type] = disp
+			var seg: ColorRect = segments[seg_type] as ColorRect
+			var w: float = (disp / denom) * CONTRIB_BAR_WIDTH
+			seg.position = Vector2(x, 0)
+			seg.size = Vector2(w, CONTRIB_BAR_HEIGHT)
+			x += w
 
 
 func _style_hp_bar(bar: ProgressBar) -> void:
@@ -271,6 +389,8 @@ func _render() -> void:
 	($VBox/ControlsRow/Speed1xButton as Button).modulate = Color.WHITE if _speed_mult == 1.0 else Color(0.55, 0.55, 0.55)
 	($VBox/ControlsRow/Speed15xButton as Button).modulate = Color.WHITE if _speed_mult == 1.5 else Color(0.55, 0.55, 0.55)
 	($VBox/ControlsRow/Speed2xButton as Button).modulate = Color.WHITE if _speed_mult == 2.0 else Color(0.55, 0.55, 0.55)
+	_contrib_button.modulate = Color.WHITE if _contrib_visible else Color(0.55, 0.55, 0.55)
+	_update_contrib_bars(s, is_result)
 
 	if is_result:
 		var dr: Dictionary = PhaseSystem.describe_result(s)

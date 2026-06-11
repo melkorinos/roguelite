@@ -42,15 +42,24 @@ static func tick_battle(state: Dictionary, delta: float) -> Dictionary:
 		var tick_acc: float = (s["status_tick_timer"] as float) + delta
 		while tick_acc >= 1.0:
 			tick_acc -= 1.0
+			var battle_stats: Dictionary = s["battle_stats"] as Dictionary
 			var opp_tick: Dictionary = StatusSystem.tick(s["opponent_statuses"] as Dictionary)
 			s["opponent_statuses"] = opp_tick["statuses"] as Dictionary
 			s["opponent_hp"] = maxi(0, (s["opponent_hp"] as int) - (opp_tick["damage"] as int))
+			# DOT on the opponent was applied by the player's elements → credit player contrib.
+			_credit_dot_contrib(battle_stats["player"] as Array, opp_tick["attribution"] as Dictionary)
+			# DOT blocked by the opponent's own armor/plating → credit the opponent's defence.
+			_credit_dot_contrib(battle_stats["opponent"] as Array, { "blocked": opp_tick["blocked_by_source"] as Dictionary })
 			# A DOT ticking on the opponent is the player's event to react to.
 			for tick_trigger: Variant in opp_tick["events"] as Array:
 				events.append(AbilitySystem.trigger_event(tick_trigger as String, "player"))
 			var pl_tick: Dictionary = StatusSystem.tick(s["player_statuses"] as Dictionary)
 			s["player_statuses"] = pl_tick["statuses"] as Dictionary
 			s["player_hp"] = maxi(0, (s["player_hp"] as int) - (pl_tick["damage"] as int))
+			# DOT on the player was applied by the opponent's elements → credit opponent contrib.
+			_credit_dot_contrib(battle_stats["opponent"] as Array, pl_tick["attribution"] as Dictionary)
+			# DOT blocked by the player's own armor/plating → credit the player's defence.
+			_credit_dot_contrib(battle_stats["player"] as Array, { "blocked": pl_tick["blocked_by_source"] as Dictionary })
 			for tick_trigger: Variant in pl_tick["events"] as Array:
 				events.append(AbilitySystem.trigger_event(tick_trigger as String, "opponent"))
 		s["status_tick_timer"] = tick_acc
@@ -206,6 +215,9 @@ static func _fire_element_once(s: Dictionary, ctx: Dictionary, side: String, ele
 		var hit: Dictionary = StatusSystem.compute_incoming_damage(raw, s[own_statuses_key] as Dictionary, s[opp_statuses_key] as Dictionary)
 		dmg = hit["damage"] as int
 		s[opp_statuses_key] = hit["defender_statuses"] as Dictionary
+		# Armor that soaked this hit is the defender's Contribution → credit its slots.
+		_credit_dot_contrib((s["battle_stats"] as Dictionary)[opp_k["stats"] as String] as Array,
+			{ "blocked": hit["blocked_by_source"] as Dictionary })
 		var armor_after: int = ((s[opp_statuses_key] as Dictionary)["armor"] as Dictionary)["value"] as int
 		if armor_before > 0 and armor_after == 0:
 			events.append(AbilitySystem.trigger_event("on_armor_stripped", side, slot_index))
@@ -215,6 +227,8 @@ static func _fire_element_once(s: Dictionary, ctx: Dictionary, side: String, ele
 	var slot_stats: Dictionary = stats[slot_index] as Dictionary
 	slot_stats["fires"] = (slot_stats["fires"] as int) + 1
 	slot_stats["damage"] = (slot_stats["damage"] as int) + dmg
+	var contrib: Dictionary = slot_stats["contrib"] as Dictionary
+	contrib["direct"] = (contrib["direct"] as int) + dmg
 	if use_effects and elem.has("effect"):
 		# On-fire Action runs through the same effect vocabulary as Abilities;
 		# apply_on_fire also records this element's Summary tally.
@@ -251,6 +265,20 @@ static func select_freeze_target(grid: Array, last_frozen_slot: int) -> int:
 		if slot != last_frozen_slot:
 			return slot
 	return occupied[0]
+
+
+# Folds a tick's per-source DOT attribution ({ "burn"/"poison": { slot: damage } })
+# into the applying side's Contribution rows, so each element's bar reflects the HP
+# its burn/poison dealt this tick. Slots out of range are ignored defensively.
+static func _credit_dot_contrib(rows: Array, attribution: Dictionary) -> void:
+	for dot_type: Variant in attribution:
+		var by_source: Dictionary = attribution[dot_type] as Dictionary
+		for slot: Variant in by_source:
+			var i: int = slot as int
+			if i < 0 or i >= rows.size():
+				continue
+			var contrib: Dictionary = (rows[i] as Dictionary)["contrib"] as Dictionary
+			contrib[dot_type] = (contrib[dot_type] as int) + (by_source[slot] as int)
 
 
 # Records one status application onto an element's Summary row (total + per-status).

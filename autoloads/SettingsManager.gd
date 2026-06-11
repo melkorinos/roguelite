@@ -9,6 +9,7 @@ const DEFAULT_FULLSCREEN := false
 const DEFAULT_VSYNC      := true
 const DEFAULT_RES_W      := 1280
 const DEFAULT_RES_H      := 720
+const DEFAULT_CONTRIBUTION_BARS := true
 
 var _config := ConfigFile.new()
 
@@ -99,6 +100,17 @@ func _apply_window_mode(fullscreen: bool) -> void:
 func _apply_vsync(enabled: bool) -> void:
 	var mode := DisplayServer.VSYNC_ENABLED if enabled else DisplayServer.VSYNC_DISABLED
 	DisplayServer.window_set_vsync_mode(mode)
+
+
+# --- UI ---
+
+# Whether the live Contribution Bars panel shows during combat (player toggle).
+func get_contribution_bars() -> bool:
+	return _config.get_value("ui", "contribution_bars", DEFAULT_CONTRIBUTION_BARS)
+
+func set_contribution_bars(value: bool) -> void:
+	_config.set_value("ui", "contribution_bars", value)
+	_save()
 
 
 func _save() -> void:

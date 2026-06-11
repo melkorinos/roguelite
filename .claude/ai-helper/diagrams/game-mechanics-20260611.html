@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Auto-Battler — Mechanics Map (Shop &amp; Battle)</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  body { background:#0b0e14; color:#cdd6f4; font-family: ui-sans-serif, system-ui, sans-serif; }
+  .card { background:#11151f; border:1px solid #1f2937; border-radius:14px; }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .pill { font-size:11px; padding:2px 8px; border-radius:999px; }
+  h2 { scroll-margin-top: 70px; }
+  h3 { scroll-margin-top: 70px; }
+  table.k td, table.k th { padding:4px 10px; border-bottom:1px solid #1f2937; vertical-align:top; }
+  table.k th { text-align:left; color:#94a3b8; font-weight:600; }
+  .mermaid { background:#0e1320; border-radius:12px; padding:14px; }
+  a.anchor { color:#7dd3fc; text-decoration:none; }
+  code { background:#1e2535; padding:1px 5px; border-radius:5px; color:#fde68a; }
+  .formula { background:#0e1320; border-left:3px solid #f59e0b; padding:10px 14px; border-radius:6px; }
+  .warn { background:#2a1414; border-left:3px solid #ef4444; }
+  .note { background:#0f2018; border-left:3px solid #22c55e; }
+</style>
+</head>
+<body class="px-6 py-8">
+
+<div class="max-w-6xl mx-auto">
+
+  <header class="mb-8">
+    <h1 class="text-3xl font-bold text-white">Auto-Battler — Mechanics Map</h1>
+    <p class="text-slate-400 mt-1">Built from the live code (<span class="mono">systems/</span>, <span class="mono">data/TuningData.gd</span>) as of 2026-06-11 — vocabulary from <span class="mono">CONTEXT.md</span>. Purpose: a shared picture before the balance pass and the damage-interaction bug hunt.</p>
+    <nav class="flex flex-wrap gap-2 mt-4 text-sm">
+      <a class="pill bg-sky-900 text-sky-200" href="#shop">① Shop &amp; Economy</a>
+      <a class="pill bg-amber-900 text-amber-200" href="#battle">② Battle &amp; Combat Loop</a>
+      <a class="pill bg-rose-900 text-rose-200" href="#damage">③ Damage Pipeline (bug-hunt focus)</a>
+      <a class="pill bg-violet-900 text-violet-200" href="#statuses">④ Status reference</a>
+      <a class="pill bg-emerald-900 text-emerald-200" href="#knobs">⑤ All tuning knobs</a>
+      <a class="pill bg-slate-700 text-slate-200" href="#watch">⑥ Things to watch</a>
+    </nav>
+  </header>
+
+  <!-- ===================== SHOP ===================== -->
+  <section id="shop" class="mb-12">
+    <h2 class="text-2xl font-bold text-sky-300 border-b border-sky-900 pb-2 mb-4">① Shop &amp; Economy — buy · merge · sell · forge</h2>
+
+    <div class="card p-5 mb-6">
+      <h3 class="text-lg font-semibold text-white mb-3">The shop-phase loop</h3>
+      <div class="mermaid">
+flowchart TD
+    A([Enter Shop<br/>after advance_round:<br/>+5g · reroll_count=0 · shop rerolled]) --> EV{Event due?<br/>round %% 3 == 0}
+    EV -->|yes| EVO[EventOverlay: pick 1 of 3<br/>gold / grant element / run modifier]
+    EV -->|no| SP
+    EVO --> SP{Round 1?}
+    SP -->|yes| PICK[Starting Pick:<br/>1 of 3 T1 at Level 2]
+    SP -->|no| LOOP
+    PICK --> LOOP
+
+    LOOP[/Player acts freely/]
+    LOOP --> BUY[Buy: click or drag shop item]
+    LOOP --> MERGE[Merge: drag same elem+level]
+    LOOP --> SELL[Sell: drag to SellZone]
+    LOOP --> FORGE[Forge: 2 items on bench]
+    LOOP --> REROLL[Reroll shop]
+    LOOP --> ARRANGE[Arrange Battlegrid]
+    BUY --> LOOP
+    MERGE --> LOOP
+    SELL --> LOOP
+    FORGE --> LOOP
+    REROLL --> LOOP
+    ARRANGE --> FIGHT([Click Fight → to_battle])
+      </div>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-6 mb-6">
+      <div class="card p-5">
+        <h3 class="text-lg font-semibold text-white mb-3">Economy numbers</h3>
+        <table class="k mono text-sm w-full">
+          <tr><th>Starting gold</th><td>20</td></tr>
+          <tr><th>Gold / round</th><td>+5 (no interest, no streak)</td></tr>
+          <tr><th>Reroll cost</th><td>2 + 1·(paid rerolls this phase) − reroll_discount, floor 0</td></tr>
+          <tr><th>Sell refund</th><td>price / 2 (integer div)</td></tr>
+          <tr><th>Shop slots</th><td>5 (slot mix re-rolled each round)</td></tr>
+          <tr><th>Inventory</th><td>6 slots</td></tr>
+          <tr><th>Prices by tier</th><td>T1 5 · T2 8 · T3 12 · T4 16</td></tr>
+          <tr><th>Forge gold cost</th><td>0 (knob reserved)</td></tr>
+        </table>
+        <p class="text-xs text-slate-500 mt-2">All moves route through <code>ShopSystem.transfer</code>; the scene reads the <code>resolve_drop</code> outcome (<code>bought/merged/swapped/rejected</code>) — it never re-derives by diffing gold.</p>
+      </div>
+
+      <div class="card p-5">
+        <h3 class="text-lg font-semibold text-white mb-3">Shop slot roll (per reroll)</h3>
+        <div class="mermaid">
+flowchart TD
+    R[reroll_shop] --> U[unlocked_tiers from run_discoveries]
+    U --> S{For each of 5 slots}
+    S -->|30%% &amp; a higher tier unlocked| H[higher-tier pool<br/>family-filtered]
+    S -->|else / nothing unlocked| T1[T1 full pool]
+    H --> SP2[_pick_spread:<br/>distinct families, dedupe]
+    T1 --> SP2
+    SP2 --> BF[T1 backfills shortfall] --> SH[shuffle slots]
+        </div>
+        <p class="text-xs text-slate-500 mt-2">T1 is always available (~70%/slot) so the forge engine is never starved.</p>
+      </div>
+    </div>
+
+    <div class="grid md:grid-cols-3 gap-6 mb-6">
+      <div class="card p-5">
+        <h3 class="text-base font-semibold text-white mb-2">Merge <span class="text-slate-500 text-xs">(level axis)</span></h3>
+        <p class="text-sm text-slate-300">Two of the <strong>same element at the same Level</strong> → one at Level+1. Drag-drop, no recipe, no gold. Buying onto a matching Lv1 also merges → Lv2.</p>
+        <p class="text-xs text-slate-500 mt-2">Result lands in <code>min(slot_a, slot_b)</code>; other slot cleared.</p>
+      </div>
+      <div class="card p-5">
+        <h3 class="text-base font-semibold text-white mb-2">Forge <span class="text-slate-500 text-xs">(tier axis · ADR 0008)</span></h3>
+        <p class="text-sm text-slate-300">Recipe A+B→C, one Tier up. <strong>Both inputs Level ≥ 2.</strong> Result Level = <span class="mono">max(1, min(inputs) − 1)</span> → two Lv2s give a Lv1 of the next tier.</p>
+        <p class="text-xs text-slate-500 mt-2">Outcomes: <code>ok · no_recipe · level_too_low · inv_full · no_gold</code>. <code>level_too_low</code> keeps items staged (you can Merge them up).</p>
+      </div>
+      <div class="card p-5">
+        <h3 class="text-base font-semibold text-white mb-2">Sell</h3>
+        <p class="text-sm text-slate-300">Drag to SellZone → refund <span class="mono">price / 2</span>. Works from inventory or grid. <strong>No level scaling on refund</strong> — a Lv3 refunds the same as a Lv1.</p>
+        <p class="text-xs text-slate-500 mt-2 warn formula">⚠ Possible balance leak: merging then selling loses value; selling never recoups merge/forge investment.</p>
+      </div>
+    </div>
+
+    <div class="card p-5 mb-2">
+      <h3 class="text-lg font-semibold text-white mb-3">Two progression gates fed by Forge</h3>
+      <div class="grid md:grid-cols-2 gap-6">
+        <div>
+          <p class="font-semibold text-sky-200 mb-1">Tier unlock (ADR 0007)</p>
+          <p class="text-sm text-slate-300">Forging distinct results writes <code>run_discoveries</code>. Unlock thresholds: <span class="mono">T2 = 3 · T3 = 2 · T4 = 1</span> distinct forges. Once unlocked, that tier appears <em>only from families you forged with</em>. A <em>granted</em> element (Event reward) never writes <code>run_discoveries</code> — forging is the only unlock path.</p>
+        </div>
+        <div>
+          <p class="font-semibold text-emerald-200 mb-1">Grid Growth (ADR 0014)</p>
+          <p class="text-sm text-slate-300">Owning (inv/grid/bench) an element at a milestone grants +1 Battle Slot, once per run, path-agnostic: <span class="mono">T2 Lv2 → 5th slot</span>, <span class="mono">T3 Lv2 → 6th slot</span>. Base 4, hard cap 8. Checked via <code>ForgeSystem.apply_grid_growth</code> after every merge/forge/drop (idempotent).</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== BATTLE ===================== -->
+  <section id="battle" class="mb-12">
+    <h2 class="text-2xl font-bold text-amber-300 border-b border-amber-900 pb-2 mb-4">② Battle — round lifecycle &amp; per-tick order</h2>
+
+    <div class="card p-5 mb-6">
+      <h3 class="text-lg font-semibold text-white mb-3">Round lifecycle (Shop → result → next Shop)</h3>
+      <div class="mermaid">
+flowchart LR
+    FIGHT([Fight]) --> TB[PhaseSystem.to_battle]
+    TB --> TB1[reset timers/statuses/stats<br/>size each side from its own grid]
+    TB1 --> TB2[player_hp = 130 + 11·round-1 + hp_bonus]
+    TB2 --> TB3[opponent_hp = compute_opponent_hp round]
+    TB3 --> TB4[seed combat_rng = hash combat:round]
+    TB4 --> TB5[fire combat_start abilities]
+    TB5 --> TICK{{tick_battle per frame<br/>fixed 0.1s steps}}
+    TICK -->|player_hp&le;0 or opp_hp&le;0<br/>or t&ge;60s| RES[phase = result]
+    RES --> RR[PhaseSystem.resolve_round]
+    RR --> AR[advance_round:<br/>+1 round, +5g, apply wins/lives]
+    AR --> NEXT([Shop or victory/eliminated])
+      </div>
+      <p class="text-xs text-slate-500 mt-2">Deterministic: same boards + same round seed = identical fight. <code>simulate_battle</code> runs the same steps headless — it is the ground truth for the balance pass (there is no separate BalanceSystem).</p>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-6 mb-6">
+      <div class="card p-5">
+        <h3 class="text-lg font-semibold text-white mb-3">What happens inside one tick (<code>tick_battle</code>, δ=0.1s)</h3>
+        <div class="mermaid">
+flowchart TD
+    T0[duplicate state] --> ST{status_tick_timer<br/>&ge; 1.0s?}
+    ST -->|each whole second| STT[StatusSystem.tick both sides:<br/>burn + poison damage → HP<br/>emit on_burn_tick / on_poison_tick]
+    ST -->|no| FR
+    STT --> FR[rebuild seeded combat_rng]
+    FR --> P[_tick_side player]
+    P --> O[_tick_side opponent]
+    O --> RX[resolve_reactive_inplace<br/>depth-1 on this tick's events]
+    RX --> PD[resolve_periodic_inplace]
+    PD --> CMD[_drain_commands<br/>Innate / Replay moments]
+    CMD --> SS[_tick_sandstorm]
+    SS --> KO{HP&le;0 or t&ge;60s}
+    KO -->|yes| END[phase = result]
+    KO -->|no| KEEP[persist rng + visual events]
+        </div>
+      </div>
+
+      <div class="card p-5">
+        <h3 class="text-lg font-semibold text-white mb-3">One element firing (<code>_tick_side</code> → <code>_fire_element_once</code>)</h3>
+        <div class="mermaid">
+flowchart TD
+    A{slot occupied?} -->|no| SKIP[skip]
+    A -->|yes| FZ{frozen?}
+    FZ -->|yes| DRAIN[drain freeze, CD stalls, skip]
+    FZ -->|no| CD[t += δ]
+    CD --> RDY{t &ge; effective_cooldown?}
+    RDY -->|no| WAIT[wait]
+    RDY -->|yes| BL{blind roll<br/>miss?}
+    BL -->|miss| ME[miss_event]
+    BL -->|hit| MC[repeat 1 + multicast_count ×]
+    MC --> FIRE[_fire_element_once:<br/>damage → effect → on_activate → on-hit passives]
+        </div>
+        <p class="text-xs text-slate-500 mt-2">Effective cooldown = <span class="mono">base × 0.7 (global mult) + side cd_modifier, then ×(1+shock slow), round, floor 10 dc (1/sec)</span>.</p>
+      </div>
+    </div>
+
+    <div class="card p-5 mb-2 note formula">
+      <p class="text-sm"><strong class="text-emerald-300">Sandstorm (ADR 0012)</strong> — at t=30s, true damage hits <strong>both</strong> sides each storm-second: <span class="mono">5 + 5·k</span> (k from 0). Bypasses all mitigation by design. Guarantees every fight ends in a KO; hard cap 60s is only a determinism backstop. <strong>No HP-comparison timeout exists</strong> — a fight is won only when the opponent reaches 0 HP.</p>
+    </div>
+  </section>
+
+  <!-- ===================== DAMAGE PIPELINE ===================== -->
+  <section id="damage" class="mb-12">
+    <h2 class="text-2xl font-bold text-rose-300 border-b border-rose-900 pb-2 mb-4">③ Damage pipeline — the bug-hunt surface</h2>
+    <p class="text-slate-400 mb-4">This is where damage-calc and interaction bugs live. Two distinct paths feed HP: a <strong>direct hit</strong> (only ~20% of T2+ elements, the <span class="mono">DAMAGE_DEALERS</span>) and a <strong>DOT tick</strong> (burn/poison, once per second). They apply mitigation in <em>different orders</em> — a common source of confusion.</p>
+
+    <div class="grid md:grid-cols-2 gap-6 mb-6">
+      <div class="card p-5">
+        <h3 class="text-lg font-semibold text-white mb-3">Direct hit — <code>compute_incoming_damage</code></h3>
+        <div class="mermaid">
+flowchart TD
+    R[raw = effective_damage<br/>= base × multiplier × level<br/>0 for pure-effect elements] --> PE{raw &gt; 0?}
+    PE -->|no| ZERO[0-dmg event + apply effect only<br/>no mitigation, no armor-strip, no curse]
+    PE -->|yes| W[Weaken on ATTACKER:<br/>− stacks × 1, floor 0<br/>only while ticks &gt; 0]
+    W --> PL[Plating on defender:<br/>− value × 1, flat, floor 0]
+    PL --> AR[Armor on defender:<br/>absorb down to floor<br/>1 dmg per point]
+    AR --> CU{dmg &gt; 0 &amp; curse stacks?}
+    CU -->|yes| CUY[+ damage_amplifier<br/>consume 1 curse stack]
+    CU -->|no| HP
+    CUY --> HP[opponent_hp −= dmg, floor 0]
+    HP --> STRIP{armor went &gt;0 → 0?}
+    STRIP -->|yes| EV[emit on_armor_stripped]
+        </div>
+        <p class="text-xs text-slate-500 mt-2 mono">Order: Weaken → Plating → Armor → Curse → HP</p>
+      </div>
+
+      <div class="card p-5">
+        <h3 class="text-lg font-semibold text-white mb-3">DOT tick — <code>StatusSystem.tick</code> (1/sec)</h3>
+        <div class="mermaid">
+flowchart TD
+    B[Burn: stacks × 1 + tick_bonus] --> BA[Armor absorbs at HALF rate<br/>raw_burn / 2, never below armor floor<br/>burn stacks −1]
+    BA --> P[Poison: stacks × 1 + tick_bonus<br/>stacks NEVER decrease]
+    P --> SUM[hp_damage = burn_dealt + poison_dealt]
+    SUM --> PD{plating.reduces_dot?}
+    PD -->|yes Steel| PDY[hp_damage − plating.value, floor 0]
+    PD -->|no| CU
+    PDY --> CU{hp_damage &gt; 0 &amp; curse stacks?}
+    CU -->|yes| CUY[+ damage_amplifier<br/>consume 1 curse stack]
+    CU -->|no| OUT
+    CUY --> OUT[side HP −= hp_damage, floor 0]
+        </div>
+        <p class="text-xs text-slate-500 mt-2 mono">Order: Burn (½ armor) + Poison → Plating(if flagged) → Curse → HP</p>
+      </div>
+    </div>
+
+    <div class="card p-5 mb-2 warn formula">
+      <p class="text-sm font-semibold text-rose-300 mb-1">Asymmetries worth verifying during the bug hunt</p>
+      <ul class="text-sm text-slate-300 list-disc ml-5 space-y-1">
+        <li><strong>Curse is consumed twice over.</strong> Both the direct-hit path <em>and</em> each DOT tick consume a curse stack and add the amplifier. A single curse stack can be spent by whichever damaging event lands first in a tick — confirm that's intended ordering (status tick runs <em>before</em> _tick_side fires within the same tick_battle call).</li>
+        <li><strong>Armor treats burn (½ rate) and direct/poison differently.</strong> Burn is soaked at half rate and never below <code>armor.floor</code>; poison is <em>not</em> soaked by armor at all; plating only touches DOT when <code>reduces_dot</code> is set.</li>
+        <li><strong>Pure-effect elements skip the entire damage block</strong> (raw==0) — no armor-strip event, no curse consumption. All T1 + most T2+ are pure-effect, so most "damage" is actually DOT laid by statuses.</li>
+        <li><strong>Multicast</strong> repeats the full fire N× — each repeat an independent event/reactive. Caps: 2× at T2/T3, 3× at T4.</li>
+        <li><strong>Weaken</strong> only reduces direct hits, not DOT ticks (it lives on the attacker, DOT has no live attacker at tick time).</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ===================== STATUS REFERENCE ===================== -->
+  <section id="statuses" class="mb-12">
+    <h2 class="text-2xl font-bold text-violet-300 border-b border-violet-900 pb-2 mb-4">④ Status reference (T1 actions)</h2>
+    <div class="card p-5">
+      <table class="k text-sm w-full">
+        <tr><th>Status</th><th>Magnitude (×Level potency)</th><th>Behaviour</th></tr>
+        <tr><td>🔥 Burn</td><td>1 dmg/stack/tick</td><td>Ramping stacks, −1/tick; armor absorbs at ½ rate</td></tr>
+        <tr><td>🍄 Poison</td><td>1 dmg/stack/tick</td><td>Stacks <strong>permanent</strong>, never decrement; armor ignores it</td></tr>
+        <tr><td>🌍 Armor</td><td>1 dmg absorbed/point</td><td>Depletes on hit, never below floor</td></tr>
+        <tr><td>⚙️ Plating</td><td>1 dmg reduced/point</td><td>Flat per-hit; never depletes; shaves DOT only if <code>reduces_dot</code></td></tr>
+        <tr><td>☀️ Blind</td><td>+15%/stack, cap 50%</td><td>Per-fire miss roll (seeded RNG)</td></tr>
+        <tr><td>⚡ Shock</td><td>50·n/(n+5) % slower CD</td><td>Cooldown slow, diminishing returns</td></tr>
+        <tr><td>🌬️ Haste</td><td>−0.3s (3 dc)/stack</td><td>Side-wide CD reduction</td></tr>
+        <tr><td>🌨️ Weaken</td><td>−1 dmg/stack, 3 ticks</td><td>Reduces attacker's direct hits only; timed</td></tr>
+        <tr><td>🌑 Curse</td><td>+1 dmg/charge (v2)</td><td>Charges consumed per damaging event (hit OR DOT); no duration</td></tr>
+        <tr><td>🌿 Heal</td><td>+1 HP/application</td><td>Instant self</td></tr>
+        <tr><td>💧 Cleanse</td><td>remove 1 stack/application</td><td>Strips burn/poison/shock/slow/weaken/blind</td></tr>
+        <tr><td>🩸 Leech</td><td>heal = damage dealt</td><td>Instant self on fire (+bonus / double via abilities)</td></tr>
+      </table>
+      <p class="text-xs text-slate-500 mt-3">Status is a flat per-side pool (not per-element). All elements on a side share it. Potency = the applying element's <strong>Level</strong> → a Lv-N element applies N stacks/points. Most magnitudes are ×1 placeholders deliberately left flat for the balance pass.</p>
+    </div>
+  </section>
+
+  <!-- ===================== KNOBS ===================== -->
+  <section id="knobs" class="mb-12">
+    <h2 class="text-2xl font-bold text-emerald-300 border-b border-emerald-900 pb-2 mb-4">⑤ Every balance knob (<code>data/TuningData.gd</code>)</h2>
+    <div class="grid md:grid-cols-2 gap-6">
+      <div class="card p-5">
+        <h3 class="text-base font-semibold text-white mb-2">Run / match</h3>
+        <table class="k mono text-xs w-full">
+          <tr><th>STARTING_LIFE</th><td>100</td></tr>
+          <tr><th>WIN_THRESHOLD</th><td>10 wins</td></tr>
+          <tr><th>MAX_LIFE_LOSS</th><td>30 (× opp_hp_ratio)</td></tr>
+          <tr><th>BASE_PLAYER_HP</th><td>130</td></tr>
+          <tr><th>HP_PER_ROUND</th><td>11</td></tr>
+        </table>
+      </div>
+      <div class="card p-5">
+        <h3 class="text-base font-semibold text-white mb-2">Opponent scaling</h3>
+        <table class="k mono text-xs w-full">
+          <tr><th>OPPONENT_BASE_HP</th><td>100 (round 1)</td></tr>
+          <tr><th>OPPONENT_HP_GROWTH</th><td>+15%/round of base</td></tr>
+          <tr><th>HP formula</th><td>100 × (1 + 0.15·(round−1))</td></tr>
+          <tr><th>tier breaks</th><td>≤2 T1 · ≤4 T2 · ≤6 T3 · else T4</td></tr>
+          <tr><th>slot breaks</th><td>2→3→4→5→6 (cap 8)</td></tr>
+          <tr><th>ghost top-tier frac</th><td>0.6</td></tr>
+          <tr><th>ghost level breaks</th><td>≤3 Lv1 · ≤6 Lv2 · else Lv3</td></tr>
+        </table>
+      </div>
+      <div class="card p-5">
+        <h3 class="text-base font-semibold text-white mb-2">Combat</h3>
+        <table class="k mono text-xs w-full">
+          <tr><th>COMBAT_COOLDOWN_MULT</th><td>0.7 (global firing-rate dial)</td></tr>
+          <tr><th>EFFECTIVE_CD_FLOOR</th><td>10 dc (1 fire/sec)</td></tr>
+          <tr><th>DOT_TICK</th><td>1.0s</td></tr>
+          <tr><th>BATTLE_TIME_LIMIT</th><td>30s (storm start)</td></tr>
+          <tr><th>SANDSTORM base/ramp</th><td>5 / +5 per sec</td></tr>
+          <tr><th>SANDSTORM hard cap</th><td>60s</td></tr>
+        </table>
+      </div>
+      <div class="card p-5">
+        <h3 class="text-base font-semibold text-white mb-2">Economy / progression</h3>
+        <table class="k mono text-xs w-full">
+          <tr><th>STARTING_GOLD</th><td>20</td></tr>
+          <tr><th>GOLD_PER_ROUND</th><td>5</td></tr>
+          <tr><th>REROLL base/step</th><td>2 / +1</td></tr>
+          <tr><th>SELL_REFUND_DIV</th><td>2</td></tr>
+          <tr><th>FORGE_MIN_INPUT_LVL</th><td>2</td></tr>
+          <tr><th>FORGE_RESULT_PENALTY</th><td>1 level</td></tr>
+          <tr><th>TIER_UNLOCK</th><td>T2 3 · T3 2 · T4 1 forges</td></tr>
+          <tr><th>GRID base/cap</th><td>4 / 8</td></tr>
+        </table>
+      </div>
+    </div>
+    <p class="text-xs text-slate-500 mt-3">G4 targets (from <span class="mono">memory.md</span>): run ~12–18 rounds, KO ~10–20s, T2 ≈ r3–4 / T3 ≈ r7–9 / T4 ≈ r12+, ~60% win vs broadened ghost pool. Tune empirically through <code>BattleSystem.simulate_battle()</code>.</p>
+  </section>
+
+  <!-- ===================== WATCH ===================== -->
+  <section id="watch" class="mb-12">
+    <h2 class="text-2xl font-bold text-slate-200 border-b border-slate-700 pb-2 mb-4">⑥ Things to watch in the balance/bug pass</h2>
+    <div class="card p-5">
+      <ol class="text-sm text-slate-300 list-decimal ml-5 space-y-2">
+        <li><strong>Opponent HP is board-independent.</strong> <code>compute_opponent_hp</code> keys off round only (100 × growth), ignoring the opponent's actual board. A grown opponent board deals more but absorbs the same — verify offence/defence don't decouple unfairly.</li>
+        <li><strong>Sandstorm dominates long fights.</strong> Anything not resolved by ~30s gets pulled to a KO by escalating true damage on both sides — defensive/DOT builds racing the clock can flip to a coin-toss. Check how often fights actually reach the storm.</li>
+        <li><strong>Curse double-consumption</strong> across the hit path and DOT path within one tick (status tick runs first). Confirm the spend order is intended.</li>
+        <li><strong>Sell refund ignores level.</strong> Merge/forge value is unrecoverable on sell — intended sink or leak?</li>
+        <li><strong>Most elements deal 0 direct damage.</strong> Real damage is DOT laid by statuses; <code>effective_damage</code> &gt; 0 only for ~20% of T2+. The "damage" knobs (base × multiplier × level) affect a small minority.</li>
+        <li><strong>Status magnitudes are ×1 placeholders.</strong> Burn/poison/armor/etc. are deliberately flat — the per-stack values are the primary balance levers and currently undifferentiated.</li>
+        <li><strong>Determinism is the test asset.</strong> Same boards + <code>hash("combat:%d" % round)</code> seed = identical fight. Lean on <code>simulate_battle</code> for regression checks on any damage-calc change.</li>
+      </ol>
+    </div>
+  </section>
+
+  <footer class="text-xs text-slate-600 border-t border-slate-800 pt-4 mt-8">
+    Generated from live code 2026-06-11 · sources: BattleSystem.gd, StatusSystem.gd, ShopSystem.gd, ForgeSystem.gd, PhaseSystem.gd, ElementData.gd, TuningData.gd. Vocabulary per CONTEXT.md.
+  </footer>
+</div>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'dark',
+    themeVariables: { fontSize: '13px' },
+    flowchart: { useMaxWidth: true, htmlLabels: true, curve: 'basis' }
+  });
+</script>
+</body>
+</html>

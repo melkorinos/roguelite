@@ -142,7 +142,7 @@ static func effective_cooldown_deciseconds(base_deciseconds: int, own_statuses: 
 # hp_delta is non-zero only for instant self-effects (heal, leech).
 # `potency` (the applying element's Level) scales the quantity applied this call —
 # a Lv-N element applies N stacks / points / heal. Default 1 (instant effects, tests).
-static func apply_effect(statuses: Dictionary, effect: String, potency: int = 1) -> Dictionary:
+static func apply_effect(statuses: Dictionary, effect: String, potency: int = 1, source_slot: int = -1) -> Dictionary:
 	var s: Dictionary = statuses.duplicate(true)
 	var hp_delta: int = 0
 	var p: int = maxi(1, potency)
@@ -150,16 +150,24 @@ static func apply_effect(statuses: Dictionary, effect: String, potency: int = 1)
 	match effect:
 		"burn":
 			var d: Dictionary = s["burn"] as Dictionary
-			d["stacks"] = mini((d["stacks"] as int) + p, MAX_STACKS)
+			var before: int = d["stacks"] as int
+			d["stacks"] = mini(before + p, MAX_STACKS)
+			_credit_source(d, source_slot, (d["stacks"] as int) - before)
 		"poison":
 			var d: Dictionary = s["poison"] as Dictionary
-			d["stacks"] = mini((d["stacks"] as int) + p, MAX_STACKS)
+			var before: int = d["stacks"] as int
+			d["stacks"] = mini(before + p, MAX_STACKS)
+			_credit_source(d, source_slot, (d["stacks"] as int) - before)
 		"armor":
 			var d: Dictionary = s["armor"] as Dictionary
-			d["value"] = mini((d["value"] as int) + p, MAX_STACKS)
+			var before: int = d["value"] as int
+			d["value"] = mini(before + p, MAX_STACKS)
+			_credit_source(d, source_slot, (d["value"] as int) - before)
 		"plating":
 			var d: Dictionary = s["plating"] as Dictionary
-			d["value"] = mini((d["value"] as int) + p, MAX_STACKS)
+			var before: int = d["value"] as int
+			d["value"] = mini(before + p, MAX_STACKS)
+			_credit_source(d, source_slot, (d["value"] as int) - before)
 		"blind":
 			var d: Dictionary = s["blind"] as Dictionary
 			d["percent"] = mini((d["percent"] as int) + p * TuningData.BLIND_PERCENT_PER_STACK, TuningData.BLIND_PERCENT_CAP)
@@ -188,8 +196,10 @@ static func apply_effect(statuses: Dictionary, effect: String, potency: int = 1)
 			var remove: int = TuningData.CLEANSE_REMOVE_PER_APPLICATION * p
 			var burn_d: Dictionary = s["burn"] as Dictionary
 			burn_d["stacks"] = maxi(0, (burn_d["stacks"] as int) - remove)
+			_decrement_source(burn_d["by_source"] as Dictionary, remove)
 			var poison_d: Dictionary = s["poison"] as Dictionary
 			poison_d["stacks"] = maxi(0, (poison_d["stacks"] as int) - remove)
+			_decrement_source(poison_d["by_source"] as Dictionary, remove)
 			var shock_d: Dictionary = s["shock"] as Dictionary
 			shock_d["n"] = maxi(0, (shock_d["n"] as int) - remove)
 			var slow_d: Dictionary = s["slow"] as Dictionary
@@ -204,6 +214,17 @@ static func apply_effect(statuses: Dictionary, effect: String, potency: int = 1)
 	return { "statuses": s, "hp_delta": hp_delta }
 
 
+# Records `amount` stacks/points applied by `source_slot` into a status's per-source
+# attribution ledger (`by_source`), so tick damage can later be split back to the
+# element that laid each stack. No-op for unattributed applications (slot < 0, e.g.
+# sandstorm or tests) or statuses that don't carry a ledger.
+static func _credit_source(status: Dictionary, source_slot: int, amount: int) -> void:
+	if source_slot < 0 or amount <= 0 or not status.has("by_source"):
+		return
+	var by_source: Dictionary = status["by_source"] as Dictionary
+	by_source[source_slot] = (by_source.get(source_slot, 0) as int) + amount
+
+
 # Advances all time-based statuses by one tick (1 second).
 # Returns { "statuses": Dictionary, "damage": int } where damage is HP damage
 # dealt this tick (burn + poison). Armor absorbs burn at half rate but never
@@ -213,6 +234,13 @@ static func tick(statuses: Dictionary) -> Dictionary:
 	var hp_damage: int = 0
 	var events: Array = []
 	var curse: Dictionary = s["curse"] as Dictionary
+	# Per-source damage attribution for Contribution Bars: maps a DOT type to a
+	# { source_slot: damage } split of the HP that type dealt this tick (pre global
+	# plating/curse modifiers), so BattleSystem can credit each contributing element.
+	var attribution: Dictionary = { "burn": {}, "poison": {} }
+	# Damage Blocked this tick by THIS side's defences (armor soaking burn + plating
+	# shaving the DOT total), split to the defending element(s) that laid them.
+	var blocked_by_source: Dictionary = {}
 
 	# Burn: deal damage (armor absorbs at half rate, never below floor), decrement stacks
 	var burn: Dictionary = s["burn"] as Dictionary
@@ -225,21 +253,34 @@ static func tick(statuses: Dictionary) -> Dictionary:
 		@warning_ignore("integer_division")
 		var armor_absorbed: int = mini(absorbable, raw_burn / TuningData.ARMOR_BURN_ABSORB_DIVISOR)
 		armor["value"] = armor_val - armor_absorbed
-		hp_damage += raw_burn - armor_absorbed
+		if armor_absorbed > 0:
+			_merge_split(blocked_by_source, _split_proportional(armor["by_source"] as Dictionary, armor_absorbed))
+			_decrement_source(armor["by_source"] as Dictionary, armor_absorbed)
+		var burn_dealt: int = raw_burn - armor_absorbed
+		hp_damage += burn_dealt
+		attribution["burn"] = _split_proportional(burn["by_source"] as Dictionary, burn_dealt)
 		burn["stacks"] = burn_stacks - 1
+		_decrement_source(burn["by_source"] as Dictionary, 1)
 		events.append("on_burn_tick")
 
 	# Poison: deal damage, stacks never decrease
 	var poison: Dictionary = s["poison"] as Dictionary
 	var poison_stacks: int = poison["stacks"] as int
 	if poison_stacks > 0:
-		hp_damage += poison_stacks * TuningData.POISON_DAMAGE_PER_STACK + (poison["tick_damage_bonus"] as int)
+		var poison_dealt: int = poison_stacks * TuningData.POISON_DAMAGE_PER_STACK + (poison["tick_damage_bonus"] as int)
+		hp_damage += poison_dealt
+		attribution["poison"] = _split_proportional(poison["by_source"] as Dictionary, poison_dealt)
 		events.append("on_poison_tick")
 
-	# Plating-vs-DOT (Steel): plating shaves the tick total when flagged
+	# Plating-vs-DOT (Steel): plating shaves the tick total when flagged. The shaved HP
+	# is Damage Blocked credited to the plating element(s).
 	var plating: Dictionary = s["plating"] as Dictionary
 	if (plating["reduces_dot"] as bool) and hp_damage > 0:
+		var before_plating: int = hp_damage
 		hp_damage = maxi(0, hp_damage - (plating["value"] as int))
+		var plating_reduced: int = before_plating - hp_damage
+		if plating_reduced > 0:
+			_merge_split(blocked_by_source, _split_proportional(plating["by_source"] as Dictionary, plating_reduced))
 
 	# Curse v2: a DOT tick is a damaging event — amplify the tick by damage_amplifier and
 	# consume one curse stack. When stacks reach 0, the curse is spent.
@@ -253,7 +294,70 @@ static func tick(statuses: Dictionary) -> Dictionary:
 	if weaken_ticks > 0:
 		weaken["ticks"] = weaken_ticks - 1
 
-	return { "statuses": s, "damage": hp_damage, "events": events }
+	return { "statuses": s, "damage": hp_damage, "events": events, "attribution": attribution, "blocked_by_source": blocked_by_source }
+
+
+# Adds a { slot: amount } split into an accumulator dict (used to merge armor- and
+# plating-blocked contributions from multiple defences into one blocked ledger).
+static func _merge_split(target: Dictionary, addition: Dictionary) -> void:
+	for slot: Variant in addition:
+		target[slot] = (target.get(slot, 0) as int) + (addition[slot] as int)
+
+
+# Removes `amount` stacks from a `by_source` ledger, taking from the largest source
+# first (ties → lowest slot) so the ledger stays in sync with an aggregate that
+# decrements (burn per-tick) or is cleansed. Deterministic; drops keys that hit 0.
+static func _decrement_source(by_source: Dictionary, amount: int) -> void:
+	for _i: int in amount:
+		if by_source.is_empty():
+			return
+		var slots: Array = by_source.keys()
+		slots.sort()  # ascending → first max found is the lowest slot among ties
+		var target: int = slots[0] as int
+		for slot: int in slots:
+			if (by_source[slot] as int) > (by_source[target] as int):
+				target = slot
+		var left: int = (by_source[target] as int) - 1
+		if left <= 0:
+			by_source.erase(target)
+		else:
+			by_source[target] = left
+
+
+# Splits `total` damage across the sources in `by_source` (a { slot: weight } ledger),
+# proportionally to each source's weight. Uses largest-remainder apportionment with a
+# deterministic tie-break (ascending slot) so the per-slot integers sum exactly to
+# `total` and the result is reproducible under Replay. Empty when nothing to split.
+static func _split_proportional(by_source: Dictionary, total: int) -> Dictionary:
+	var result: Dictionary = {}
+	if total <= 0 or by_source.is_empty():
+		return result
+	var slots: Array = by_source.keys()
+	slots.sort()
+	var weight_sum: int = 0
+	for slot: int in slots:
+		weight_sum += by_source[slot] as int
+	if weight_sum <= 0:
+		return result
+	var assigned: int = 0
+	var remainders: Array = []  # [{ slot, rem }], parallel to floor assignment
+	for slot: int in slots:
+		var exact: int = (by_source[slot] as int) * total
+		@warning_ignore("integer_division")
+		var base: int = exact / weight_sum
+		result[slot] = base
+		assigned += base
+		remainders.append({ "slot": slot, "rem": exact % weight_sum })
+	# Hand out the leftover one unit at a time to the largest remainders (ties → lower slot).
+	remainders.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		if (a["rem"] as int) != (b["rem"] as int):
+			return (a["rem"] as int) > (b["rem"] as int)
+		return (a["slot"] as int) < (b["slot"] as int))
+	var leftover: int = total - assigned
+	for i: int in leftover:
+		var slot: int = remainders[i]["slot"] as int
+		result[slot] = (result[slot] as int) + 1
+	return result
 
 
 # Computes final HP damage after Weaken (attacker penalty), Plating (flat reduction),
@@ -262,15 +366,22 @@ static func tick(statuses: Dictionary) -> Dictionary:
 static func compute_incoming_damage(raw: int, attacker_statuses: Dictionary, defender_statuses: Dictionary) -> Dictionary:
 	var dmg: int = raw
 	var def_s: Dictionary = defender_statuses.duplicate(true)
+	# Per-source split of the HP this side's Armor prevents — credited to the defending
+	# element(s) that laid the armor (the "Damage Blocked" Contribution).
+	var blocked_by_source: Dictionary = {}
 
 	# Weaken on attacker reduces their damage output (only while ticks > 0)
 	var weaken: Dictionary = attacker_statuses["weaken"] as Dictionary
 	if (weaken["ticks"] as int) > 0:
 		dmg = maxi(0, dmg - (weaken["stacks"] as int) * TuningData.WEAKEN_DAMAGE_REDUCTION_PER_STACK)
 
-	# Plating: flat integer reduction to all incoming
-	var plating_val: int = (def_s["plating"] as Dictionary)["value"] as int
+	# Plating: flat integer reduction to all incoming. The reduced HP is Damage Blocked.
+	var plating: Dictionary = def_s["plating"] as Dictionary
+	var plating_val: int = plating["value"] as int
+	var before_plating: int = dmg
 	dmg = maxi(0, dmg - plating_val * TuningData.PLATING_REDUCTION_PER_POINT)
+	if before_plating - dmg > 0:
+		_merge_split(blocked_by_source, _split_proportional(plating["by_source"] as Dictionary, before_plating - dmg))
 
 	# Armor: absorbs remaining physical damage, depletes but never below floor.
 	# Each armor point soaks ARMOR_ABSORB_PER_POINT damage (1:1 today).
@@ -282,6 +393,8 @@ static func compute_incoming_damage(raw: int, attacker_statuses: Dictionary, def
 		var absorbed: int = mini(capacity, dmg)
 		@warning_ignore("integer_division")
 		var points_spent: int = absorbed / TuningData.ARMOR_ABSORB_PER_POINT
+		blocked_by_source = _split_proportional(armor["by_source"] as Dictionary, absorbed)
+		_decrement_source(armor["by_source"] as Dictionary, points_spent)
 		armor["value"] = armor_val - points_spent
 		dmg -= absorbed
 
@@ -292,4 +405,4 @@ static func compute_incoming_damage(raw: int, attacker_statuses: Dictionary, def
 		dmg += curse["damage_amplifier"] as int
 		curse["stacks"] = (curse["stacks"] as int) - 1
 
-	return { "damage": dmg, "defender_statuses": def_s }
+	return { "damage": dmg, "defender_statuses": def_s, "blocked_by_source": blocked_by_source }

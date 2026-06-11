@@ -121,6 +121,23 @@ const FLOAT_LABEL_COLORS: Dictionary = {
 }
 
 
+# ── Contribution Bars (live, in-combat) ───────────────────────────────────────
+# Per-Contribution-type segment colours; CONTRIB_SEGMENT_ORDER fixes the stacking
+# order so bars read consistently. Player-spec palette: damage red, poison purple,
+# burn orange, heal green, Damage Blocked blue.
+const CONTRIB_SEGMENT_ORDER: Array = ["direct", "poison", "burn", "heal", "blocked"]
+const CONTRIB_COLORS: Dictionary = {
+	"direct":  Color(0.95, 0.27, 0.27),   # red — direct hit damage
+	"poison":  Color(0.70, 0.32, 0.95),   # purple — poison DOT
+	"burn":    Color(1.00, 0.55, 0.15),   # orange — burn DOT
+	"heal":    Color(0.30, 0.90, 0.45),   # green — healing
+	"blocked": Color(0.30, 0.62, 1.00),   # blue — Damage Blocked
+}
+const CONTRIB_BAR_BG     := Color(0.10, 0.07, 0.14, 0.92)
+const CONTRIB_BAR_BORDER := Color(0.32, 0.24, 0.46, 0.9)
+const CONTRIB_PANEL_BG   := Color(0.07, 0.05, 0.11, 0.85)
+
+
 # ── Event overlay (ADR 0011) ──────────────────────────────────────────────────
 const EVENT_DIMMER             := Color(0.0, 0.0, 0.0, 0.7)
 const EVENT_PANEL_BG           := Color(0.08, 0.08, 0.13, 0.98)

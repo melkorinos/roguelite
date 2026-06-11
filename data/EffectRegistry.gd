@@ -18,10 +18,10 @@ class_name EffectRegistry
 #               no "float" entry shows no status popup: heal/leech show an HP-gain
 #               amount built at the call site, and slow has no popup.
 const EFFECTS: Dictionary = {
-	"burn":    { "status_shape": { "stacks": 0, "tick_damage_bonus": 0 },              "count_field": "stacks",    "triggers": ["on_burn_applied", "on_status_applied:burn"], "emoji": "🔥", "valence": "debuff", "float": { "label": "BURN", "nudge": -4.0 } },
-	"poison":  { "status_shape": { "stacks": 0, "tick_damage_bonus": 0 },              "count_field": "stacks",    "triggers": ["on_status_applied:poison"], "emoji": "🧪", "valence": "debuff", "float": { "label": "POISON", "nudge": -4.0 } },
-	"armor":   { "status_shape": { "value": 0, "floor": 0 },                           "count_field": "value",     "triggers": [], "emoji": "🛡️", "valence": "buff", "float": { "label": "ARMOR", "nudge": -4.0 } },
-	"plating": { "status_shape": { "value": 0, "reduces_dot": false },                 "count_field": "value",     "triggers": [], "emoji": "🧱", "valence": "buff", "float": { "label": "PLATE", "nudge": -4.0 } },
+	"burn":    { "status_shape": { "stacks": 0, "tick_damage_bonus": 0, "by_source": {} }, "count_field": "stacks",    "triggers": ["on_burn_applied", "on_status_applied:burn"], "emoji": "🔥", "valence": "debuff", "float": { "label": "BURN", "nudge": -4.0 } },
+	"poison":  { "status_shape": { "stacks": 0, "tick_damage_bonus": 0, "by_source": {} }, "count_field": "stacks",    "triggers": ["on_status_applied:poison"], "emoji": "🧪", "valence": "debuff", "float": { "label": "POISON", "nudge": -4.0 } },
+	"armor":   { "status_shape": { "value": 0, "floor": 0, "by_source": {} },          "count_field": "value",     "triggers": [], "emoji": "🛡️", "valence": "buff", "float": { "label": "ARMOR", "nudge": -4.0 } },
+	"plating": { "status_shape": { "value": 0, "reduces_dot": false, "by_source": {} }, "count_field": "value",     "triggers": [], "emoji": "🧱", "valence": "buff", "float": { "label": "PLATE", "nudge": -4.0 } },
 	"blind":   { "status_shape": { "percent": 0 },                                     "count_field": "percent",   "triggers": ["on_status_applied:blind"], "emoji": "🙈", "valence": "debuff", "float": { "label": "BLIND", "nudge": -4.0 } },
 	"shock":   { "status_shape": { "n": 0, "effective_stack_bonus": 0 },               "count_field": "n",         "triggers": ["on_status_applied:shock"], "emoji": "⚡", "valence": "debuff", "float": { "label": "SHOCK", "nudge": -4.0 } },
 	"slow":    { "status_shape": { "n": 0 },                                           "count_field": "n",         "triggers": [], "emoji": "🐌", "valence": "debuff" },

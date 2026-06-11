@@ -245,6 +245,18 @@ _Avoid_: status icon, badge, pip
 The plain-language, magnitude-filled hover text on a Status Chip — e.g. "Burning: 3 damage/tick · 3 stacks left", "Hasted: fires 0.3s sooner". Produced by the pure `StatusSystem.describe`, so its numbers match combat exactly.
 _Avoid_: status description, blurb, hint
 
+**Contribution Bar**:
+A live, color-segmented horizontal bar shown during combat (and persisting into the result screen) for each occupied player Battle Slot, visualising how much HP-impact that element is contributing in real time. Segments are colour-coded by **Contribution** type (direct damage, poison, burn, healing, **Damage Blocked**) and accumulate as combat ticks. Every bar is normalised against a single shared running maximum — the largest single-element total seen so far this combat — which only ever increases and resets each combat. Player side only. Player-toggleable; distinct from the post-combat Battle Summary.
+_Avoid_: damage meter, dps bar, health bar, threat meter
+
+**Contribution**:
+An HP-quantifiable amount of value one element has produced this combat, attributed to the element that caused it: direct hit damage, poison/burn tick damage (split per-source from the merged Status pool), HP healed (raw, overheal included), and **Damage Blocked**. Non-HP control effects (blind, shock, weaken, curse, haste, freeze, cleanse) are **not** Contributions and get no bar. Stored as the `contrib` sub-dict on each `battle_stats` slot row.
+_Avoid_: stat, impact, score
+
+**Damage Blocked**:
+The HP a player element's Armor/Plating prevented its own side from losing, attributed to the element that applied that defence. The defensive counterpart to dealt damage; counts as a **Contribution** so a pure tank piece still shows a (blue) Contribution Bar.
+_Avoid_: mitigation, absorption, defence
+
 ### Async PvP
 
 **Ghost**:
