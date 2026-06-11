@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Element Card — Design Exploration</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Exo+2:wght@300;400;600;700&family=Fredoka+One&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #1c1c1c; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+
+// ─── DATA ─────────────────────────────────────────────────────────
+const FIRE_T1 = {
+  name:"Fire", emoji:"🔥", family:"fire", tier:1,
+  archetype:"pure-status", cd:"2.5s", status:"burn", statusVal:"X",
+  price:3, trigger:"", ability:"",
+};
+const RAIN_T2 = {
+  name:"Rain", emoji:"🌧️", family:"water", tier:2,
+  archetype:"pure-status", cd:"3.0s", status:"cleanse", statusVal:"X",
+  price:5, trigger:"EVERY 8s", ability:"Apply X [cleanse] to your side.",
+};
+const MOUNTAIN_T3 = {
+  name:"Mountain", emoji:"🏔️", family:"earth", tier:3,
+  archetype:"damage-dealer", cd:"5.0s", dmg:8,
+  price:6, trigger:"COMBAT START", ability:"absorb at least 1 damage per hit.",
+};
+const RAGNAROK_T4 = {
+  name:"Ragnarok", emoji:"🔱", family:"combo", tier:4,
+  archetype:"damage-status", cd:"4.0s", dmg:6, status:"burn", statusVal:"X",
+  price:12, trigger:"EVERY 4s", ability:"Deal [6] damage and apply X [burn] to the opponent.",
+};
+
+// ─── ELEMENT COLORS ───────────────────────────────────────────────
+const EC = {
+  fire:  { accent:"#f07020", accentL2:"#ff9840", dark:"#7a2c08", rgb:"240,112,32",  nameC:"#faa050", iconBg:"radial-gradient(ellipse at 50% 78%, rgba(255,108,18,0.52) 0%, rgba(178,44,8,0.24) 52%, rgba(8,2,1,0.92) 82%), #110604" },
+  water: { accent:"#20a8c8", accentL2:"#40d0ee", dark:"#0a3848", rgb:"32,168,200",  nameC:"#80d8f0", iconBg:"radial-gradient(ellipse at 50% 25%, rgba(32,168,200,0.52) 0%, rgba(10,60,100,0.24) 52%, rgba(2,6,18,0.92) 82%), #04080f" },
+  earth: { accent:"#8090a8", accentL2:"#a0b4cc", dark:"#2a3848", rgb:"128,144,168", nameC:"#b0c8e0", iconBg:"radial-gradient(ellipse at 50% 38%, rgba(128,144,168,0.48) 0%, rgba(50,70,105,0.22) 52%, rgba(4,6,14,0.92) 82%), #060a10" },
+  combo: { accent:"#9b1a1a", accentL2:"#d44020", dark:"#4a0808", rgb:"155,26,26",   nameC:"#d4a030", iconBg:"radial-gradient(ellipse at 50% 50%, rgba(180,40,20,0.55) 0%, rgba(80,10,10,0.3) 45%, rgba(5,2,2,0.95) 80%), #090202" },
+};
+
+// ─── KEYWORD COLOR SYSTEM ─────────────────────────────────────────
+// Each keyword type has its own semantic color
+function kwColor(keyword) {
+  if (/^\d+$/.test(keyword)) return "#ebcf73"; // damage number → gold
+  const k = keyword.toLowerCase();
+  const map = {
+    burn:    "#ff6c28",
+    cleanse: "#42d898",
+    shock:   "#80c8ff",
+    freeze:  "#a0e8ff",
+    poison:  "#88dd44",
+    stun:    "#ffcc44",
+  };
+  return map[k] || "#8fd3ff";
+}
+
+function renderKw(text, baseStyle = {}) {
+  if (!text) return null;
+  const { color: _c, borderBottomColor: _b, ...rest } = baseStyle;
+  return text.split(/(\[[^\]]+\])/g).map((part, i) => {
+    if (/^\[[^\]]+\]$/.test(part)) {
+      const kw = part.slice(1, -1);
+      const kc = kwColor(kw);
+      return <span key={i} style={{ ...rest, color: kc, borderBottomColor: kc, cursor: "default" }}>{kw}</span>;
+    }
+    return <span key={i}>{part}</span>;
+  });
+}
+
+// ─── STATUS STYLE MAP ─────────────────────────────────────────────
+const STATUS_STYLES = {
+  burn:    { color:"#ff6c28", border:"rgba(255,108,40,0.58)" },
+  cleanse: { color:"#42d898", border:"rgba(66,216,152,0.52)" },
+  shock:   { color:"#80c8ff", border:"rgba(128,200,255,0.52)" },
+  default: { color:"#8fd3ff", border:"rgba(143,211,255,0.52)" },
+};
+const ssFor = (s) => STATUS_STYLES[(s||"").toLowerCase()] || STATUS_STYLES.default;
+
+// ─── STATS HELPER ─────────────────────────────────────────────────
+function getStats(data) {
+  const ss = ssFor(data.status);
+  if (data.archetype === "pure-status") return [
+    { label:null,         value:data.cd,        hl:false, hlC:null,      hlB:null },
+    { label:data.status,  value:data.statusVal,  hl:true,  hlC:ss.color,  hlB:ss.border },
+  ];
+  if (data.archetype === "damage-status") return [
+    { label:null,         value:data.cd,        hl:false, hlC:null,      hlB:null },
+    { label:"DMG",        value:data.dmg,        hl:false, hlC:null,      hlB:null },
+    { label:data.status,  value:data.statusVal,  hl:true,  hlC:ss.color,  hlB:ss.border },
+  ];
+  return [
+    { label:null,  value:data.cd,  hl:false, hlC:null, hlB:null },
+    { label:"DMG", value:data.dmg, hl:false, hlC:null, hlB:null },
+  ];
+}
+
+// ─── ART: FIRE SVG ────────────────────────────────────────────────
+function ArtFire({ size=70 }) {
+  const uid = React.useId();
+  const gId = `afg-${uid}`;
+  return (
+    <svg width={size} height={size} viewBox="0 0 68 68" fill="none">
+      <defs>
+        <radialGradient id={gId} cx="50%" cy="82%" r="52%">
+          <stop offset="0%"   stopColor="rgba(255,110,20,0.6)" />
+          <stop offset="100%" stopColor="rgba(255,60,0,0)" />
+        </radialGradient>
+      </defs>
+      <ellipse cx="34" cy="57" rx="23" ry="12" fill={`url(#${gId})`} />
+      <path d="M34 7 C28 19 17 26 17 41 C17 53 24 62 34 64 C44 62 51 53 51 41 C51 26 40 19 34 7Z" fill="rgba(165,12,4,1)" />
+      <path d="M34 15 C29 25 22 32 22 43 C22 53 27 60 34 62 C41 60 46 53 46 43 C46 32 39 25 34 15Z" fill="rgba(252,62,8,1)" />
+      <path d="M34 24 C30 32 26 37 26 46 C26 53 29 58 34 59 C39 58 42 53 42 46 C42 37 38 32 34 24Z" fill="rgba(255,148,18,0.95)" />
+      <path d="M34 33 C32 38 30 42 30 47 C30 51 32 54 34 55 C36 54 38 51 38 47 C38 42 36 38 34 33Z" fill="rgba(255,226,36,0.9)" />
+      <path d="M34 41 C33 44 32 46 32 49 C32 52 33 54 34 54.5 C35 54 36 52 36 49 C36 46 35 44 34 41Z" fill="rgba(255,248,188,0.85)" />
+      <circle cx="25" cy="22" r="2.6" fill="rgba(255,198,55,0.72)" />
+      <circle cx="44" cy="16" r="1.9" fill="rgba(255,220,100,0.62)" />
+      <circle cx="28" cy="11" r="1.4" fill="rgba(255,240,160,0.52)" />
+      <circle cx="46" cy="30" r="1.2" fill="rgba(255,160,28,0.58)" />
+    </svg>
+  );
+}
+
+// ─── TIER BADGE ───────────────────────────────────────────────────
+// All badges: 32×32 CSS, 40×40 SVG viewBox, center (20,20)
+// Ornament complexity escalates; SIZE is identical across T1–T4
+// Glow intensity scales with tier via CSS filter: drop-shadow
+function TierBadge({ tier, ec }) {
+  const uid = React.useId();
+  const { rgb, accentL2 } = ec;
+  const gId = `bg-${uid}`;
+
+  const glows = ["drop-shadow(0 0 3px rgba("+rgb+",0.3))",
+                  "drop-shadow(0 0 7px rgba("+rgb+",0.45))",
+                  "drop-shadow(0 0 12px rgba("+rgb+",0.6))",
+                  "drop-shadow(0 0 18px rgba("+rgb+",0.78))"];
+  const glowFilter = glows[tier-1] || glows[0];
+
+  // Shared fill / stroke helpers
+  const outerFill   = `rgba(${rgb},0.07)`;
+  const outerStroke = `rgba(${rgb},0.35)`;
+  const innerFill   = `rgba(${rgb},0.16)`;
+  const innerStroke = accentL2;
+  const tickStroke  = accentL2;
+  const numFill     = accentL2;
+
+  // T3+T4 tick positions from r=14→r=17.5, center (20,20)
+  // Cardinal: top/bottom/left/right
+  const cTicks = [
+    [20,6,  20,2.5],  // top
+    [20,34, 20,37.5], // bottom
+    [6,20,  2.5,20],  // left
+    [34,20, 37.5,20], // right
+  ];
+  // Diagonal: NE/SE/SW/NW — from r=14 to r=17.5 at 45°
+  const diagTicks = [
+    [29.9,10.1, 32.4,7.6],   // NE
+    [29.9,29.9, 32.4,32.4],  // SE
+    [10.1,29.9, 7.6,32.4],   // SW
+    [10.1,10.1, 7.6,7.6],    // NW
+  ];
+
+  return (
+    <div style={{ width:32, height:32, filter:glowFilter, flexShrink:0 }}>
+      <svg width="32" height="32" viewBox="0 0 40 40" overflow="visible">
+        <defs>
+          <radialGradient id={gId} cx="50%" cy="40%" r="55%">
+            <stop offset="0%"   stopColor={`rgba(${rgb},0.35)`} />
+            <stop offset="100%" stopColor={`rgba(${rgb},0.04)`} />
+          </radialGradient>
+        </defs>
+
+        {/* T1: single circle */}
+        {tier >= 1 && (
+          <circle cx="20" cy="20" r="13"
+            fill={outerFill} stroke={tier === 1 ? `rgba(${rgb},0.42)` : outerStroke} strokeWidth={tier === 1 ? "1" : "0.8"} />
+        )}
+
+        {/* T2+: inner circle */}
+        {tier >= 2 && (
+          <circle cx="20" cy="20" r="9.5"
+            fill={innerFill} stroke={innerStroke} strokeWidth="1.2" />
+        )}
+
+        {/* T3+: 4 cardinal ticks */}
+        {tier >= 3 && cTicks.map(([x1,y1,x2,y2],i) => (
+          <line key={i} x1={x1} y1={y1} x2={x2} y2={y2}
+            stroke={tickStroke} strokeWidth="1.5" strokeLinecap="round" />
+        ))}
+
+        {/* T4: 4 additional diagonal ticks */}
+        {tier >= 4 && diagTicks.map(([x1,y1,x2,y2],i) => (
+          <line key={i} x1={x1} y1={y1} x2={x2} y2={y2}
+            stroke="rgba(235,207,115,0.72)" strokeWidth="1.2" strokeLinecap="round" />
+        ))}
+
+        {/* T4: inner gem circle + gradient fill */}
+        {tier >= 4 && (
+          <>
+            <circle cx="20" cy="20" r="9.5"
+              fill="none" stroke="rgba(235,207,115,0.62)" strokeWidth="1.2" />
+            <circle cx="20" cy="20" r="6.5"
+              fill={`url(#${gId})`} stroke="rgba(235,207,115,0.45)" strokeWidth="0.8" />
+          </>
+        )}
+
+        {/* Roman numeral — all tiers */}
+        <text x="20" y={tier >= 4 ? "24.5" : "24"}
+          textAnchor="middle"
+          fill={tier >= 4 ? "#ebcf73" : numFill}
+          fontSize={tier === 3 ? "8" : "9"}
+          fontWeight="700"
+          fontFamily="Cinzel,Georgia,serif">
+          {["I","II","III","IV"][tier-1]}
+        </text>
+      </svg>
+    </div>
+  );
+}
+
+
+// ════════════════════════════════════════════════════════════════════
+//  02 — CARTOON EPIC
+// ════════════════════════════════════════════════════════════════════
+// DIRECTION A — tier reads from FRAME RICHNESS, no badge, no number.
+//   T1: thin hairline border, faint glow, no inner ring
+//   T2: full border + single inner ring
+//   T3: double-border read (border + dark gap + accent inset) + corner marks
+//   T4: ornate multi-layer (gold outer keyline + border + gold inner) + gold corners
+// Card footprint stays the same across tiers.
+const GOLD = "235,207,115";
+function getTierFrame(tier, ec) {
+  const { rgb, accentL2, dark } = ec;
+  if (tier <= 1) {
+    return {
+      border: `2px solid ${accentL2}`,
+      boxShadow: [
+        `0 0 0 1px ${dark}`,
+        `0 0 9px rgba(${rgb},0.18)`,
+        `0 6px 20px rgba(0,0,0,0.85)`,
+      ].join(","),
+      brackets: null, studs: null,
+    };
+  }
+  if (tier === 2) {
+    return {
+      border: `3px solid ${accentL2}`,
+      boxShadow: [
+        `0 0 0 1px ${dark}`,
+        `inset 0 0 0 2px rgba(${rgb},0.28)`,
+        `0 0 16px rgba(${rgb},0.26)`,
+        `0 7px 22px rgba(0,0,0,0.88)`,
+      ].join(","),
+      brackets: null, studs: null,
+    };
+  }
+  if (tier === 3) {
+    return {
+      // double-border read: 4px frame, dark gap, accent inner line
+      border: `4px solid ${accentL2}`,
+      boxShadow: [
+        `0 0 0 1px ${dark}`,
+        `inset 0 0 0 2px rgba(0,0,0,0.65)`,
+        `inset 0 0 0 4px rgba(${rgb},0.45)`,
+        `0 0 22px rgba(${rgb},0.32)`,
+        `0 8px 26px rgba(0,0,0,0.9)`,
+      ].join(","),
+      brackets: null,
+      studs: null,
+    };
+  }
+  // tier 4 — ornate gilded frame
+  return {
+    border: `4px solid ${accentL2}`,
+    boxShadow: [
+      `0 0 0 2px rgba(${GOLD},0.7)`,        // gold outer keyline
+      `0 0 0 4px ${dark}`,                  // dark gap
+      `0 0 0 6px rgba(${GOLD},0.32)`,       // faint gold halo line
+      `inset 0 0 0 2px rgba(0,0,0,0.65)`,
+      `inset 0 0 0 4px rgba(${GOLD},0.5)`,  // gold inner line
+      `0 0 30px rgba(${rgb},0.38)`,
+      `0 0 18px rgba(${GOLD},0.22)`,
+      `0 9px 32px rgba(0,0,0,0.92)`,
+    ].join(","),
+    brackets: null,
+    studs:    null,
+  };
+}
+
+function CardCartoonEpic({ data }) {
+  const ec    = EC[data.family] || EC.fire;
+  const stats = getStats(data);
+  const n     = stats.length;
+  const frame = getTierFrame(data.tier, ec);
+
+  const cornerBr = [
+    {top:3,left:3},{top:3,right:3},{bottom:3,left:3},{bottom:3,right:3},
+  ];
+
+  return (
+    <div style={{
+      width:200, height:290, position:"relative",
+      background:`radial-gradient(ellipse at 50% 28%, rgba(${ec.rgb},0.11) 0%, transparent 62%), #0a0808`,
+      border:frame.border, borderRadius:4,
+      padding:"7px 8px 26px",
+      display:"flex", flexDirection:"column",
+      fontFamily:"system-ui, sans-serif", overflow:"hidden",
+      boxShadow:frame.boxShadow,
+    }}>
+
+      {/* Tier corner brackets — T3/T4 (frame ornamentation) */}
+      {frame.brackets && (() => {
+        const c = frame.brackets;
+        return [
+          {top:c.inset,left:c.inset},{top:c.inset,right:c.inset},
+          {bottom:c.inset,left:c.inset},{bottom:c.inset,right:c.inset},
+        ].map((p,i) => {
+          const iR=p.right!==undefined, iB=p.bottom!==undefined;
+          return <div key={"br"+i} style={{
+            position:"absolute", ...p, width:c.size, height:c.size, zIndex:6,
+            pointerEvents:"none",
+            borderTop:   !iB ? `${c.weight}px solid ${c.color}` : "none",
+            borderBottom: iB ? `${c.weight}px solid ${c.color}` : "none",
+            borderLeft:  !iR ? `${c.weight}px solid ${c.color}` : "none",
+            borderRight:  iR ? `${c.weight}px solid ${c.color}` : "none",
+          }} />;
+        });
+      })()}
+
+      {/* Tier corner studs — T4 only (gilded rivets) */}
+      {frame.studs && (() => {
+        const s = frame.studs;
+        return [
+          {top:s.inset,left:s.inset},{top:s.inset,right:s.inset},
+          {bottom:s.inset,left:s.inset},{bottom:s.inset,right:s.inset},
+        ].map((p,i) => (
+          <div key={"st"+i} style={{
+            position:"absolute", ...p, width:s.size, height:s.size, zIndex:7,
+            background:s.color, transform:"rotate(45deg)", pointerEvents:"none",
+            boxShadow:`0 0 7px ${s.color}`,
+          }} />
+        ));
+      })()}
+
+
+      {/* Portrait */}
+      <div style={{
+        height:82, borderRadius:4, flexShrink:0,
+        background:ec.iconBg,
+        border:`1px solid rgba(${ec.rgb},0.42)`,
+        display:"flex", alignItems:"center", justifyContent:"center",
+        position:"relative", overflow:"hidden",
+        boxShadow:`inset 0 0 26px rgba(${ec.rgb},0.22)`,
+        filter:"brightness(1.42) saturate(1.38)",
+      }}>
+        {cornerBr.map((p,i) => {
+          const iR=p.right!==undefined, iB=p.bottom!==undefined;
+          return <div key={i} style={{
+            position:"absolute",...p, width:9, height:9,
+            borderTop:   !iB ? `1.5px solid rgba(${ec.rgb},0.55)` : "none",
+            borderBottom: iB ? `1.5px solid rgba(${ec.rgb},0.55)` : "none",
+            borderLeft:  !iR ? `1.5px solid rgba(${ec.rgb},0.55)` : "none",
+            borderRight:  iR ? `1.5px solid rgba(${ec.rgb},0.55)` : "none",
+          }} />;
+        })}
+        {data.family === "fire"
+          ? <ArtFire size={70} />
+          : <div style={{ fontSize:50, lineHeight:1, userSelect:"none" }}>{data.emoji}</div>
+        }
+      </div>
+
+      {/* Name plate */}
+      <div style={{
+        marginTop:6, flexShrink:0,
+        background:"rgba(0,0,0,0.55)",
+        border:`1px solid rgba(${ec.rgb},0.2)`,
+        borderRadius:3, padding:"4px 8px", textAlign:"center",
+      }}>
+        <div style={{ fontSize:18, fontFamily:"'Fredoka One', system-ui",
+          color:ec.nameC, letterSpacing:1,
+          textShadow:`0 0 16px rgba(${ec.rgb},0.55)` }}>{data.name}</div>
+      </div>
+
+      {/* Stats row */}
+      <div style={{ marginTop:7, display:"grid",
+        gridTemplateColumns:`repeat(${n},1fr)`, gap:5, flexShrink:0 }}>
+        {stats.map((s,i) => (
+          <div key={i} style={{
+            background:"rgba(0,0,0,0.45)",
+            border:s.hl ? `1px solid ${s.hlB}` : `1px solid rgba(${ec.rgb},0.28)`,
+            borderRadius:22, padding:"5px 0",
+            display:"flex", flexDirection:"column", alignItems:"center", gap:0,
+            cursor:s.hl ? "pointer" : "default",
+          }}>
+            <div style={{ fontSize:n===3?14:18, fontWeight:700,
+              color:s.hl ? s.hlC : "#e8eaf4", lineHeight:1.1 }}>
+              {s.value}
+            </div>
+            {s.label && (
+              <div style={{ fontSize:n===3?7.5:9, letterSpacing:1.5,
+                textTransform:"uppercase",
+                color:s.hl ? s.hlC : "#9a9cb8",
+                textDecoration:s.hl ? "underline dotted" : "none" }}>
+                {s.label}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Separator */}
+      <div style={{ marginTop:8, height:1,
+        background:"rgba(255,255,255,0.07)", flexShrink:0 }} />
+
+      {/* Ability */}
+      <div style={{ marginTop:6, flex:1, display:"flex",
+        flexDirection:"column", justifyContent:"center", overflow:"hidden" }}>
+        {(data.trigger || data.ability) && (
+          <div style={{ fontSize:10, color:"#c8caf2", lineHeight:1.6 }}>
+            {data.trigger && (
+              <span style={{ fontWeight:700, color:"#8fd3ff",
+                letterSpacing:0.5, marginRight:4 }}>{data.trigger}</span>
+            )}
+            {renderKw(data.ability)}
+          </div>
+        )}
+      </div>
+
+      {/* Price */}
+      <div style={{ position:"absolute", bottom:6, right:8,
+        background:"rgba(0,0,0,0.6)", border:"1px solid rgba(235,207,115,0.55)",
+        borderRadius:10, padding:"1px 7px",
+        fontSize:11, fontWeight:700, color:"#ebcf73" }}>{data.price}g</div>
+    </div>
+  );
+}
+
+
+// ════════════════════════════════════════════════════════════════════
+//  01 — CRYSTALLINE PRISM  (reference, 2 cards)
+// ════════════════════════════════════════════════════════════════════
+function CardCrystalline({ data }) {
+  const ec    = EC[data.family] || EC.fire;
+  const rgb   = ec.rgb;
+  const stats = getStats(data);
+  const clip  = "polygon(14px 0%,calc(100% - 14px) 0%,100% 14px,100% calc(100% - 14px),calc(100% - 14px) 100%,14px 100%,0% calc(100% - 14px),0% 14px)";
+
+  return (
+    <div style={{ width:200, height:290, position:"relative",
+      boxShadow:`0 0 30px rgba(${rgb},0.2),0 0 0 1px rgba(${rgb},0.12)` }}>
+      <div style={{ position:"absolute", inset:-2, clipPath:clip,
+        background:`rgba(${rgb},0.22)`, filter:"blur(6px)" }} />
+      <div style={{ position:"relative", width:200, height:290, clipPath:clip,
+        background:`linear-gradient(155deg,rgba(${rgb},0.07) 0%,transparent 55%),#0c1020`,
+        padding:"10px 10px 28px", display:"flex", flexDirection:"column",
+        fontFamily:"'Exo 2',system-ui,sans-serif" }}>
+
+        <div style={{ position:"absolute", top:0, left:28, right:28, height:2,
+          background:`linear-gradient(90deg,transparent,${ec.accentL2},transparent)`, opacity:0.95 }} />
+        <div style={{ position:"absolute", top:10, right:10, width:22, height:22,
+          transform:"rotate(45deg)", background:`rgba(${rgb},0.14)`,
+          border:`1px solid ${ec.accentL2}`,
+          display:"flex", alignItems:"center", justifyContent:"center" }}>
+          <span style={{ transform:"rotate(-45deg)", fontSize:8,
+            color:ec.accentL2, fontWeight:700 }}>{data.tier}</span>
+        </div>
+        <div style={{ fontSize:7.5, color:`rgba(${rgb},0.55)`, textTransform:"uppercase",
+          letterSpacing:2.5, textAlign:"center", marginBottom:6, marginTop:2 }}>
+          {data.family} · T{data.tier}
+        </div>
+        <div style={{ display:"flex", justifyContent:"center", marginBottom:7 }}>
+          <div style={{ position:"relative", width:68, height:68,
+            display:"flex", alignItems:"center", justifyContent:"center" }}>
+            <svg style={{ position:"absolute", top:0, left:0 }} width="68" height="68">
+              <polygon points="34,1 67,18 67,50 34,67 1,50 1,18"
+                fill={`rgba(${rgb},0.1)`} stroke={ec.accentL2} strokeWidth="1.5" />
+            </svg>
+            <div style={{ position:"relative", zIndex:1, fontSize:32, lineHeight:1, userSelect:"none" }}>
+              {data.emoji}
+            </div>
+          </div>
+        </div>
+        <div style={{ textAlign:"center", fontSize:15, fontWeight:700, color:"#ffffff",
+          letterSpacing:2, textTransform:"uppercase", marginBottom:8 }}>
+          {data.name}
+        </div>
+        <div style={{ display:"grid", gridTemplateColumns:`repeat(${stats.length},1fr)`, gap:4, marginBottom:8 }}>
+          {stats.map((s,i) => (
+            <div key={i} style={{
+              background:"rgba(255,255,255,0.05)",
+              border:s.hl ? `1px solid ${s.hlB}` : `1px solid rgba(${rgb},0.3)`,
+              borderRadius:2, padding:"5px 2px",
+              display:"flex", flexDirection:"column", alignItems:"center", gap:2,
+              cursor:s.hl ? "pointer" : "default",
+            }}>
+              {s.label && <div style={{ fontSize:7, letterSpacing:1, textTransform:"uppercase",
+                color:s.hl ? s.hlC : `rgba(${rgb},0.55)`,
+                textDecoration:s.hl ? "underline dotted" : "none" }}>{s.label}</div>}
+              <div style={{ fontSize:stats.length===3?13:16, fontWeight:600,
+                color:s.hl ? s.hlC : "#dce8ff", lineHeight:1 }}>{s.value}</div>
+            </div>
+          ))}
+        </div>
+        <div style={{ height:1, background:"rgba(255,255,255,0.08)", marginBottom:7 }} />
+        <div style={{ flex:1, display:"flex", flexDirection:"column", justifyContent:"center" }}>
+          {(data.trigger||data.ability) && (
+            <div style={{ fontSize:10, color:"#c8caf2", lineHeight:1.6 }}>
+              {data.trigger && <span style={{ fontWeight:700, color:"#8fd3ff",
+                letterSpacing:0.5, marginRight:4 }}>{data.trigger}</span>}
+              {renderKw(data.ability)}
+            </div>
+          )}
+        </div>
+        <div style={{ position:"absolute", bottom:7, right:10,
+          background:"rgba(0,0,0,0.6)", border:"1px solid rgba(235,207,115,0.55)",
+          borderRadius:2, padding:"1px 6px",
+          fontSize:11, fontWeight:700, color:"#ebcf73" }}>{data.price}g</div>
+      </div>
+    </div>
+  );
+}
+
+
+// ════════════════════════════════════════════════════════════════════
+//  03 — RUNESTONE  (reference, 2 cards)
+// ════════════════════════════════════════════════════════════════════
+function CardRunestone({ data }) {
+  const ec    = EC[data.family] || EC.fire;
+  const stats = getStats(data);
+  const isFire = data.family==="fire";
+  const stoneBg = isFire ? "linear-gradient(170deg,#2e1c0c,#100c04)" : "linear-gradient(170deg,#10182a,#08101e)";
+  const stoneHL = isFire
+    ? "radial-gradient(ellipse at 38% 14%,rgba(255,200,100,0.04) 0%,transparent 65%)"
+    : "radial-gradient(ellipse at 38% 14%,rgba(160,200,255,0.03) 0%,transparent 65%)";
+  const borderC = ec.accentL2;
+  const accentC = ec.accent;
+  const statC   = isFire ? "#f0c060" : "#a0b8d8";
+  const nameC   = isFire ? "#e0c060" : "#b0c8e0";
+  const innerBR = isFire ? "rgba(180,115,45,0.35)" : "rgba(100,140,180,0.35)";
+
+  return (
+    <div style={{ width:200, height:290, position:"relative",
+      background:stoneBg,
+      borderRadius:"7px 5px 8px 6px / 5px 8px 6px 7px",
+      border:`2px solid ${borderC}`,
+      padding:"10px 10px 28px",
+      display:"flex", flexDirection:"column",
+      fontFamily:"'Cinzel',Georgia,serif",
+      boxShadow:`0 4px 28px rgba(${ec.rgb},0.15),0 0 0 1px rgba(${ec.rgb},0.08)`,
+      overflow:"hidden" }}>
+
+      <div style={{ position:"absolute", inset:0, pointerEvents:"none", background:stoneHL }} />
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:7 }}>
+        <div style={{ fontSize:7.5, color:`rgba(${ec.rgb},0.5)`, letterSpacing:2 }}>
+          {data.family.toUpperCase()}
+        </div>
+        <div style={{ width:22, height:22, border:`1px solid ${borderC}`,
+          transform:"rotate(45deg)", borderRadius:1,
+          display:"flex", alignItems:"center", justifyContent:"center" }}>
+          <span style={{ transform:"rotate(-45deg)", fontSize:9, color:borderC, fontWeight:700 }}>
+            {data.tier}
+          </span>
+        </div>
+      </div>
+      <div style={{ display:"flex", justifyContent:"center", marginBottom:7 }}>
+        <div style={{ width:70, height:70, borderRadius:"50%",
+          background:"rgba(0,0,0,0.32)", border:`1px solid ${borderC}`,
+          boxShadow:`inset 0 2px 12px rgba(0,0,0,0.6),0 0 18px rgba(${ec.rgb},0.12)`,
+          display:"flex", alignItems:"center", justifyContent:"center", position:"relative" }}>
+          <div style={{ position:"absolute", inset:5, borderRadius:"50%", border:`1px solid ${innerBR}` }} />
+          <div style={{ fontSize:36, lineHeight:1, userSelect:"none", position:"relative", zIndex:1 }}>
+            {data.emoji}
+          </div>
+        </div>
+      </div>
+      <div style={{ display:"flex", alignItems:"center", gap:5, marginBottom:7 }}>
+        <div style={{ flex:1, height:1, background:`linear-gradient(90deg,transparent,${accentC})` }} />
+        <div style={{ fontSize:11, fontWeight:700, color:nameC, letterSpacing:2, whiteSpace:"nowrap" }}>
+          {data.name.toUpperCase()}
+        </div>
+        <div style={{ flex:1, height:1, background:`linear-gradient(90deg,${accentC},transparent)` }} />
+      </div>
+      <div style={{ display:"grid", gridTemplateColumns:`repeat(${stats.length},1fr)`, gap:4, marginBottom:7 }}>
+        {stats.map((s,i) => (
+          <div key={i} style={{
+            background:"rgba(0,0,0,0.28)",
+            border:s.hl ? `1px solid ${s.hlB}` : `1px solid rgba(${ec.rgb},0.4)`,
+            borderRadius:2, padding:"4px 2px",
+            display:"flex", flexDirection:"column", alignItems:"center", gap:1,
+            cursor:s.hl ? "pointer" : "default",
+          }}>
+            {s.label && <div style={{ fontSize:6.5, letterSpacing:1, textTransform:"uppercase",
+              color:s.hl ? s.hlC : `rgba(${ec.rgb},0.5)`,
+              textDecoration:s.hl ? "underline dotted" : "none" }}>{s.label}</div>}
+            <div style={{ fontSize:stats.length===3?13:16, fontWeight:700,
+              color:s.hl ? s.hlC : statC, lineHeight:1 }}>{s.value}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{ height:1, marginBottom:6, opacity:0.5,
+        background:`linear-gradient(90deg,transparent,${accentC} 30%,${accentC} 70%,transparent)` }} />
+      <div style={{ flex:1, display:"flex", flexDirection:"column", justifyContent:"center" }}>
+        {(data.trigger||data.ability) && (
+          <div style={{ fontSize:9.5, color:"#c8caf2", lineHeight:1.6, letterSpacing:0.2 }}>
+            {data.trigger && <span style={{ fontWeight:700, color:"#8fd3ff",
+              letterSpacing:0.5, marginRight:4 }}>{data.trigger}</span>}
+            {renderKw(data.ability, { borderBottom:"1px dotted" })}
+          </div>
+        )}
+      </div>
+      <div style={{ position:"absolute", bottom:7, right:10,
+        background:"rgba(0,0,0,0.45)", border:"1px solid rgba(235,207,115,0.5)",
+        borderRadius:2, padding:"1px 5px",
+        fontSize:9, fontWeight:700, color:"#ebcf73" }}>{data.price}g</div>
+    </div>
+  );
+}
+
+
+// ─── APP ──────────────────────────────────────────────────────────
+function App() {
+  return (
+    <DesignCanvas>
+      <DCSection id="s01" title="01 — Crystalline Prism" subtitle="Reference · 2 cards">
+        <DCArtboard id="cp-fire"  label="Fire · T1"      width={200} height={290}><CardCrystalline data={FIRE_T1} /></DCArtboard>
+        <DCArtboard id="cp-mtn"   label="Mountain · T3"  width={200} height={290}><CardCrystalline data={MOUNTAIN_T3} /></DCArtboard>
+      </DCSection>
+
+      <DCSection id="s02" title="02 — Cartoon Epic — Tier via Frame (Direction A)"
+        subtitle="No badge, no number. Tier = frame richness: T1 hairline · T2 ring · T3 double border + corners · T4 ornate gold frame + corners · level expression removed">
+        <DCArtboard id="ce-f1"  label="Fire · T1"       width={200} height={290}><CardCartoonEpic data={FIRE_T1}     /></DCArtboard>
+        <DCArtboard id="ce-r1"  label="Rain · T2"       width={200} height={290}><CardCartoonEpic data={RAIN_T2}     /></DCArtboard>
+        <DCArtboard id="ce-m1"  label="Mountain · T3"   width={200} height={290}><CardCartoonEpic data={MOUNTAIN_T3} /></DCArtboard>
+        <DCArtboard id="ce-rg"  label="Ragnarok · T4"   width={200} height={290}><CardCartoonEpic data={RAGNAROK_T4} /></DCArtboard>
+      </DCSection>
+
+      <DCSection id="s03" title="03 — Runestone" subtitle="Reference · 2 cards">
+        <DCArtboard id="rs-fire" label="Fire · T1"      width={200} height={290}><CardRunestone data={FIRE_T1} /></DCArtboard>
+        <DCArtboard id="rs-mtn"  label="Mountain · T3"  width={200} height={290}><CardRunestone data={MOUNTAIN_T3} /></DCArtboard>
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>

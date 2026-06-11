@@ -132,30 +132,28 @@ func _style_hp_bar(bar: ProgressBar) -> void:
 
 func _build_grids() -> void:
 	var s: Dictionary = GameManager.state
-	var pgrid_node: Node = $VBox/BattleRow/PlayerSide/PlayerGrid
-	var ogrid_node: Node = $VBox/BattleRow/OppSide/OppGrid
+	var pgrid_node: GridContainer = $VBox/BattleRow/PlayerSide/PlayerGrid
+	var ogrid_node: GridContainer = $VBox/BattleRow/OppSide/OppGrid
 
 	_player_slots.clear()
 	_opp_slots.clear()
 
-	for i: int in 4:
-		var ps: BattleSlot = BattleSlot.new()
-		ps.slot_index = i
-		ps.draggable = false
-		ps.tooltip_requested.connect(_on_tooltip_requested.bind("player", i))
-		ps.tooltip_hide_requested.connect(_on_tooltip_hide)
-		pgrid_node.add_child(ps)
-		ps.set_element(s["battle_grid"][i])
-		_player_slots.append(ps)
+	# Each side sizes from its own grid — boards may differ (Grid Growth, ADR 0014).
+	_build_side(pgrid_node, s["battle_grid"] as Array, "player", _player_slots)
+	_build_side(ogrid_node, s["opponent_grid"] as Array, "opponent", _opp_slots)
 
-		var os: BattleSlot = BattleSlot.new()
-		os.slot_index = i
-		os.draggable = false
-		os.tooltip_requested.connect(_on_tooltip_requested.bind("opponent", i))
-		os.tooltip_hide_requested.connect(_on_tooltip_hide)
-		ogrid_node.add_child(os)
-		os.set_element(s["opponent_grid"][i])
-		_opp_slots.append(os)
+
+func _build_side(container: GridContainer, grid: Array, side: String, slots_out: Array[BattleSlot]) -> void:
+	container.columns = GridSystem.dimensions(grid.size()).x
+	for i: int in grid.size():
+		var slot: BattleSlot = BattleSlot.new()
+		slot.slot_index = i
+		slot.draggable = false
+		slot.tooltip_requested.connect(_on_tooltip_requested.bind(side, i))
+		slot.tooltip_hide_requested.connect(_on_tooltip_hide)
+		container.add_child(slot)
+		slot.set_element(grid[i])
+		slots_out.append(slot)
 
 
 func _update_progress_bars(s: Dictionary) -> void:

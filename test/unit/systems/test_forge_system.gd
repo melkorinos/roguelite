@@ -280,6 +280,88 @@ func test_preview_recipe_shows_result_name() -> void:
 	assert_true(_preview_pair(_state_with("water", "fire", 2, 2), 0, 1).contains("Steam"))
 
 
+# ── Grid Growth (ADR 0014): apply_grid_growth ────────────────────────────────
+
+# A state owning a single element of `id` at `level` in inventory slot 0, with no
+# growth fired yet (a fresh base board).
+func _owning(id: String, level: int) -> Dictionary:
+	var state := GameState.create()
+	state["inventory"][0] = ElementData.instantiate(id, level)
+	return state
+
+
+# Triggers (ADR 0014): 5th slot ← first Tier-2 Lv2, 6th slot ← first Tier-3 Lv2.
+# steam = T2, storm = T3.
+
+func test_growth_t2_level2_grants_fifth_slot() -> void:
+	var s := ForgeSystem.apply_grid_growth(_owning("steam", 2))
+	assert_eq(s["battle_slot_count"] as int, 5)
+	assert_eq((s["battle_grid"] as Array).size(), 5)
+	assert_eq(s["grid_growth_fired"] as Array, [0])
+
+
+func test_growth_t1_level2_does_not_grant() -> void:
+	# A Tier-1 Lv2 is no longer a trigger (too cheap a milestone).
+	var state := _owning("water", 2)
+	assert_eq(ForgeSystem.apply_grid_growth(state), state)  # same ref, no growth
+
+
+func test_growth_does_not_fire_below_threshold_level() -> void:
+	var state := _owning("steam", 1)  # Lv1 T2 — not yet Lv2
+	assert_eq(ForgeSystem.apply_grid_growth(state), state)
+
+
+func test_growth_is_idempotent_does_not_regrant() -> void:
+	var s := ForgeSystem.apply_grid_growth(_owning("steam", 2))
+	var s2 := ForgeSystem.apply_grid_growth(s)
+	assert_eq(s2["battle_slot_count"] as int, 5)
+	assert_eq(s2["grid_growth_fired"] as Array, [0])
+
+
+func test_growth_slot_persists_after_selling_the_item() -> void:
+	var s := ForgeSystem.apply_grid_growth(_owning("steam", 2))
+	s["inventory"][0] = null  # sell the qualifying item
+	var s2 := ForgeSystem.apply_grid_growth(s)
+	assert_eq(s2["battle_slot_count"] as int, 5)  # slot kept
+
+
+func test_growth_t3_level2_fires_second_trigger_only() -> void:
+	# Owning only a Tier-3 Lv2 fires trigger index 1, not 0 (no T2 Lv2 owned).
+	var s := ForgeSystem.apply_grid_growth(_owning("storm", 2))
+	assert_eq(s["battle_slot_count"] as int, 5)
+	assert_eq(s["grid_growth_fired"] as Array, [1])
+
+
+func test_growth_both_triggers_fire_to_six() -> void:
+	var state := _owning("steam", 2)
+	state["inventory"][1] = ElementData.instantiate("storm", 2)
+	var s := ForgeSystem.apply_grid_growth(state)
+	assert_eq(s["battle_slot_count"] as int, 6)
+	assert_eq((s["battle_grid"] as Array).size(), 6)
+	assert_eq(s["grid_growth_fired"] as Array, [0, 1])
+
+
+func test_growth_respects_hard_max() -> void:
+	var state := _owning("steam", 2)
+	state["inventory"][1] = ElementData.instantiate("storm", 2)
+	state["battle_slot_count"] = TuningData.GRID_HARD_MAX
+	assert_eq(ForgeSystem.apply_grid_growth(state), state)  # at cap, no growth
+
+
+func test_growth_via_grid_path_counts() -> void:
+	# Path-agnostic: a qualifying element on the battle grid also triggers.
+	var state := GameState.create()
+	state["battle_grid"][0] = ElementData.instantiate("steam", 2)
+	var s := ForgeSystem.apply_grid_growth(state)
+	assert_eq(s["battle_slot_count"] as int, 5)
+
+
+func test_growth_fires_through_merge_attempt() -> void:
+	# The real hook: merging two Lv1 T2s to a Lv2 grants the 5th slot via attempt().
+	var s := _merge_inv(_state_with("steam", "steam"), 0, 1)
+	assert_eq(s["battle_slot_count"] as int, 5)
+
+
 func test_preview_below_min_level_prompts_to_level_up() -> void:
 	# A valid recipe with Level-1 inputs previews the requirement, not the result.
 	var preview: String = _preview_pair(_state_with("water", "fire", 1, 1), 0, 1)

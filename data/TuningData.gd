@@ -24,7 +24,21 @@ const ELEMENT_PRICE_BY_TIER: Dictionary = { 1: 5, 2: 8, 3: 12, 4: 16 }
 
 
 # ── Board ────────────────────────────────────────────────────────────────────
-const GRID_SIZE: int = 4                  # CombatState.SLOT_COUNT re-exports this
+const GRID_SIZE: int = 4                  # CombatState.SLOT_COUNT re-exports this; the base board
+
+# Grid Growth (ADR 0014): the player's Battlegrid starts at GRID_BASE_SLOTS and
+# grows +1 slot per run when they first OWN an element of a given tier at the given
+# level (Merge or Forge result — path-agnostic), each trigger once per run, in
+# order, never past GRID_HARD_MAX. Retune freely: reorder, change levels, or add
+# entries up to the cap. 9 is intentionally NOT supported.
+# Tuned so the slot is a real investment milestone (a T1 Lv2 is too cheap): the
+# 5th slot wants a Tier-2 Lv2, the 6th a Tier-3 Lv2.
+const GRID_BASE_SLOTS: int = 4
+const GRID_HARD_MAX: int = 8
+const GRID_GROWTH_TRIGGERS: Array = [
+	{ "tier": 2, "level": 2 },  # → 5th slot
+	{ "tier": 3, "level": 2 },  # → 6th slot
+]
 
 
 # ── Progression / unlocks ────────────────────────────────────────────────────
@@ -83,7 +97,11 @@ const OPPONENT_HP_GROWTH_PERCENT: int = 15  # +% of base per round: HP = BASE ×
 const OPPONENT_HP_MIN: int = 15
 const OPPONENT_TIER_ROUND_BREAKS: Array = [2, 4, 6]   # ≤2→T1, ≤4→T2, ≤6→T3, else T4
 const OPPONENT_SLOTS_BASE: int = 2
-const OPPONENT_SLOTS_ROUND_BREAKS: Array = [1, 3]     # +1 slot past each (≤1→2, ≤3→3, else 4)
+# +1 opponent slot past each break. Extended past 4 so opponents scale with the
+# player's Grid Growth (ADR 0014) instead of plateauing at 4 — the 5th/6th breaks
+# track the forge climb (T2 Lv2 ≈ r6, T3 Lv2 ≈ r9). Result, capped at GRID_HARD_MAX:
+#   ≤1→2, ≤3→3, ≤5→4, ≤8→5, else 6.
+const OPPONENT_SLOTS_ROUND_BREAKS: Array = [1, 3, 5, 8]
 # Synthetic ghost board generation (G4): make opponent power track the round predictably
 # instead of a uniform grab-bag. Most slots field the round's max tier; the rest one tier
 # down. Ghost elements also gain Level with the round so opponent offence grows like a

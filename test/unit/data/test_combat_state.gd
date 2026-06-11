@@ -66,3 +66,28 @@ func test_reset_provides_fresh_status_pools() -> void:
 func test_reset_returns_same_dict_reference() -> void:
 	var state := GameState.create()
 	assert_eq(CombatState.reset(state), state)
+
+
+func test_reset_sizes_player_arrays_to_player_count() -> void:
+	var state := GameState.create()
+	CombatState.reset(state, 6, 4)
+	assert_eq((state["element_timers"] as Array).size(), 6)
+	assert_eq((state["player_frozen_seconds"] as Array).size(), 6)
+	assert_eq((state["player_ability_timers"] as Array).size(), 6)
+	assert_eq((state["battle_stats"]["player"] as Array).size(), 6)
+
+
+func test_reset_sizes_opponent_arrays_to_opponent_count() -> void:
+	var state := GameState.create()
+	CombatState.reset(state, 6, 4)
+	assert_eq((state["opponent_timers"] as Array).size(), 4)
+	assert_eq((state["opponent_frozen_seconds"] as Array).size(), 4)
+	assert_eq((state["opponent_ability_timers"] as Array).size(), 4)
+	assert_eq((state["battle_stats"]["opponent"] as Array).size(), 4)
+
+
+func test_reset_opponent_count_defaults_to_player_count() -> void:
+	var state := GameState.create()
+	CombatState.reset(state, 8)
+	assert_eq((state["element_timers"] as Array).size(), 8)
+	assert_eq((state["opponent_timers"] as Array).size(), 8)

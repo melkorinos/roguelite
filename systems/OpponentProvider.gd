@@ -36,8 +36,11 @@ static func _max_tier_for_round(round_num: int) -> int:
 # family (elements sharing an ingredient). Deterministic — seeded by day+round so Replay
 # and async playback reproduce it. Grid-agnostic via CombatState.SLOT_COUNT.
 static func _day_seeded_grid(day: int, round_num: int, max_tier: int) -> Array:
-	var grid: Array = CombatState.empty_slots()
-	var slots: int = mini(_max_slots_for_round(round_num), grid.size())
+	# The opponent board scales with the round (capped at the hard max), mirroring the
+	# player's Grid Growth (ADR 0014) so a grown player isn't permanently fighting a
+	# 4-slot ghost. Per-side combat sizing handles whatever length this returns.
+	var slots: int = mini(_max_slots_for_round(round_num), TuningData.GRID_HARD_MAX)
+	var grid: Array = CombatState.empty_slots(slots)
 	var level: int = _level_for_round(round_num)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash(str(day) + str(round_num))

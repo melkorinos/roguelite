@@ -370,7 +370,7 @@ static func resolve_reactive_inplace(state: Dictionary, events: Array, combat_rn
 			# adjacency_upgrade abilities only react to an adjacent source (when a
 			# source slot is known — side-wide events skip the check).
 			if source_slot >= 0 and (ability.get("adjacency_upgrade", false) as bool) and FeatureFlags.combat_adjacency:
-				if not GridSystem.neighbors(i, dimensions.x, dimensions.y).has(source_slot):
+				if not GridSystem.neighbors(i, dimensions.x, dimensions.y, grid.size()).has(source_slot):
 					continue
 			# Probabilistic reactives (Miasma) roll against the seeded RNG.
 			if ability.has("chance") and combat_rng != null:

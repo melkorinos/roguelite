@@ -158,8 +158,16 @@ _Avoid_: undo, time rewind
 ### UI zones
 
 **Battlegrid**:
-The arrangement zone inside the Shop UI where the player positions their elements before clicking Fight. Elements placed here fight in the combat phase. *(Grid size — 2×2 / 2×3 / 3×3 — is undecided; the combat backend is grid-size-agnostic, deriving size from the slot array and using an orthogonal-neighbor helper for adjacency.)*
+The arrangement zone inside the Shop UI where the player positions their elements before clicking Fight. Elements placed here fight in the combat phase. Starts at 2×2 (4 **Battle Slots**) and can grow per run via **Grid Growth** (see below) up to a hard cap of 8 slots. The combat backend is grid-size-agnostic — each side derives its size from its own slot array and uses an orthogonal-neighbor helper for adjacency, so the player's and opponent's boards may differ in size.
 _Avoid_: board, bench, lineup
+
+**Battle Slot**:
+One position on the Battlegrid that holds a single element. The number of Battle Slots a side fields is its board size; the player's count is per-run state (`battle_slot_count`), the opponent's comes from its Ghost snapshot.
+_Avoid_: cell, tile, square
+
+**Grid Growth**:
+A per-run reward that adds one Battle Slot to the player's Battlegrid when they first reach a level milestone with an element of a given tier (e.g. first Tier-1 element to reach Level 2, first Tier-2 to reach Level 2). Encourages Merging/Forging up rather than going wide. Milestones are tunable; slots gained are permanent for that run and reset between runs. Distinct from any opponent board scaling.
+_Avoid_: board expansion, slot unlock, grid upgrade
 
 **Charge Bar**:
 The thin bar on each Battle slot that fills 0→1 as an element charges toward its next fire, then resets when it fires. Driven by the element's cooldown; rendered smoothly by interpolating between the fixed combat steps. Empty while the slot is frozen.

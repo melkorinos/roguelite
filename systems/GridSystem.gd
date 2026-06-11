@@ -6,12 +6,16 @@ class_name GridSystem
 
 
 # Maps a slot count to a (width, height) board shape. Width is columns, height is
-# rows. Falls back to a near-square layout for unlisted counts.
+# rows. The Grid Growth ladder (ADR 0014) stays two rows tall up to the hard cap
+# of 8 — 5/7 are ragged (the last row is short). Falls back to a near-square
+# layout for any unlisted count.
 static func dimensions(slot_count: int) -> Vector2i:
 	match slot_count:
 		4: return Vector2i(2, 2)
+		5: return Vector2i(3, 2)
 		6: return Vector2i(3, 2)
-		9: return Vector2i(3, 3)
+		7: return Vector2i(4, 2)
+		8: return Vector2i(4, 2)
 	var width: int = int(ceil(sqrt(float(slot_count))))
 	@warning_ignore("integer_division")
 	var height: int = int(ceil(float(slot_count) / float(width)))
@@ -19,8 +23,12 @@ static func dimensions(slot_count: int) -> Vector2i:
 
 
 # Orthogonal neighbors (up, left, right, down) of a slot, in ascending index
-# order. No diagonals. Out-of-bounds directions are omitted.
-static func neighbors(slot_index: int, width: int, height: int) -> Array[int]:
+# order. No diagonals. Out-of-bounds directions are omitted. `slot_count` guards
+# ragged boards (e.g. 5 slots in a 3×2 layout): any neighbor index >= slot_count
+# is a hole in the short last row and is dropped. Defaults to width*height (the
+# full rectangle), so passing it is only needed for ragged boards.
+static func neighbors(slot_index: int, width: int, height: int, slot_count: int = -1) -> Array[int]:
+	var limit: int = slot_count if slot_count >= 0 else width * height
 	@warning_ignore("integer_division")
 	var row: int = slot_index / width
 	var column: int = slot_index % width
@@ -33,4 +41,8 @@ static func neighbors(slot_index: int, width: int, height: int) -> Array[int]:
 		result.append(slot_index + 1)
 	if row < height - 1:
 		result.append(slot_index + width)
-	return result
+	var guarded: Array[int] = []
+	for n: int in result:
+		if n < limit:
+			guarded.append(n)
+	return guarded

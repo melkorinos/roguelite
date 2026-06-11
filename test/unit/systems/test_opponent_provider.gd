@@ -22,9 +22,12 @@ func test_get_opponent_returns_source_key() -> void:
 	assert_true(g.has("source"))
 
 
-func test_get_opponent_grid_has_four_slots() -> void:
-	var g := OpponentProvider.get_opponent(_ctx(1, 1))
-	assert_eq((g["grid"] as Array).size(), 4)
+func test_get_opponent_grid_scales_with_round() -> void:
+	# Opponent board size is round-scaled (ADR 0014 G4 follow-up): small early,
+	# growing to match the player's Grid Growth, capped at GRID_HARD_MAX.
+	assert_eq((OpponentProvider.get_opponent(_ctx(1, 1))["grid"] as Array).size(), 2)
+	assert_eq((OpponentProvider.get_opponent(_ctx(1, 9))["grid"] as Array).size(), 6)
+	assert_lte((OpponentProvider.get_opponent(_ctx(1, 30))["grid"] as Array).size(), TuningData.GRID_HARD_MAX)
 
 
 # ── day-seeded source ─────────────────────────────────────────────────────────
@@ -64,7 +67,8 @@ func test_late_round_opponent_capped_at_tier4() -> void:
 func test_same_context_produces_same_grid() -> void:
 	var g1 := OpponentProvider.get_opponent(_ctx(42, 3))
 	var g2 := OpponentProvider.get_opponent(_ctx(42, 3))
-	for i: int in 4:
+	assert_eq((g1["grid"] as Array).size(), (g2["grid"] as Array).size())
+	for i: int in (g1["grid"] as Array).size():
 		var a: Variant = (g1["grid"] as Array)[i]
 		var b: Variant = (g2["grid"] as Array)[i]
 		if a == null:

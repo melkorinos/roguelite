@@ -9,7 +9,12 @@ static func create(seed_recipes: Array[String] = []) -> Dictionary:
 		"opponent_hp": TuningData.INITIAL_OPPONENT_HP,
 		"gold": TuningData.STARTING_GOLD,
 		"inventory": CombatState.empty_slots(TuningData.INVENTORY_SIZE),
-		"battle_grid": CombatState.empty_slots(),
+		"battle_grid": CombatState.empty_slots(TuningData.GRID_BASE_SLOTS),
+		# Grid Growth (ADR 0014): the player's board size this run. Grows via
+		# ShopSystem.apply_grid_growth; persists across rounds, resets per run.
+		# grid_growth_fired holds the GRID_GROWTH_TRIGGERS indices already awarded.
+		"battle_slot_count": TuningData.GRID_BASE_SLOTS,
+		"grid_growth_fired": [],
 		"element_timers": CombatState.zero_floats(),
 		"opponent_grid": CombatState.empty_slots(),
 		"opponent_timers": CombatState.zero_floats(),

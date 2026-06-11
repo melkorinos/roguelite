@@ -248,11 +248,14 @@ func _rebuild_inventory(s: Dictionary) -> void:
 
 func _rebuild_battle_grid(s: Dictionary) -> void:
 	_battle_slot_nodes.clear()
-	var container: Node = $VBox/MainArea/LeftPanel/BattleGrid
+	var container: GridContainer = $VBox/MainArea/LeftPanel/BattleGrid
 	for child: Node in container.get_children():
 		child.queue_free()
 	var grid: Array = s["battle_grid"]
-	for i: int in 4:
+	# The board can grow during a run (Grid Growth, ADR 0014); size the UI from the
+	# live grid and lay it out via the shared GridSystem shape.
+	container.columns = GridSystem.dimensions(grid.size()).x
+	for i: int in grid.size():
 		var slot: BattleSlot = BattleSlot.new()
 		slot.slot_index = i
 		slot.draggable = true

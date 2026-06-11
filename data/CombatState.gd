@@ -55,20 +55,25 @@ static func empty_battle_stats(count: int = SLOT_COUNT) -> Dictionary:
 # Mutates and returns `state` (callers pass a duplicate). Does NOT set phase, hp,
 # the RNG seed, the opponent grid/hp, or run combat-start abilities — those stay
 # with PhaseSystem.to_battle().
-static func reset(state: Dictionary, slot_count: int = SLOT_COUNT) -> Dictionary:
+#
+# Boards can differ in size per side (Grid Growth, ADR 0014): the player's count
+# comes from `battle_grid`/`battle_slot_count`, the opponent's from its Ghost
+# snapshot grid. `opponent_count` defaults to `player_count` for symmetric boards.
+static func reset(state: Dictionary, player_count: int = SLOT_COUNT, opponent_count: int = -1) -> Dictionary:
+	var opp_count: int = opponent_count if opponent_count >= 0 else player_count
 	state["battle_timer"] = 0.0
 	state["sandstorm_ticks"] = 0
-	state["element_timers"] = zero_floats(slot_count)
-	state["opponent_timers"] = zero_floats(slot_count)
-	state["player_frozen_seconds"] = zero_floats(slot_count)
-	state["opponent_frozen_seconds"] = zero_floats(slot_count)
+	state["element_timers"] = zero_floats(player_count)
+	state["opponent_timers"] = zero_floats(opp_count)
+	state["player_frozen_seconds"] = zero_floats(player_count)
+	state["opponent_frozen_seconds"] = zero_floats(opp_count)
 	state["player_last_frozen_slot"] = -1
 	state["opponent_last_frozen_slot"] = -1
-	state["player_ability_timers"] = zero_floats(slot_count)
-	state["opponent_ability_timers"] = zero_floats(slot_count)
+	state["player_ability_timers"] = zero_floats(player_count)
+	state["opponent_ability_timers"] = zero_floats(opp_count)
 	state["pending_commands"] = []
 	state["battle_events"] = []
-	state["battle_stats"] = empty_battle_stats(slot_count)
+	state["battle_stats"] = { "player": empty_stat_rows(player_count), "opponent": empty_stat_rows(opp_count) }
 	state["player_statuses"] = StatusSystem.empty_statuses()
 	state["opponent_statuses"] = StatusSystem.empty_statuses()
 	state["status_tick_timer"] = 0.0

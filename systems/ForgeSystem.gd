@@ -26,6 +26,15 @@ class_name ForgeSystem
 
 
 static func attempt(state: Dictionary, op: Dictionary) -> Dictionary:
+	var result: Dictionary = _attempt(state, op)
+	# Any merge/forge can produce the leveled element that earns a Battle Slot
+	# (Grid Growth, ADR 0014). Re-evaluated on the result of every op — idempotent
+	# (a no-op when nothing newly qualifies), so it's safe to run unconditionally.
+	result["state"] = apply_grid_growth(result["state"] as Dictionary)
+	return result
+
+
+static func _attempt(state: Dictionary, op: Dictionary) -> Dictionary:
 	match op.get("kind", "") as String:
 		"merge":       return _merge(state, op.get("zone", "inventory") as String, op["a"] as int, op["b"] as int)
 		"forge_pair":  return _forge_pair(state, op["a"] as int, op["b"] as int)
@@ -33,6 +42,53 @@ static func attempt(state: Dictionary, op: Dictionary) -> Dictionary:
 		"to_bench":    return _to_bench(state, op.get("forge_slot", -1) as int, op["from"] as Dictionary)
 		"from_bench":  return _from_bench(state, op["forge_slot"] as int)
 	return _noop(state)
+
+
+# ── Grid Growth (ADR 0014) ──────────────────────────────────────────────────────
+# Grants Battle Slots when the player first OWNS an element of a tier at a level
+# named in TuningData.GRID_GROWTH_TRIGGERS. Path-agnostic (Merge or Forge result),
+# each trigger once per run (tracked in grid_growth_fired), never past
+# GRID_HARD_MAX. Pure: returns the same `state` reference when nothing new fires,
+# otherwise a grown duplicate. Idempotent — safe to call after any state change.
+static func apply_grid_growth(state: Dictionary) -> Dictionary:
+	var count: int = state.get("battle_slot_count", TuningData.GRID_BASE_SLOTS) as int
+	if count >= TuningData.GRID_HARD_MAX:
+		return state
+	var fired: Array = state.get("grid_growth_fired", []) as Array
+	var triggers: Array = TuningData.GRID_GROWTH_TRIGGERS
+	var to_fire: Array[int] = []
+	var projected: int = count
+	for idx: int in triggers.size():
+		if projected >= TuningData.GRID_HARD_MAX:
+			break
+		if fired.has(idx):
+			continue
+		var trig: Dictionary = triggers[idx]
+		if _owns_tier_at_level(state, trig["tier"] as int, trig["level"] as int):
+			to_fire.append(idx)
+			projected += 1
+	if to_fire.is_empty():
+		return state
+	var s: Dictionary = state.duplicate(true)
+	var grid: Array = s["battle_grid"]
+	for idx: int in to_fire:
+		s["battle_slot_count"] = (s["battle_slot_count"] as int) + 1
+		grid.append(null)
+		(s["grid_growth_fired"] as Array).append(idx)
+	return s
+
+
+# True when the player owns (inventory, battle grid, or forge bench) at least one
+# element of `tier` at level ≥ `level`.
+static func _owns_tier_at_level(state: Dictionary, tier: int, level: int) -> bool:
+	for key: String in ["inventory", "battle_grid", "forge_slots"]:
+		for item: Variant in state.get(key, []) as Array:
+			if item == null:
+				continue
+			var d: Dictionary = item as Dictionary
+			if (d.get("tier", 0) as int) == tier and (d.get("level", 0) as int) >= level:
+				return true
+	return false
 
 
 static func preview(state: Dictionary, op: Dictionary) -> String:

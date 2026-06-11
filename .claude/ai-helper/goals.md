@@ -1,14 +1,13 @@
 # Goals
 
-## Current focus (2026-06-09) — live tracker is the handoff
+## Current focus (2026-06-11) — live tracker is the handoff
 Phases 1–3 below are the historical foundation. **Active work is the run loop** — see
-`.claude/ai-helper/handoff-run-loop.md` for live status, priorities, and backlog. Since
-Phase 3: ability system + status effects (combat is real, not placeholder), forge-gated
-shop (ADR 0007), forge leveled inputs (0008), discoverability (0009), dead-end elimination
-(0010), every-N Event node + reward framework (0011), Round-resolution unification, and an
-architecture pass (data indexing + drop seam). The north-star loop (start-pick → forge-gated
-shop → Event every N → win/loss) is now structurally complete.
-**Next:** G4 balance pass · ForgePanel extraction (needs F5) · grid growth (feature 5).
+`.claude/ai-helper/handoff-run-loop.md` (the single merged tracker) for live status, priorities,
+and backlog. The north-star loop (start-pick → forge-gated shop → Event every N → win/loss) is
+**structurally complete**; combat content, Sandstorm (0012), damage archetypes (0013), Grid Growth
+(0014), and the arch passes (data indexing, Round-resolution, ForgePanel extraction, EffectRegistry)
+have all landed.
+**Next:** G4 balance pass · F5 eyeball backlog · small arch cleanups · PlatformLayer (Steam seam).
 
 ## Phase 1 — Godot setup (COMPLETE — 2026-06-01)
 - [x] Migrate from Phaser 3 / TypeScript to Godot 4 / GDScript

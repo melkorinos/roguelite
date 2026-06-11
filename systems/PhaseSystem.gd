@@ -17,14 +17,20 @@ static func _scaled_player_hp(state: Dictionary) -> int:
 
 static func to_battle(state: Dictionary, opponent_snapshot: Dictionary) -> Dictionary:
 	var s: Dictionary = state.duplicate(true)
+	# Boards can differ in size per side (Grid Growth, ADR 0014): the player's
+	# size comes from their (possibly grown) battle_grid, the opponent's from the
+	# Ghost snapshot grid. Size every per-side array accordingly.
+	var opp_grid: Array = opponent_snapshot.get("grid", CombatState.empty_slots()) as Array
+	var player_count: int = (s["battle_grid"] as Array).size()
+	var opponent_count: int = opp_grid.size()
 	# CombatState owns the per-combat shape: every per-slot array, the status
-	# pools, and the Battle Summary stat rows, all sized to the board.
-	s = CombatState.reset(s)
+	# pools, and the Battle Summary stat rows, all sized to each side's board.
+	s = CombatState.reset(s, player_count, opponent_count)
 	s["phase"] = "battle"
 	s["player_hp"] = _scaled_player_hp(s)
 	s["player_starting_hp"] = s["player_hp"]
 	s["opponent_snapshot"] = opponent_snapshot
-	s["opponent_grid"] = opponent_snapshot.get("grid", CombatState.empty_slots()) as Array
+	s["opponent_grid"] = opp_grid
 	# Seed the combat RNG deterministically per round so Replay and async Ghost
 	# playback reproduce the exact fight.
 	var combat_rng := RandomNumberGenerator.new()

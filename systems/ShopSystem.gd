@@ -139,6 +139,14 @@ static func transfer(state: Dictionary, from_loc: Dictionary, to_loc: Dictionary
 #         | "swapped" — pieces moved or exchanged, no level change
 #         | "rejected"— nothing changed (no gold, full, invalid, not mergeable)
 static func resolve_drop(state: Dictionary, from_loc: Dictionary, to_loc: Dictionary) -> Dictionary:
+	var result: Dictionary = _resolve_drop(state, from_loc, to_loc)
+	# A buy-onto-matching-Lv1 merges to Lv2 via transfer() (not ForgeSystem), so the
+	# Grid Growth check is applied here too. Idempotent — covers every drop outcome.
+	result["state"] = ForgeSystem.apply_grid_growth(result["state"] as Dictionary)
+	return result
+
+
+static func _resolve_drop(state: Dictionary, from_loc: Dictionary, to_loc: Dictionary) -> Dictionary:
 	var from_zone: String = from_loc["zone"] as String
 	var to_zone: String = to_loc["zone"] as String
 	var from_slot: int = from_loc["slot"] as int

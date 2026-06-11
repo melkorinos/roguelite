@@ -58,8 +58,8 @@ Merge to Lv2: flat gold + choice (+1 base dmg OR −0.5s cooldown).
 - **Pause**: ESC in Shop/Battle → PauseOverlay (CanvasLayer 110): Resume/Settings/Forfeit/Quit-menu/Quit-desktop. Sim pauses.
 - **Godot lifecycle**: `_ready()` fires on `add_child()`, not `.new()`. Set plain props before add_child; call child methods after.
 
-## Board + synergies (partly TBD)
-Battlegrid size TBD (backend grid-agnostic via `CombatState.SLOT_COUNT`; live grid 4 slots). **Reactive adjacency IS in combat** for `adjacency_upgrade` (Ember, Photosynthesis) via `combat_adjacency` + `GridSystem.neighbors`. Faction threshold synergies deferred.
+## Board + Grid Growth (ADR 0014, IMPLEMENTED 2026-06-11)
+Battlegrid starts 2×2 (4 slots); **Grid Growth** = +1 slot/run when first owning a tier-T element at level≥L (table `TuningData.GRID_GROWTH_TRIGGERS` = **T2→Lv2 (5th slot), T3→Lv2 (6th slot)**; T1→Lv2 dropped as too cheap; path-agnostic merge/forge; permanent for run; per-run reset). Reachable 6, hard cap **8** (no 9). Shapes 2-rows-tall (5/6→3×2, 7/8→4×2 in `GridSystem.dimensions`). State `battle_slot_count`/`grid_growth_fired`; `battle_grid` grows. **Per-side combat sizing**: `CombatState.reset(state, player_count, opp_count)` + `to_battle` sizes each side from its own grid; `GridSystem.neighbors(.., slot_count)` guards ragged 5/7. Growth helper = **`ForgeSystem.apply_grid_growth`** (idempotent; in ForgeSystem not ShopSystem to avoid class cycle; hooked in `ForgeSystem.attempt` + `ShopSystem.resolve_drop`). **Asymmetric boards embraced**; opponent board now **round-scaled** too (`OpponentProvider._max_slots_for_round`, `OPPONENT_SLOTS_ROUND_BREAKS=[1,3,5,8]` → 2→3→4→5→6, capped `GRID_HARD_MAX`) so a grown player isn't vs a fixed 4-slot ghost. **Reactive adjacency IS in combat** for `adjacency_upgrade` (Ember, Photosynthesis) via `combat_adjacency` + `GridSystem.neighbors`. Faction threshold synergies deferred. **F5 eyeball pending.** See `handoff-run-loop.md`.
 
 ## Steam + backend seams
 - **OpponentProvider** (`systems/`): `get_opponent(context)` → Ghost `{player_id,player_name,round,grid,acquired_day,source}`. LocalDaySeededAdapter + GhostFixtures fallback.
