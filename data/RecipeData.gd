@@ -301,6 +301,17 @@ static func recipes_for(result_id: String) -> Array[Dictionary]:
 	return _by_result.get(result_id, [] as Array[Dictionary]) as Array[Dictionary]
 
 
+# Resolves a recipe pair { a, b } of element ids into their full Element defs for
+# display ("Made from" rows, Compendium recipe lines). The single place that turns
+# a stored pair into renderable elements. Returns {} when either id is unknown.
+static func describe_pair(pair: Dictionary) -> Dictionary:
+	var a: Dictionary = ElementData.find(pair["a"] as String)
+	var b: Dictionary = ElementData.find(pair["b"] as String)
+	if a.is_empty() or b.is_empty():
+		return {}
+	return { "a": a, "b": b }
+
+
 # The deduped set of ingredient ids that can forge `result_id` — the union across every
 # recipe producing it. Used by the shop's family filter (ADR 0007).
 static func ingredients_of(result_id: String) -> Array[String]:

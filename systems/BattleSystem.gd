@@ -37,7 +37,6 @@ static func tick_battle(state: Dictionary, delta: float) -> Dictionary:
 	var s: Dictionary = state.duplicate(true)
 	var events: Array = []
 	var use_effects: bool = FeatureFlags.status_effects
-	var bstats: Dictionary = s["battle_stats"] as Dictionary
 
 	if use_effects:
 		var tick_acc: float = (s["status_tick_timer"] as float) + delta
@@ -59,8 +58,13 @@ static func tick_battle(state: Dictionary, delta: float) -> Dictionary:
 	# Reconstruct the seeded combat RNG, advance it through both sides + reactives, persist it.
 	var combat_rng := RandomNumberGenerator.new()
 	combat_rng.state = s["combat_rng_state"] as int
-	_tick_side(s, "player", delta, events, use_effects, bstats, combat_rng)
-	_tick_side(s, "opponent", delta, events, use_effects, bstats, combat_rng)
+	# Per-tick combat context: the cross-cutting plumbing every fire shares — the
+	# event sink, the status-effects flag, the seeded RNG. Bundled so the fire path
+	# takes one context value instead of threading three positional args; the state
+	# `s` and the per-side subject (side/elem/slot/stats) stay explicit.
+	var ctx: Dictionary = { "events": events, "use_effects": use_effects, "rng": combat_rng }
+	_tick_side(s, ctx, "player", delta)
+	_tick_side(s, ctx, "opponent", delta)
 
 	# Depth-1 reactive abilities respond to this tick's fire/tick/armor events;
 	# periodic abilities advance their own timers. In-place (s is already a fresh
@@ -136,14 +140,17 @@ static func _drain_commands(s: Dictionary, current_time: float) -> Dictionary:
 	return s
 
 
-static func _tick_side(s: Dictionary, side: String, delta: float, events: Array, use_effects: bool, bstats: Dictionary, combat_rng: RandomNumberGenerator) -> void:
+static func _tick_side(s: Dictionary, ctx: Dictionary, side: String, delta: float) -> void:
+	var events: Array = ctx["events"] as Array
+	var use_effects: bool = ctx["use_effects"] as bool
+	var combat_rng: RandomNumberGenerator = ctx["rng"] as RandomNumberGenerator
 	# All side→state-key mapping goes through CombatSide — the single side accessor.
 	var k: Dictionary = CombatSide.keys(side)
 	var own_statuses_key: String = k["statuses"] as String
 	var grid: Array = s[k["grid"] as String] as Array
 	var timers: Array = s[k["timers"] as String] as Array
 	var frozen_seconds: Array = s[k["frozen"] as String] as Array
-	var stats: Array = bstats[k["stats"] as String] as Array
+	var stats: Array = (s["battle_stats"] as Dictionary)[k["stats"] as String] as Array
 
 	for i: int in grid.size():
 		if grid[i] == null:
@@ -173,7 +180,7 @@ static func _tick_side(s: Dictionary, side: String, delta: float, events: Array,
 				# independent event so synergies trigger once per repeat.
 				var repeats: int = 1 + AbilitySystem.multicast_count(elem)
 				for _repeat: int in repeats:
-					_fire_element_once(s, side, elem, i, stats, events, use_effects, combat_rng)
+					_fire_element_once(s, ctx, side, elem, i, stats)
 			else:
 				events.append(AbilitySystem.miss_event(side, i))
 		timers[i] = t
@@ -181,7 +188,10 @@ static func _tick_side(s: Dictionary, side: String, delta: float, events: Array,
 
 # Resolves a single fire of one element: damage hit, event, stats, and on-fire
 # effect. Called once per multicast repeat.
-static func _fire_element_once(s: Dictionary, side: String, elem: Dictionary, slot_index: int, stats: Array, events: Array, use_effects: bool, combat_rng: RandomNumberGenerator) -> void:
+static func _fire_element_once(s: Dictionary, ctx: Dictionary, side: String, elem: Dictionary, slot_index: int, stats: Array) -> void:
+	var events: Array = ctx["events"] as Array
+	var use_effects: bool = ctx["use_effects"] as bool
+	var combat_rng: RandomNumberGenerator = ctx["rng"] as RandomNumberGenerator
 	var k: Dictionary = CombatSide.keys(side)
 	var opp_k: Dictionary = CombatSide.keys(CombatSide.opponent_of(side))
 	var own_statuses_key: String = k["statuses"] as String

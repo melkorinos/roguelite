@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" path="res://scenes/screens/Shop.gd" id="1_shop"]
 [ext_resource type="Script" path="res://scenes/slots/SellZone.gd" id="2_sellzone"]
+[ext_resource type="Script" path="res://scenes/screens/ForgePanel.gd" id="3_forgepanel"]
 
 [node name="Shop" type="Control"]
 layout_mode = 3
@@ -197,6 +198,7 @@ layout_mode = 2
 layout_mode = 2
 custom_minimum_size = Vector2(280, 0)
 theme_override_constants/separation = 8
+script = ExtResource("3_forgepanel")
 
 [node name="ForgeHeader" type="Label" parent="VBox/MainArea/RightPanel"]
 layout_mode = 2
@@ -237,5 +239,4 @@ text = ""
 [connection signal="pressed" from="VBox/DebugRow/AddElemButton" to="." method="_on_add_elem_pressed"]
 [connection signal="pressed" from="VBox/MainArea/LeftPanel/SellZone/SellZoneVBox/ShopHeaderRow/RerollButton" to="." method="_on_reroll_pressed"]
 [connection signal="pressed" from="VBox/MainArea/LeftPanel/FightRow/FightButton" to="." method="_on_fight_pressed"]
-[connection signal="pressed" from="VBox/MainArea/RightPanel/ForgeButton" to="." method="_on_forge_button_pressed"]
 [connection signal="sold" from="VBox/MainArea/LeftPanel/SellZone" to="." method="_on_sell_zone_sold"]

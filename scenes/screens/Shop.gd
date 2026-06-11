@@ -7,9 +7,7 @@ var _pause_overlay: PauseOverlay
 var _starting_pick_overlay: StartingPickOverlay
 var _event_overlay: EventOverlay
 var _add_elem_panel: PanelContainer = null
-var _forge_hint_box: VBoxContainer = null
-var _forge_result_elem: Variant = null
-var _forge_result_hover_timer: Timer
+var _forge_panel: ForgePanel = null
 
 
 func _ready() -> void:
@@ -26,23 +24,15 @@ func _ready() -> void:
 
 	_apply_theme()
 	_build_compendium_button()
-	_build_forge_hint()
 
-	_forge_result_hover_timer = Timer.new()
-	_forge_result_hover_timer.wait_time = 0.3
-	_forge_result_hover_timer.one_shot = true
-	add_child(_forge_result_hover_timer)
-	_forge_result_hover_timer.timeout.connect(_on_forge_result_hover_timeout)
-	var forge_result_lbl: Label = $VBox/MainArea/RightPanel/ForgeResultLabel
-	forge_result_lbl.mouse_filter = Control.MOUSE_FILTER_STOP
-	forge_result_lbl.mouse_entered.connect(func() -> void:
-		if _forge_result_elem != null:
-			_forge_result_hover_timer.start()
-	)
-	forge_result_lbl.mouse_exited.connect(func() -> void:
-		_forge_result_hover_timer.stop()
-		_on_tooltip_hide()
-	)
+	# Forge bench lives in its own module (ForgePanel, on the RightPanel node). It
+	# owns bench rendering + operations and signals back so the shop re-renders.
+	_forge_panel = $VBox/MainArea/RightPanel
+	_forge_panel.setup()
+	_forge_panel.state_changed.connect(_render)
+	_forge_panel.forge_succeeded.connect(func() -> void: _fire_achievement("forge_discovered"))
+	_forge_panel.tooltip_requested.connect(_on_tooltip_requested)
+	_forge_panel.tooltip_hide.connect(_on_tooltip_hide)
 
 	_starting_pick_overlay = StartingPickOverlay.new()
 	add_child(_starting_pick_overlay)
@@ -80,41 +70,7 @@ func _on_event_chosen(reward: Dictionary) -> void:
 	_render()
 
 
-func _forge_button_style(bg: Color) -> StyleBoxFlat:
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = bg
-	sb.set_border_width_all(2)
-	sb.border_color = ThemeData.FORGE_BUTTON_BORDER
-	sb.set_corner_radius_all(6)
-	sb.content_margin_left = 10.0
-	sb.content_margin_right = 10.0
-	sb.content_margin_top = 6.0
-	sb.content_margin_bottom = 6.0
-	return sb
-
-
 func _apply_theme() -> void:
-	# Forge bench: purple panel background via Container's built-in "panel" stylebox
-	var forge_style := StyleBoxFlat.new()
-	forge_style.bg_color = ThemeData.FORGE_PANEL_BG
-	forge_style.set_border_width_all(1)
-	forge_style.border_color = ThemeData.FORGE_PANEL_BORDER
-	forge_style.set_corner_radius_all(8)
-	forge_style.content_margin_left = 10.0
-	forge_style.content_margin_right = 10.0
-	forge_style.content_margin_top = 8.0
-	forge_style.content_margin_bottom = 8.0
-	$VBox/MainArea/RightPanel.add_theme_stylebox_override("panel", forge_style)
-
-	# Forge button — red action button, distinct from the forge/tier purples.
-	var forge_btn: Button = $VBox/MainArea/RightPanel/ForgeButton
-	forge_btn.add_theme_stylebox_override("normal", _forge_button_style(ThemeData.FORGE_BUTTON_BG))
-	forge_btn.add_theme_stylebox_override("hover", _forge_button_style(ThemeData.FORGE_BUTTON_BG_HOVER))
-	forge_btn.add_theme_stylebox_override("pressed", _forge_button_style(ThemeData.FORGE_BUTTON_BG_HOVER))
-	forge_btn.add_theme_stylebox_override("disabled", _forge_button_style(ThemeData.FORGE_BUTTON_BG_DISABLED))
-	forge_btn.add_theme_color_override("font_color", Color.WHITE)
-	UIScale.apply(forge_btn, UIScale.FORGE_BUTTON)
-
 	# FOR SALE section — warm amber tint (applied directly to SellZone panel)
 	var forsale_style := StyleBoxFlat.new()
 	forsale_style.bg_color = ThemeData.SHOP_FORSALE_BG
@@ -143,7 +99,6 @@ func _apply_theme() -> void:
 	($VBox/MainArea/LeftPanel/SellZone/SellZoneVBox/ShopHeaderRow/ShopHeader as Label).add_theme_color_override("font_color", ThemeData.COLOR_HEADER_SHOP)
 	($VBox/MainArea/LeftPanel/InventoryHeader as Label).add_theme_color_override("font_color", ThemeData.COLOR_HEADER_INVENTORY)
 	($VBox/MainArea/LeftPanel/BattleGridHeader as Label).add_theme_color_override("font_color", ThemeData.COLOR_HEADER_GRID)
-	($VBox/MainArea/RightPanel/ForgeHeader as Label).add_theme_color_override("font_color", ThemeData.COLOR_HEADER_FORGE)
 	($VBox/TopBar/RoundLabel as Label).add_theme_color_override("font_color", ThemeData.COLOR_ROUND_LABEL)
 
 
@@ -161,143 +116,6 @@ func _on_compendium_pressed() -> void:
 	AudioManager.play("click")
 	GameManager.compendium_return_scene = "res://scenes/screens/Shop.tscn"
 	get_tree().change_scene_to_file("res://scenes/screens/Compendium.tscn")
-
-
-# ── Forge discoverability hint (ADR 0009) ─────────────────────────────────────
-# Appended to the forge panel; populated when exactly one element sits in the bench.
-# Shows "Made from" (the recipe(s) that produce the placed element) + "Forges with"
-# (everything it can forge into). Each element is a hoverable chip that pops the
-# Item Tooltip — the SAME card used everywhere (TooltipCard.show_for), no duplication.
-
-func _build_forge_hint() -> void:
-	_forge_hint_box = VBoxContainer.new()
-	_forge_hint_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_forge_hint_box.add_theme_constant_override("separation", 2)
-	$VBox/MainArea/RightPanel.add_child(_forge_hint_box)
-
-
-func _update_forge_partner_hint(s: Dictionary) -> void:
-	for child: Node in _forge_hint_box.get_children():
-		child.queue_free()
-
-	# Show only when exactly one bench slot is filled (the "what next?" moment).
-	var slots: Array = s["forge_slots"]
-	var single: Variant = null
-	if slots[0] != null and slots[1] == null:
-		single = slots[0]
-	elif slots[1] != null and slots[0] == null:
-		single = slots[1]
-	if single == null:
-		_forge_hint_box.visible = false
-		return
-	_forge_hint_box.visible = true
-
-	var elem: Dictionary = single as Dictionary
-	var elem_id: String = elem["element_id"] as String
-
-	# Honest about ADR 0008: a Level-1 bench item can't forge until merged up.
-	if (elem["level"] as int) < TuningData.FORGE_MIN_INPUT_LEVEL:
-		var note := Label.new()
-		note.text = "⚠ Level %d — Merge to Level %d to forge" % [elem["level"] as int, TuningData.FORGE_MIN_INPUT_LEVEL]
-		note.autowrap_mode = TextServer.AUTOWRAP_WORD
-		note.modulate = ThemeData.COLOR_OPP_SIDE
-		UIScale.apply(note, UIScale.TOOLTIP_SECTION)
-		_forge_hint_box.add_child(note)
-
-	# Made from — the recipe(s) that produce this element (reverse). T2+ only; a T1
-	# bench item has none. Hover any ingredient chip for its card.
-	var made: Array[Dictionary] = RecipeData.recipes_for(elem_id)
-	if not made.is_empty():
-		_add_hint_section_header("Made from:")
-		var neutral := Color(0.7, 0.82, 0.95)
-		for pair: Dictionary in made:
-			var a: Dictionary = ElementData.find(pair["a"] as String)
-			var b: Dictionary = ElementData.find(pair["b"] as String)
-			if a.is_empty() or b.is_empty():
-				continue
-			_add_recipe_row(_make_element_chip(a, neutral), "+", _make_element_chip(b, neutral))
-
-	# Forges with — everything this element can forge INTO (forward). Owned partners
-	# (inventory + grid) first and highlighted. Hidden when empty (a forward dead-end).
-	var owned: Dictionary = _owned_element_ids(s)
-	var rows: Array = []
-	for recipe: Dictionary in RecipeData.recipes_with(elem_id):
-		var partner: Dictionary = ElementData.find(recipe["partner"] as String)
-		var result: Dictionary = ElementData.find(recipe["result"] as String)
-		if partner.is_empty() or result.is_empty():
-			continue
-		rows.append({
-			"partner": partner, "result": result,
-			"owned": owned.has(recipe["partner"] as String),
-			"tier": result["tier"] as int,
-		})
-	rows.sort_custom(func(x: Dictionary, y: Dictionary) -> bool:
-		if (x["owned"] as bool) != (y["owned"] as bool):
-			return x["owned"] as bool
-		return (x["tier"] as int) < (y["tier"] as int))
-
-	if not rows.is_empty():
-		_add_hint_section_header("Forges with:")
-		var owned_color := Color(0.55, 0.95, 0.6)
-		var unowned_color := Color(0.62, 0.64, 0.72)
-		for row: Dictionary in rows:
-			var partner_color: Color = owned_color if (row["owned"] as bool) else unowned_color
-			var partner_chip: Control = _make_element_chip(row["partner"] as Dictionary, partner_color)
-			var result_chip: Control = _make_element_chip(row["result"] as Dictionary, Color(0.85, 0.85, 0.92))
-			_add_recipe_row(partner_chip, "→", result_chip)
-
-
-func _add_hint_section_header(text: String) -> void:
-	var header := Label.new()
-	header.text = text
-	header.modulate = Color(0.6, 0.6, 0.68)
-	UIScale.apply(header, UIScale.TOOLTIP_SECTION)
-	_forge_hint_box.add_child(header)
-
-
-# Assembles one recipe row: [chip] sep [chip], the chips hoverable for their card.
-func _add_recipe_row(left: Control, separator: String, right: Control) -> void:
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 5)
-	row.add_child(left)
-	var sep := Label.new()
-	sep.text = separator
-	sep.modulate = Color(0.5, 0.5, 0.56)
-	UIScale.apply(sep, UIScale.TOOLTIP_STAT)
-	row.add_child(sep)
-	row.add_child(right)
-	_forge_hint_box.add_child(row)
-
-
-# A hoverable element chip (emoji + name). Hovering pops the shared Item Tooltip —
-# the same card seen everywhere — so the player can read the element's full info.
-func _make_element_chip(def: Dictionary, color: Color) -> Control:
-	var chip := Label.new()
-	chip.text = "%s %s" % [def["emoji"], def["name"]]
-	chip.modulate = color
-	chip.mouse_filter = Control.MOUSE_FILTER_STOP
-	UIScale.apply(chip, UIScale.TOOLTIP_STAT)
-	chip.mouse_entered.connect(_on_hint_chip_hover.bind(def))
-	chip.mouse_exited.connect(_on_hint_chip_unhover)
-	return chip
-
-
-func _on_hint_chip_hover(def: Dictionary) -> void:
-	_tooltip.show_for(def)
-
-
-func _on_hint_chip_unhover() -> void:
-	_tooltip.hide_card()
-
-
-# Set of element ids the player currently owns (inventory + battle grid), at any level.
-func _owned_element_ids(s: Dictionary) -> Dictionary:
-	var owned: Dictionary = {}
-	for zone: String in ["inventory", "battle_grid"]:
-		for item: Variant in s[zone] as Array:
-			if item != null:
-				owned[(item as Dictionary)["element_id"] as String] = true
-	return owned
 
 
 func _unhandled_key_input(event: InputEvent) -> void:
@@ -349,7 +167,7 @@ func _render() -> void:
 	_rebuild_shop_grid(s)
 	_rebuild_inventory(s)
 	_rebuild_battle_grid(s)
-	_rebuild_forge_bench(s)
+	_forge_panel.render(s)
 
 
 func _rebuild_shop_grid(s: Dictionary) -> void:
@@ -422,7 +240,7 @@ func _rebuild_inventory(s: Dictionary) -> void:
 		slot.shop_buy_to_slot_requested.connect(_on_shop_buy_to_slot_requested)
 		slot.drag_started.connect(_on_inv_drag_started)
 		slot.drag_ended.connect(_on_inv_drag_ended)
-		slot.forge_quick_slot.connect(_on_forge_quick_slot)
+		slot.forge_quick_slot.connect(_forge_panel.quick_add_from_inventory)
 		slot.tooltip_requested.connect(_on_tooltip_requested)
 		slot.tooltip_hide_requested.connect(_on_tooltip_hide)
 		_inv_slot_nodes.append(slot)
@@ -441,78 +259,12 @@ func _rebuild_battle_grid(s: Dictionary) -> void:
 		slot.slot_dropped.connect(_on_grid_slot_received_drop)
 		slot.drag_started.connect(_on_grid_drag_started)
 		slot.drag_ended.connect(_on_inv_drag_ended)
-		slot.forge_quick_slot_grid.connect(_on_forge_quick_slot_grid)
+		slot.forge_quick_slot_grid.connect(_forge_panel.quick_add_from_grid)
 		slot.tooltip_requested.connect(_on_tooltip_requested)
 		slot.tooltip_hide_requested.connect(_on_tooltip_hide)
 		container.add_child(slot)
 		slot.set_element(grid[i])
 		_battle_slot_nodes.append(slot)
-
-
-func _rebuild_forge_bench(s: Dictionary) -> void:
-	var row: Node = $VBox/MainArea/RightPanel/ForgeSlotsRow
-	for child: Node in row.get_children():
-		child.queue_free()
-	var forge_slots: Array = s["forge_slots"]
-	for i: int in 2:
-		var fslot: ForgeSlot = ForgeSlot.new()
-		fslot.forge_slot_index = i
-		row.add_child(fslot)
-		fslot.set_item(forge_slots[i])
-		fslot.item_placed.connect(_on_forge_slot_item_placed)
-		fslot.tooltip_requested.connect(_on_tooltip_requested)
-		fslot.tooltip_hide_requested.connect(_on_tooltip_hide)
-		fslot.item_removed.connect(_on_forge_slot_item_removed)
-	_update_forge_info(s)
-
-
-func _update_forge_info(s: Dictionary) -> void:
-	_update_forge_partner_hint(s)
-	var info: Label = $VBox/MainArea/RightPanel/ForgeInfoLabel
-	var result: Label = $VBox/MainArea/RightPanel/ForgeResultLabel
-	var forge_btn: Button = $VBox/MainArea/RightPanel/ForgeButton
-	var slots: Array = s["forge_slots"]
-	var ea: Variant = slots[0]
-	var eb: Variant = slots[1]
-	result.text = ""
-	_forge_result_elem = null
-	if ea == null and eb == null:
-		info.text = "Drop 2 items to forge"
-		forge_btn.disabled = true
-	elif ea != null and eb == null:
-		var da: Dictionary = ea as Dictionary
-		info.text = "%s %s in slot 1 — add second item" % [da["emoji"], da["name"]]
-		forge_btn.disabled = true
-	elif ea == null and eb != null:
-		var db: Dictionary = eb as Dictionary
-		info.text = "%s %s in slot 2 — add first item" % [db["emoji"], db["name"]]
-		forge_btn.disabled = true
-	else:
-		# Both items present — show the resulting element prominently so the player can
-		# decide before committing. preview_bench returns "→ …" on a hit, "✗ …" on a miss.
-		var preview_text: String = ForgeSystem.preview(s, {"kind": "forge_bench"})
-		var has_recipe: bool = preview_text.begins_with("→")
-		info.text = "Forge result:"
-		result.text = preview_text
-		result.add_theme_color_override("font_color", ThemeData.COLOR_PLAYER_SIDE if has_recipe else ThemeData.COLOR_OPP_SIDE)
-		forge_btn.disabled = not has_recipe
-		# Compute the hoverable result element for the tooltip.
-		if has_recipe:
-			var da: Dictionary = (ea as Dictionary)
-			var db: Dictionary = (eb as Dictionary)
-			var result_id: String = RecipeData.find_result(da["element_id"], db["element_id"])
-			if not result_id.is_empty():
-				var la: int = da["level"] as int
-				var lb: int = db["level"] as int
-				var result_level: int = maxi(1, mini(la, lb) - TuningData.FORGE_RESULT_LEVEL_PENALTY)
-				_forge_result_elem = ElementData.instantiate(result_id, result_level)
-			else:
-				# Merge case: same element, level+1
-				var merged: Dictionary = (ea as Dictionary).duplicate()
-				merged["level"] = (merged["level"] as int) + 1
-				_forge_result_elem = merged
-		else:
-			_forge_result_elem = null
 
 
 # ── Item Tooltip ─────────────────────────────────────────────────────────────
@@ -523,11 +275,6 @@ func _on_tooltip_requested(element: Dictionary) -> void:
 
 func _on_tooltip_hide() -> void:
 	_tooltip.hide_card()
-
-
-func _on_forge_result_hover_timeout() -> void:
-	if _forge_result_elem != null:
-		_tooltip.show_for(_forge_result_elem as Dictionary)
 
 
 # ── Drag hint overlays ────────────────────────────────────────────────────────
@@ -619,62 +366,8 @@ func _on_shop_buy_upgrade_requested(_element_id: String, to_inv_index: int, shop
 	_render()
 
 
-# ── Forge bench ───────────────────────────────────────────────────────────────
-
-func _on_forge_slot_item_placed(forge_slot_idx: int, from_inv_idx: int) -> void:
-	GameManager.state = ForgeSystem.attempt(GameManager.state,
-		{"kind": "to_bench", "forge_slot": forge_slot_idx, "from": {"zone": "inventory", "slot": from_inv_idx}})["state"]
-	_render()
-
-
-func _on_forge_quick_slot(inv_slot_index: int) -> void:
-	GameManager.state = ForgeSystem.attempt(GameManager.state,
-		{"kind": "to_bench", "forge_slot": -1, "from": {"zone": "inventory", "slot": inv_slot_index}})["state"]
-	_render()
-
-
-func _on_forge_slot_item_removed(forge_slot_idx: int) -> void:
-	GameManager.state = ForgeSystem.attempt(GameManager.state, {"kind": "from_bench", "forge_slot": forge_slot_idx})["state"]
-	_render()
-
-
-func _on_forge_button_pressed() -> void:
-	_execute_forge()
-
-
-func _execute_forge() -> void:
-	GameManager.save_undo()
-	var pre_recipe_count: int = (GameManager.state["discovered_recipes"] as Array).size()
-	var result: Dictionary = ForgeSystem.attempt(GameManager.state, {"kind": "forge_bench"})
-	GameManager.state = result["state"] as Dictionary
-	var outcome: String = result["outcome"] as String
-	var level_mismatch: bool = result["level_mismatch"] as bool
-
-	if outcome == "ok":
-		AudioManager.play("forge")
-		var post_count: int = (GameManager.state["discovered_recipes"] as Array).size()
-		if post_count > pre_recipe_count:
-			_fire_achievement("forge_discovered")
-
-	_render()
-	var result_lbl: Label = $VBox/MainArea/RightPanel/ForgeResultLabel
-	match outcome:
-		"ok":
-			var msg: String = "Forged!"
-			if level_mismatch:
-				msg += "  ⚠ Level mismatch — result at lower level"
-			result_lbl.text = msg
-		"no_recipe":
-			result_lbl.text = "✗ No recipe — items returned"
-		"level_too_low":
-			result_lbl.text = "✗ Inputs must be Level %d+ — Merge them first" % TuningData.FORGE_MIN_INPUT_LEVEL
-		"no_gold":
-			result_lbl.text = "✗ Not enough gold to forge"
-		"inv_full":
-			result_lbl.text = "✗ Inventory full — clear a slot first"
-		_:
-			result_lbl.text = ""
-
+# Forge bench operations live in ForgePanel; it fires forge_succeeded for the
+# achievement below.
 
 func _fire_achievement(event: String) -> void:
 	var ach: Dictionary = AchievementSystem.check(GameManager.state, PlayerProfile.to_dict(), event)
@@ -698,12 +391,6 @@ func _on_grid_slot_received_drop(from_type: String, from_index: int, to_grid_ind
 	var outcome: String = _apply_drop({"zone": from_type, "slot": from_index}, {"zone": "grid", "slot": to_grid_index})
 	if outcome == "merged":
 		AudioManager.play("upgrade")
-	_render()
-
-
-func _on_forge_quick_slot_grid(grid_slot: int) -> void:
-	GameManager.state = ForgeSystem.attempt(GameManager.state,
-		{"kind": "to_bench", "forge_slot": -1, "from": {"zone": "grid", "slot": grid_slot}})["state"]
 	_render()
 
 

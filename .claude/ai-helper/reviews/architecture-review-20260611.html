@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Architecture review — roguelite (auto-battler) · #6</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="module">
+      import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+      mermaid.initialize({ startOnLoad: true, theme: "neutral", securityLevel: "loose" });
+    </script>
+    <style>
+      .seam { stroke-dasharray: 5 4; }
+      .deep { background: linear-gradient(135deg, #0f172a, #1e293b); }
+      .iface { background: #6366f1; }
+      .impl  { background: #cbd5e1; }
+      body { font-feature-settings: "ss01"; }
+    </style>
+  </head>
+  <body class="bg-stone-50 text-slate-900 font-sans">
+    <main class="max-w-5xl mx-auto px-6 py-12 space-y-12">
+
+      <header class="border-b border-slate-200 pb-6">
+        <h1 class="text-3xl font-serif font-semibold tracking-tight">Architecture review — <span class="text-indigo-700">roguelite</span></h1>
+        <p class="text-slate-500 mt-1 text-sm">2026-06-11 · auto-battler · Godot 4 / GDScript · deepening pass #6</p>
+        <div class="mt-4 flex flex-wrap gap-4 text-xs uppercase tracking-wider text-slate-600">
+          <span class="flex items-center gap-2"><span class="inline-block w-5 h-3 border border-slate-700"></span> module</span>
+          <span class="flex items-center gap-2"><svg width="28" height="10"><line x1="0" y1="5" x2="28" y2="5" stroke="#475569" stroke-width="2" class="seam"/></svg> seam</span>
+          <span class="flex items-center gap-2"><svg width="28" height="10"><line x1="0" y1="5" x2="28" y2="5" stroke="#dc2626" stroke-width="2"/></svg> leakage</span>
+          <span class="flex items-center gap-2"><span class="inline-block w-5 h-3 deep"></span> deep module</span>
+        </div>
+        <p class="mt-4 text-sm text-slate-600 max-w-3xl">Passes #1–#5 cleared the structural wins: data indexing, the drop seam, the instance factory, the grant seam, unified Round resolution, <code class="text-xs">ForgeSystem.attempt/preview/result_element</code>, the ability/recipe presenter, the combat-tick <code class="text-xs">ctx</code> bundle, and <code class="text-xs">ForgePanel</code>. This pass goes after what those left: the <strong>Status</strong> subsystem's leaky shape and split knowledge, per-effect presentation that drifts, and combat result text + name strings.</p>
+      </header>
+
+      <section id="candidates" class="space-y-12">
+
+        <!-- ============ CANDIDATE 1 ============ -->
+        <article class="rounded-xl border border-slate-200 bg-white shadow-sm p-7">
+          <div class="flex items-center gap-3 flex-wrap">
+            <h2 class="text-2xl font-serif">1 · Finish EffectRegistry as the single per-effect source</h2>
+            <span class="text-xs font-semibold uppercase tracking-wider bg-emerald-100 text-emerald-800 px-2 py-1 rounded">Strong</span>
+            <span class="text-xs font-mono bg-slate-100 text-slate-600 px-2 py-1 rounded">in-process</span>
+          </div>
+          <p class="font-mono text-sm text-slate-500 mt-2">data/EffectRegistry.gd · scenes/screens/Battle.gd:213–225 · scenes/shared/StatusChip.gd · data/ThemeData.gd</p>
+
+          <div class="grid md:grid-cols-2 gap-4 mt-6">
+            <div class="rounded-lg border border-slate-200 p-4">
+              <p class="text-xs uppercase tracking-wider text-slate-400 mb-3">Before — two emoji tables, already drifting</p>
+              <pre class="mermaid">
+flowchart TB
+  ER["EffectRegistry.EFFECTS\nemoji + valence\n(claims: single source)"]
+  ST["Battle Status Tray\nreads emoji"]
+  FL["Battle._spawn_float_labels\nOWN emoji+text+color map\n(213–225)"]
+  ER --> ST
+  FL -.drift: 🙈≠👁 🧪≠☠ 🧱≠⚙.-> ER
+  classDef leak stroke:#dc2626,stroke-width:2px;
+  class FL leak
+              </pre>
+            </div>
+            <div class="rounded-lg border border-slate-200 p-4">
+              <p class="text-xs uppercase tracking-wider text-slate-400 mb-3">After — one table, both readers</p>
+              <pre class="mermaid">
+flowchart TB
+  ER2["EffectRegistry.EFFECTS\nemoji · valence · float_text · color"]
+  ST2["Status Tray"]
+  FL2["float labels"]
+  ER2 --> ST2
+  ER2 --> FL2
+  classDef deep fill:#0f172a,color:#fff,stroke:#0f172a;
+  class ER2 deep
+              </pre>
+            </div>
+          </div>
+
+          <dl class="mt-6 space-y-3 text-sm">
+            <div><dt class="font-semibold inline">Problem.</dt> <dd class="inline text-slate-700"><code class="text-xs">EffectRegistry</code>'s own docstring calls it "single source of truth for per-effect metadata," yet <code class="text-xs">Battle._spawn_float_labels</code> hardcodes a second effect→emoji/text/color map. They already disagree: blind 🙈 vs 👁, poison 🧪 vs ☠, plating 🧱 vs ⚙ — the same Status shows different icons in the tray and the float label.</dd></div>
+            <div><dt class="font-semibold inline">Solution.</dt> <dd class="inline text-slate-700">Add <code class="text-xs">float_text</code> + <code class="text-xs">color</code> (the one thing the registry lacks) to each <code class="text-xs">EFFECTS</code> entry. <code class="text-xs">_spawn_float_labels</code> looks the effect up instead of matching on it. The <code class="text-xs">leech</code>/<code class="text-xs">heal</code> dynamic "+N HP" text stays computed at the call site.</dd></div>
+            <div><dt class="font-semibold">Wins.</dt>
+              <dd><ul class="list-disc ml-5 mt-1 text-slate-700 space-y-0.5">
+                <li>locality: one row per effect, drift can't recur</li>
+                <li>leverage: tray + float labels + future Compendium read one table</li>
+                <li>deletes the 12-branch match in a render-only scene</li>
+              </ul></dd>
+            </div>
+          </dl>
+        </article>
+
+        <!-- ============ CANDIDATE 2 ============ -->
+        <article class="rounded-xl border border-slate-200 bg-white shadow-sm p-7">
+          <div class="flex items-center gap-3 flex-wrap">
+            <h2 class="text-2xl font-serif">2 · Stop reading Status internals across the seam</h2>
+            <span class="text-xs font-semibold uppercase tracking-wider bg-amber-100 text-amber-800 px-2 py-1 rounded">Worth exploring</span>
+            <span class="text-xs font-mono bg-slate-100 text-slate-600 px-2 py-1 rounded">in-process</span>
+          </div>
+          <p class="font-mono text-sm text-slate-500 mt-2">systems/StatusSystem.gd (owns the shape) · systems/BattleSystem.gd:168 · systems/AbilitySystem.gd</p>
+
+          <div class="rounded-lg border border-slate-200 p-4 mt-6">
+            <pre class="mermaid">
+flowchart LR
+  ER[("EffectRegistry.status_shape\nblind:{percent} armor:{value}\nshock:{n} curse:{stacks}…")]
+  SS["StatusSystem\n(owns shape)"]
+  BS["BattleSystem\n((s[k])['blind'])['percent']"]
+  AS["AbilitySystem\n(statuses[name])['field']"]
+  ER --> SS
+  BS -.knows shape.-> ER
+  AS -.knows shape.-> ER
+  classDef leak stroke:#dc2626,stroke-width:2px;
+  class BS,AS leak
+            </pre>
+          </div>
+
+          <dl class="mt-6 space-y-3 text-sm">
+            <div><dt class="font-semibold inline">Problem.</dt> <dd class="inline text-slate-700">The status-dict shape (which field each Status stores) is declared in <code class="text-xs">EffectRegistry.status_shape</code> and applied by <code class="text-xs">StatusSystem</code> — but <code class="text-xs">BattleSystem</code> and <code class="text-xs">AbilitySystem</code> reach straight through it with nested casts like <code class="text-xs">((s[key]["blind"]))["percent"] as int</code>. Every caller that reads a Status must memorise its internal field names; rename a field and the casts break silently.</dd></div>
+            <div><dt class="font-semibold inline">Solution.</dt> <dd class="inline text-slate-700"><code class="text-xs">StatusSystem</code> exposes typed readers — a generic <code class="text-xs">field(statuses, name, key, default)</code> plus a few named ones (<code class="text-xs">blind_percent</code>, <code class="text-xs">armor_value</code>) where the call site reads best. Callers ask StatusSystem; the shape stops leaking.</dd></div>
+            <div><dt class="font-semibold">Wins.</dt>
+              <dd><ul class="list-disc ml-5 mt-1 text-slate-700 space-y-0.5">
+                <li>locality: the status shape lives behind one interface</li>
+                <li>the nested triple-cast disappears from the hot path</li>
+                <li>deletion test: removing the readers re-spreads the casts → concentrates</li>
+              </ul></dd>
+            </div>
+          </dl>
+          <div class="mt-4 text-xs bg-slate-50 border border-slate-200 text-slate-600 rounded p-3">Related to #5 — this is the narrow accessor; #5 is the larger "make StatusSystem generic" play. Do this one first; it stands alone.</div>
+        </article>
+
+        <!-- ============ CANDIDATE 3 ============ -->
+        <article class="rounded-xl border border-slate-200 bg-white shadow-sm p-7">
+          <div class="flex items-center gap-3 flex-wrap">
+            <h2 class="text-2xl font-serif">3 · Move the Round-result text into PhaseSystem</h2>
+            <span class="text-xs font-semibold uppercase tracking-wider bg-amber-100 text-amber-800 px-2 py-1 rounded">Worth exploring</span>
+            <span class="text-xs font-mono bg-slate-100 text-slate-600 px-2 py-1 rounded">in-process</span>
+          </div>
+          <p class="font-mono text-sm text-slate-500 mt-2">scenes/screens/Battle.gd:278–304 · systems/PhaseSystem.gd</p>
+
+          <!-- cross-section -->
+          <div class="grid md:grid-cols-2 gap-4 mt-6">
+            <div class="rounded-lg border border-slate-200 p-4">
+              <p class="text-xs uppercase tracking-wider text-slate-400 mb-3">Before — scene interprets the win rule</p>
+              <div class="space-y-1 text-[11px] font-mono">
+                <div class="h-8 border-l-4 border-slate-300 pl-2 flex items-center bg-slate-50">PhaseSystem.resolve_round → {outcome, is_victory, is_eliminated, wins_after, lives_after}</div>
+                <div class="h-20 border-l-4 border-rose-400 pl-2 flex items-center bg-rose-50">Battle.gd match outcome:<br/>+ branch on is_victory / is_eliminated<br/>→ "🏆 VICTORY" / "✅ YOU WIN" / "💀 ELIMINATED" …<br/>+ next-button label</div>
+              </div>
+            </div>
+            <div class="rounded-lg border border-slate-200 p-4">
+              <p class="text-xs uppercase tracking-wider text-slate-400 mb-3">After — scene just renders strings</p>
+              <div class="space-y-2 text-[11px] font-mono">
+                <div class="h-16 border-l-4 border-indigo-500 pl-2 flex items-center bg-indigo-50">PhaseSystem.result_text(state)<br/>→ { text, next_label }</div>
+                <div class="h-8 border-l-4 border-slate-400 pl-2 flex items-center bg-slate-100">Battle.gd: label.text = rt.text</div>
+              </div>
+            </div>
+          </div>
+
+          <dl class="mt-6 space-y-3 text-sm">
+            <div><dt class="font-semibold inline">Problem.</dt> <dd class="inline text-slate-700">Battle.gd takes <code class="text-xs">describe_result</code> and branches on <code class="text-xs">is_victory</code>/<code class="text-xs">is_eliminated</code> to compose the win/loss/draw text and the next-button label — 25 lines of win-rule interpretation in a render-only scene. The "you understand exactly why" result copy (soul.md) has no test.</dd></div>
+            <div><dt class="font-semibold inline">Solution.</dt> <dd class="inline text-slate-700"><code class="text-xs">PhaseSystem.result_text(state) → { text, next_label }</code>, next to <code class="text-xs">resolve_round</code> which already owns the outcome. Battle.gd renders the strings.</dd></div>
+            <div><dt class="font-semibold">Wins.</dt>
+              <dd><ul class="list-disc ml-5 mt-1 text-slate-700 space-y-0.5">
+                <li>the win-rule vocabulary lives entirely in PhaseSystem</li>
+                <li>result copy becomes unit-testable</li>
+                <li>restores the rendering boundary in Battle.gd</li>
+              </ul></dd>
+            </div>
+          </dl>
+          <div class="mt-4 text-xs bg-slate-50 border border-slate-200 text-slate-600 rounded p-3">Single caller today, so the leverage is modest — the case is the rendering rule + testability, not N call sites. Same shape as pass-#5's presenter.</div>
+        </article>
+
+        <!-- ============ CANDIDATE 4 ============ -->
+        <article class="rounded-xl border border-slate-200 bg-white shadow-sm p-7">
+          <div class="flex items-center gap-3 flex-wrap">
+            <h2 class="text-2xl font-serif">4 · Name the combat triggers and effect kinds once</h2>
+            <span class="text-xs font-semibold uppercase tracking-wider bg-slate-200 text-slate-700 px-2 py-1 rounded">Speculative</span>
+            <span class="text-xs font-mono bg-slate-100 text-slate-600 px-2 py-1 rounded">constants</span>
+          </div>
+          <p class="font-mono text-sm text-slate-500 mt-2">data/AbilityData.gd · data/EffectRegistry.gd · systems/AbilitySystem.gd · systems/BattleSystem.gd:211 · systems/StatusSystem.gd:237</p>
+
+          <div class="rounded-lg border border-slate-200 p-4 mt-6">
+            <pre class="mermaid">
+flowchart LR
+  E1['on_armor_stripped']
+  AD["AbilityData\n(TRIGGER_LABELS + ability defs)"]
+  ER["EffectRegistry.triggers"]
+  BS["BattleSystem emits\n:211"]
+  SS["StatusSystem emits\n:237"]
+  AS["AbilitySystem matches\n+ inline concat"]
+  E1 --- AD
+  E1 --- ER
+  E1 --- BS
+  E1 --- SS
+  E1 --- AS
+            </pre>
+          </div>
+
+          <dl class="mt-6 space-y-3 text-sm">
+            <div><dt class="font-semibold inline">Problem.</dt> <dd class="inline text-slate-700">Trigger names (<code class="text-xs">on_armor_stripped</code>, <code class="text-xs">on_poison_tick</code>, <code class="text-xs">on_haste_applied</code>…) and effect-kind strings (<code class="text-xs">apply_status</code>, <code class="text-xs">deal_damage</code>, <code class="text-xs">freeze</code>…) are bare literals in 3–5 files each. An emitter typo silently matches no reactive — a whole synergy just fails, no error. Compound triggers are built by inline string concat (<code class="text-xs">"on_status_applied:" + status</code>).</dd></div>
+            <div><dt class="font-semibold inline">Solution.</dt> <dd class="inline text-slate-700">A <code class="text-xs">CombatNames</code> (or <code class="text-xs">Triggers</code> + <code class="text-xs">EffectKinds</code>) constants holder; emitters and matchers reference the constant, and one helper builds compound trigger names.</dd></div>
+            <div><dt class="font-semibold">Why only Speculative.</dt>
+              <dd><ul class="list-disc ml-5 mt-1 text-slate-700 space-y-0.5">
+                <li>honest: a name registry, not a deep module — no behaviour hides behind it</li>
+                <li>value is typo-safety + discoverability, not leverage</li>
+                <li>worth pairing with a test that asserts every emitted trigger is declared</li>
+              </ul></dd>
+            </div>
+          </dl>
+        </article>
+
+        <!-- ============ CANDIDATE 5 ============ -->
+        <article class="rounded-xl border border-slate-200 bg-white shadow-sm p-7">
+          <div class="flex items-center gap-3 flex-wrap">
+            <h2 class="text-2xl font-serif">5 · One Status descriptor; StatusSystem goes generic</h2>
+            <span class="text-xs font-semibold uppercase tracking-wider bg-slate-200 text-slate-700 px-2 py-1 rounded">Speculative</span>
+            <span class="text-xs font-mono bg-slate-100 text-slate-600 px-2 py-1 rounded">in-process</span>
+          </div>
+          <p class="font-mono text-sm text-slate-500 mt-2">data/EffectRegistry.gd · systems/StatusSystem.gd (is_active / apply_effect / describe / chip_badge)</p>
+
+          <!-- mass diagram -->
+          <div class="grid md:grid-cols-2 gap-4 mt-6">
+            <div class="rounded-lg border border-slate-200 p-4">
+              <p class="text-xs uppercase tracking-wider text-slate-400 mb-3">Before — a new Status touches 3 files</p>
+              <div class="flex items-end gap-4 h-56 justify-center text-[10px] font-mono text-slate-600">
+                <div class="text-center"><div class="impl w-14" style="height:60px"></div><p class="mt-1">EffectRegistry<br/>shape/emoji</p></div>
+                <div class="text-center"><div class="impl w-14" style="height:150px"></div><p class="mt-1">StatusSystem<br/>is_active·apply<br/>·describe·badge<br/>(per-status if/else)</p></div>
+                <div class="text-center"><div class="impl w-14" style="height:90px"></div><p class="mt-1">AbilityData<br/>defs</p></div>
+              </div>
+            </div>
+            <div class="rounded-lg border border-slate-200 p-4">
+              <p class="text-xs uppercase tracking-wider text-slate-400 mb-3">After — the descriptor carries the rules</p>
+              <div class="flex items-end gap-4 h-56 justify-center text-[10px] font-mono text-slate-600">
+                <div class="text-center"><div class="iface w-14" style="height:120px"></div><p class="mt-1">EffectRegistry entry<br/>shape·emoji·badge<br/>·active_when·describe</p></div>
+                <div class="text-center"><div class="deep w-14" style="height:70px"></div><p class="mt-1 text-slate-500">StatusSystem<br/>generic engine</p></div>
+              </div>
+            </div>
+          </div>
+
+          <dl class="mt-6 space-y-3 text-sm">
+            <div><dt class="font-semibold inline">Problem.</dt> <dd class="inline text-slate-700">"What a Status is" is split: <code class="text-xs">EffectRegistry</code> holds shape + emoji + count_field, while <code class="text-xs">StatusSystem</code> hardcodes per-status logic in <code class="text-xs">is_active</code>, <code class="text-xs">apply_effect</code>, <code class="text-xs">describe</code>, and <code class="text-xs">chip_badge</code>. Adding a Status means editing all of them in sync.</dd></div>
+            <div><dt class="font-semibold inline">Solution.</dt> <dd class="inline text-slate-700">Push the per-status rules — the "active when" predicate, the badge field, the describe template — into each <code class="text-xs">EFFECTS</code> entry, so <code class="text-xs">StatusSystem</code> becomes a generic applier/describer driven by the descriptor.</dd></div>
+            <div><dt class="font-semibold">Why only Speculative.</dt>
+              <dd><ul class="list-disc ml-5 mt-1 text-slate-700 space-y-0.5">
+                <li>per-status logic is genuinely varied (curse charges, weaken ticks) — some won't datafy cleanly</li>
+                <li>large surface; best tackled deliberately, after #1/#2</li>
+                <li>but the locality payoff is real: one row defines a Status end to end</li>
+              </ul></dd>
+            </div>
+          </dl>
+        </article>
+
+      </section>
+
+      <!-- ============ ALSO NOTED ============ -->
+      <section>
+        <div class="rounded-xl border border-slate-200 bg-white p-6">
+          <p class="text-xs uppercase tracking-widest text-slate-400 mb-3">Also noted — smaller, low-risk</p>
+          <ul class="text-sm text-slate-700 space-y-2">
+            <li><span class="font-semibold">Undo encapsulation leak.</span> <code class="text-xs">Shop._apply_drop</code> sets <code class="text-xs">GameManager.undo_state = before.duplicate(true)</code> inline (Shop.gd:329) while every other site uses <code class="text-xs">GameManager.save_undo()</code>. Give GameManager a guarded <code class="text-xs">save_undo()</code> the scene can call unconditionally, or a <code class="text-xs">capture_for(outcome)</code> — one place owns undo capture.</li>
+            <li><span class="font-semibold">Ghost snapshot factory.</span> The <code class="text-xs">{player_id, player_name, round, grid, acquired_day, source}</code> shape is hand-built in <code class="text-xs">OpponentProvider</code> and three times in <code class="text-xs">GhostFixtures</code>. A <code class="text-xs">Ghost.snapshot(...)</code> factory gives the shape one home (the grid-building stays per-source). Low volatility, so low priority.</li>
+            <li><span class="font-semibold">DPS math in Battle.gd:383.</span> <code class="text-xs">float(dmg) / battle_time</code> is a derived stat in the render path — a one-line <code class="text-xs">BattleSystem.dps(...)</code> would keep combat math out of the scene. Tiny.</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- ============ TOP RECOMMENDATION ============ -->
+      <section id="top-recommendation">
+        <div class="deep rounded-xl p-8 text-stone-100">
+          <p class="text-xs uppercase tracking-widest text-indigo-300">Top recommendation</p>
+          <h2 class="text-2xl font-serif mt-2">Start with #1 — finish EffectRegistry.</h2>
+          <p class="mt-3 text-stone-300 text-sm max-w-3xl">It fixes a <em>live</em> bug — three Statuses already show different emoji in the tray vs the float label — and it just completes a job <code class="text-xs bg-slate-700 px-1 rounded">EffectRegistry</code> already claims to own, so the risk is minimal. It's the same "one source for display vocabulary" theme that worked in pass #5. Then #2 (Status field readers) stops the shape leaking across the combat seam and sets up the bigger #5 if you later want StatusSystem fully generic. #3 and the undo cleanup are quick wins whenever convenient.</p>
+          <p class="mt-4 text-xs text-stone-400">Sequence: 1 → 2 → 3 → (5 when you want the big consolidation) · #4 only with a guard test.</p>
+        </div>
+      </section>
+
+    </main>
+  </body>
+</html>

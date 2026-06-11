@@ -15,6 +15,51 @@ static func get_ability(element_id: String) -> Dictionary:
 	return ABILITIES.get(element_id, {})
 
 
+# Human-readable label per ability trigger. Fixed triggers only; "periodic",
+# "on_status_applied", and "on_activate" are formatted in trigger_label() from
+# their extra fields.
+const TRIGGER_LABELS: Dictionary = {
+	"combat_start":      "Combat start",
+	"passive":           "Passive",
+	"passive_on_hit":    "On hit",
+	"on_burn_applied":   "On [burn]",
+	"on_heal_applied":   "On [heal]",
+	"on_leech":          "On [leech]",
+	"on_poison_tick":    "On [poison] tick",
+	"on_armor_stripped": "On armor strip",
+	"on_haste_applied":  "On [haste]",
+}
+
+
+# The single source for how an ability's Trigger reads on screen — the Battle
+# Summary parenthetical and the Compendium card both call this, so the two can't
+# drift. Fixed triggers come from TRIGGER_LABELS; periodic/on_status_applied/
+# on_activate are built from their extra fields; a Multicast suffix is appended
+# when present. Empty trigger (T1 / no ability) → "".
+static func trigger_label(ability: Dictionary) -> String:
+	var trigger: String = ability.get("trigger", "") as String
+	if trigger.is_empty():
+		return ""
+	var label: String = ""
+	match trigger:
+		"periodic":
+			var seconds_text: String = "%.1f" % (float(ability.get("interval_deciseconds", 0) as int) / 10.0)
+			if seconds_text.ends_with(".0"):
+				seconds_text = seconds_text.left(seconds_text.length() - 2)
+			label = "Every %ss" % seconds_text
+		"on_status_applied":
+			label = "On [%s]" % (ability.get("status", "") as String)
+		"on_activate":
+			var every_n: int = ability.get("every_n", 1) as int
+			label = ("Every %d activations" % every_n) if every_n > 1 else "On activation"
+		_:
+			label = TRIGGER_LABELS.get(trigger, trigger) as String
+	var multicast: int = ability.get("multicast", 0) as int
+	if multicast > 0:
+		label += "  ×%d" % (multicast + 1)
+	return label
+
+
 const ABILITIES: Dictionary = {
 	# ── T1 ───────────────────────────────────────────────────────────────────
 	"water":     { "description": "Apply 1 [cleanse] to your side." },

@@ -16,7 +16,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Update [.claude/ai-helper/memory.md](.claude/ai-helper/memory.md) when a decision crystallises. Update [.claude/ai-helper/log.md](.claude/ai-helper/log.md) when significant work lands.
 
-**Hard limit: both files must stay under 120 lines.** When adding to either file would exceed 120 lines, first condense or drop the oldest / least useful entries to make room. Log: collapse old entries into one-line bullets and drop routine housekeeping. Memory: merge duplicate sections and cut anything already obvious from the code.
+**Size limit: keep both files under 100 lines.** When either file exceeds 100 lines, invoke `/dream` (or, if unrecognised, read `.agents/skills/dream/SKILL.md` and follow it directly) — do not attempt inline condensation during a work session. (`log-archive.md` holds entries older than 30 days; never load it at session start.)
 
 ## Project
 
@@ -24,13 +24,7 @@ An auto-battler game built with **Godot 4 / GDScript**. Design is in early flux 
 
 ## Running the game
 
-Open the project in the Godot 4 editor and press **F5**. There is no CLI build step.
-
-```
-# From command line (if godot is on PATH):
-godot --path . scenes/screens/Boot.tscn    # run a specific scene
-godot --headless --quit            # headless smoke-test
-```
+F5 in Godot editor. CLI: `godot --path . scenes/screens/Boot.tscn` (scene) · `godot --headless --quit` (smoke-test).
 
 ## Architecture
 
@@ -51,64 +45,15 @@ godot --headless --quit            # headless smoke-test
 
 **State pattern:** `GameManager.state = SomeSystem.some_fn(GameManager.state, args)` → `_render()`
 
-## Round lifecycle (shop → battle → result)
+## Round lifecycle (key functions)
 
-One **Round** = a Shop phase then a Combat phase. End-to-end flow, with the function that owns each step
-(read this to understand how a round resolves):
-
-1. **Shop phase** — `scenes/screens/Shop.gd` + `systems/ShopSystem.gd`. The player spends gold to buy
-   elements, drags them onto the **Battlegrid** (`battle_grid`, currently 4 slots), **Merges** duplicates,
-   and **Forges** recipes (`systems/ForgeSystem.gd`). Drag-drops resolve through `ShopSystem.resolve_drop`
-   (the scene's verb; `transfer`/`can_transfer`/`can_drop` sit underneath). All state lives in
-   `GameManager.state` (a plain Dictionary from `GameState.create()`).
-2. **Fight clicked** → `PhaseSystem.to_battle(state, opponent_snapshot)`. Resets per-combat state:
-   `player_hp` = round-scaled (`BASE_PLAYER_HP` + (round−1)×`HP_PER_ROUND` + `hp_bonus`, all in `TuningData`),
-   timers / `*_frozen_seconds` / `*_ability_timers` zeroed, fresh
-   `StatusSystem.empty_statuses()` per side, seeds `combat_rng_state` (per round → reproducible), clears
-   `pending_commands` and `battle_events`, builds the opponent grid from a **Ghost** snapshot
-   (`OpponentProvider` / `GhostFixtures`), then runs `AbilitySystem.resolve_combat_start` (combat_start +
-   passive abilities for both sides). Sets `phase = "battle"`.
-3. **Combat ticks** — `Battle.gd._process(delta)` calls `BattleSystem.tick_battle(state, delta)` every
-   frame until `phase == "result"`. Each tick, in order:
-   - **Status tick** (per accumulated 1 s): `StatusSystem.tick` applies burn/poison damage per side and
-     returns tick events (`on_burn_tick` / `on_poison_tick`).
-   - **Element fires** (`_tick_side` per side): each element accrues `delta`; when it reaches its
-     `effective_cooldown_deciseconds` (base + `cooldown_modifier_deciseconds` + shock-slow, floored at 10),
-     it fires. Frozen slots are skipped. A fire rolls blind (seeded RNG), deals damage via
-     `compute_incoming_damage`, applies its T1 effect, may **Multicast** (repeat the fire block), and rolls
-     on-hit passives. Each fire / armour-strip pushes a **Combat Event** (see `AbilitySystem` event model).
-   - **Reactive abilities** — `AbilitySystem.resolve_reactive` runs depth-1 reactions to this tick's events.
-   - **Periodic abilities** — `resolve_periodic` advances per-ability timers and fires due ones.
-   - **Timed commands** — `_drain_commands` fires any due Innate-Ability command (the Replay seam).
-   - `battle_timer` advances; `phase` flips to `"result"` when either side's HP hits 0 or the 30 s limit
-     (`BATTLE_TIME_LIMIT`) is reached.
-4. **Result** — `PhaseSystem.resolve_round` is the single Round-outcome resolver (win/loss/draw, Life delta,
-   next phase, achievement event); `describe_result` is its render-facing alias and `advance_round` reads it,
-   so the result shown can't disagree with how the Run advances. **Canonical win rule = opponent eliminated**
-   (`opponent_hp ≤ 0`); a timeout with the opponent alive is a loss scaled by their remaining HP; mutual KO =
-   draw = win. `Battle.gd` shows the outcome + Battle Summary.
-5. **Next round** — `PhaseSystem.advance_round`: +1 round, +5 gold, reset `player_hp`, tally wins / Life,
-   set `phase` back to `"shop"` (or `"victory"` / `"eliminated"`). Loop to step 1.
-
-Combat is **deterministic**: same board + same `combat_rng_state` seed → identical result. That is the basis
-for Replay. Combat-only systems live in `systems/` (`BattleSystem`, `StatusSystem`, `AbilitySystem`,
-`GridSystem`, `CombatSide`) and never touch the SceneTree.
+`Shop.gd`/`ShopSystem` → fight → `PhaseSystem.to_battle` (resets timers/statuses, seeds `combat_rng_state`, builds opponent grid from Ghost snapshot, fires combat_start abilities) → `BattleSystem.tick_battle` per frame (status tick → `_tick_side` per side → `resolve_reactive` → `resolve_periodic` → `_drain_commands`; flips `phase="result"` on KO or Sandstorm) → `PhaseSystem.resolve_round` (canonical win/loss/draw) → `PhaseSystem.advance_round` (+1 round, +5g). Deterministic: same board + seed = same result. Win rule + Sandstorm details in memory.md.
 
 ## Code standards
 
-**Strict typing — mandatory on `systems/` and `data/`:**
-- All function parameters and return types must be explicitly declared
-- All local variables that perform arithmetic must be explicitly typed
-- Use `as` casts when reading numeric/bool values from a `Dictionary`: `var hp: int = state["player_hp"]`
-- For nullable slots (inventory items), use `Variant` as the local type
-- `Array[Dictionary]` for typed collections; plain `Array` when the collection is mixed or nullable
-- Scene scripts (`scenes/`) follow the same rule for function signatures; local render variables may be untyped
+**Strict typing — mandatory on `systems/` and `data/`:** All params, return types, and arithmetic locals explicitly typed. `var hp: int = state["player_hp"]` pattern for Dict values (`as` cast). `Variant` for nullable inventory slots. `Array[Dictionary]` for typed collections. Scene function signatures same rule; local render vars may be untyped.
 
-**Theme overrides — font size deviations must go through `UIScale`:**
-- The global default font size lives in Project Settings → GUI → Theme → Default Font Size
-- Any node that deviates from the global default must use `UIScale.apply(node, UIScale.SOME_CONST)` — never call `add_theme_font_size_override()` directly in scene scripts
-- Named constants live in [data/UIScale.gd](data/UIScale.gd); add a new constant there for each new UI role rather than using a bare integer
-- Never set theme properties via dictionary access (`node.theme_override_font_sizes["font_size"]`) in GDScript — use the method form
+**Theme overrides:** Font-size deviations via `UIScale.apply(node, UIScale.SOME_CONST)` only — never `add_theme_font_size_override()` directly or dict access. Constants in [data/UIScale.gd](data/UIScale.gd). Colors via `ThemeData.gd` only — never hardcode `Color()` in slot/screen scripts.
 
 ## Build validation — run before closing any task
 

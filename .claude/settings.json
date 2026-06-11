@@ -31,5 +31,18 @@
       "Edit(docs/**/*.md)",
       "Write(docs/**/*.md)"
     ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'for f in .claude/ai-helper/memory.md .claude/ai-helper/log.md; do n=$(wc -l < \"$f\" 2>/dev/null || echo 0); if [ \"$n\" -gt 100 ]; then echo \"HOOK WARNING: $f has $n lines (limit 100) - run /dream before doing more work.\"; fi; done'"
+          }
+        ]
+      }
+    ]
   }
 }

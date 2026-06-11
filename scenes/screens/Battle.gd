@@ -204,25 +204,24 @@ func _process_fire_events(s: Dictionary) -> void:
 func _spawn_float_labels(slot: BattleSlot, event: Dictionary) -> void:
 	var is_miss: bool = event.get("is_miss", false) as bool
 	if is_miss:
-		_float_label(slot, "MISS", Color(0.55, 0.55, 0.55, 0.9), 0.0)
+		_float_label(slot, "MISS", ThemeData.FLOAT_MISS, 0.0)
 		return
 	var dmg: int = event.get("damage", 0) as int
 	var effect: String = event.get("effect", "") as String
 	if dmg > 0:
-		_float_label(slot, "-%d" % dmg, Color(1.00, 0.35, 0.35, 1.0), 0.0)
-	match effect:
-		"burn":    _float_label(slot, "🔥 BURN",    Color(1.00, 0.55, 0.15), -4.0)
-		"poison":  _float_label(slot, "☠ POISON",  Color(0.55, 0.92, 0.28), -4.0)
-		"heal":    _float_label(slot, "+1 HP",      Color(0.30, 1.00, 0.55),  0.0)
-		"leech":   _float_label(slot, "+%d HP" % dmg, Color(0.30, 1.00, 0.55), 0.0)
-		"shock":   _float_label(slot, "⚡ SHOCK",   Color(0.50, 0.80, 1.00), -4.0)
-		"blind":   _float_label(slot, "👁 BLIND",   Color(0.75, 0.75, 0.75), -4.0)
-		"curse":   _float_label(slot, "🌑 CURSE",   Color(0.75, 0.32, 1.00), -4.0)
-		"weaken":  _float_label(slot, "↓ WEAKEN",   Color(0.38, 0.80, 0.80), -4.0)
-		"armor":   _float_label(slot, "🛡 ARMOR",   Color(0.72, 0.72, 0.72), -4.0)
-		"plating": _float_label(slot, "⚙ PLATE",   Color(0.60, 0.65, 0.72), -4.0)
-		"cleanse": _float_label(slot, "✨ CLEANSE",  Color(0.92, 0.92, 0.45), -4.0)
-		"haste":   _float_label(slot, "💨 HASTE",   Color(0.55, 0.92, 0.92), -4.0)
+		_float_label(slot, "-%d" % dmg, ThemeData.FLOAT_DAMAGE, 0.0)
+	# Heal and leech show an HP-gain amount (dynamic), not a status icon.
+	if effect == "heal":
+		_float_label(slot, "+1 HP", ThemeData.FLOAT_HEAL, 0.0)
+	elif effect == "leech":
+		_float_label(slot, "+%d HP" % dmg, ThemeData.FLOAT_HEAL, 0.0)
+	else:
+		# Status popups: text + emoji from EffectRegistry (one canonical emoji,
+		# shared with the Status Tray), color from ThemeData.
+		var fx: Dictionary = EffectRegistry.float_label(effect)
+		if not fx.is_empty():
+			var color: Color = ThemeData.FLOAT_LABEL_COLORS.get(effect, Color.WHITE) as Color
+			_float_label(slot, fx["text"] as String, color, fx["nudge"] as float)
 
 
 func _float_label(slot: BattleSlot, text: String, color: Color, y_nudge: float) -> void:
@@ -453,7 +452,7 @@ func _format_effects(elem: Dictionary, st: Dictionary) -> String:
 			result += "Apply %d %s" % [fx_map[status] as int, s.substr(0, 1).to_upper() + s.substr(1)]
 	else:
 		var ability: Dictionary = AbilityData.get_ability(elem.get("id", "") as String)
-		var tlabel: String = _trigger_label(ability.get("trigger", "") as String)
+		var tlabel: String = AbilityData.trigger_label(ability)
 		for status: Variant in fx_map:
 			if result != "":
 				result += "  "
@@ -461,19 +460,6 @@ func _format_effects(elem: Dictionary, st: Dictionary) -> String:
 			var cap: String = s.substr(0, 1).to_upper() + s.substr(1)
 			result += "%d %s (%s)" % [fx_map[status] as int, cap, tlabel] if tlabel != "" else "%d %s" % [fx_map[status] as int, cap]
 	return result
-
-
-func _trigger_label(trigger: String) -> String:
-	match trigger:
-		"combat_start":      return "on start"
-		"periodic":          return "periodic"
-		"passive":           return "on hit"
-		"on_burn_tick":      return "on burn"
-		"on_poison_tick":    return "on poison"
-		"on_armor_stripped": return "on armor"
-		"on_haste_applied":  return "on haste"
-		"on_status_applied": return "on status"
-	return ""
 
 
 # ── Item Tooltip ─────────────────────────────────────────────────────────────

@@ -1,250 +1,171 @@
-# Claude Design Handoff — Element Card v1
+# Element Card — Design Handoff
+**2026-06-09 · Status: Ready for design**
 
-**Date:** 2026-06-09  
-**Task:** Design the Element Card UI tile for an auto-battler game.  
-**Output:** A polished HTML/CSS mockup showing all card variants, plus a design token spec.
+## What
+Core UI tile. 1 card = 1 combat piece. Lives in 3 contexts (shop for-sale row, inventory, Battlegrid) — **layout identical everywhere**; context only adds/removes price badge + charge bar. Always fully visible, no hover needed (strategic layer lives on the face).
 
----
-
-## Technical context
-
-The game is built in **Godot 4 / GDScript**. The HTML/CSS mockup you produce is not deployed — it is a visual specification that a developer hand-translates into Godot scene nodes and GDScript. Because of this:
-
-- **Token names must use SCREAMING_SNAKE_CASE** — they map directly to GDScript constants in `ThemeData.gd` (colors) and `UIScale.gd` (font sizes).
-- **Font sizes are integer px values** — no `rem`, no `em`. Each size corresponds to one named constant in `UIScale.gd`.
-- **Colors map to Godot `Color(r, g, b, a)`** — CSS hex equivalents are provided for you; use them in the mockup but label each with its `ThemeData` constant name.
-- The card is a `PanelContainer` in Godot with a `VBoxContainer` body. The tier-colored background and border are a `StyleBoxFlat`. Keep the layout as a vertical stack — no CSS grid or flexbox tricks that can't be expressed as a VBox.
-
-A working v1 mockup already exists — open it first:  
-`e:\desktop\game\roguelite\.claude\ai-helper\design\element-card-20260609.html`
-
----
-
-## What you are designing
-
-The **Element Card** is the core UI tile of the game. It represents one element (a combat piece) and appears identically in three places: the shop for-sale row, the player's inventory, and the Battlegrid during combat. It is always fully visible — no hover required to read its content (this is a deliberate departure from the genre convention).
-
-The card must work at **130 × 195 px** (portrait). The player typically sees 4–8 on screen at once.
-
----
+## Tech (Godot 4 / GDScript)
+Output = static HTML/CSS spec, hand-translated to Godot nodes.
+- Tokens: **SCREAMING_SNAKE_CASE** (→ GDScript consts). Font px-only, no rem/em.
+- Layout = vertical stack (VBoxContainer); no CSS-grid tricks.
+- Colors labeled with `ThemeData.gd` const + hex.
+- Art: SVG at `assets/elements/{key}.svg` (key = `ElementData.gd` dict key), import as Texture2D, ~46px in darker inner art box. Missing SVG → emoji fallback.
+- Ability keywords (`[burn]`, `[shock]`) = `RichTextLabel` `[url]` tags → `TooltipCard` on click/hover.
 
 ## Aesthetic
+Clean, minimal, weird, surreal. Not cute, not grimdark. Uncanny objects, polished. Dark bg. Tier color = only vibrancy; text/chrome restrained. Physical artifact w/ slight weight, not flat chip. Sharp 4px radius.
 
-**Clean, minimal, weird, surreal.** Not cute. Not grimdark.  
-Think: uncanny objects with polished execution. Dark backgrounds. Tier colors are the primary vibrancy — everything else is restrained. The card should feel like a physical artifact with slight weight, not a flat chip. Emoji are intentional placeholder art — do not replace them with illustrations.
+## Archetypes (drives layout split)
+- **Pure-effect** — fires status on CD, no direct dmg. Stats row = **CD only**, centered.
+- **Damage-dealer** — direct dmg on CD (may also apply status). Stats row = **CD + DMG**.
 
----
+All 12 T1 = pure-effect. 22 elements T2/T3/T4 = damage-dealers (whitelist in code). Most T2+ also pure-effect.
 
-## Element archetypes — critical for card layout
-
-There are two archetypes. The card layout differs between them.
-
-### Pure-effect element
-Fires a status effect on cooldown. **No direct damage.** The effect IS the contribution.  
-**All 12 Tier 1 elements are pure-effect.**  
-Most T2+ elements are also pure-effect.  
-Stats row: **CD only** (DMG stat absent — not "0", just not shown).
-
-### Damage-dealer element
-Deals direct damage on cooldown, may also apply a status.  
-22 elements across T2/T3/T4 (whitelist in `ElementData.DAMAGE_DEALERS`).  
-Stats row: **CD + DMG** side by side.
-
-**Damage-dealer whitelist for reference:**
-- T2 (7): Lava 🟠, Boulder, Shrapnel 💥, Flint ⛏️, Molten 🔶, Steel, Gore ⚔️
-- T3 (7): Volcano, Obsidian, Meteorite, Mountain 🏔️, Tsunami, Glacier, Carnage
-- T4 (8): Ice Age, Maelstrom 🌪️, Tectonic, Supernova, Singularity, Ragnarök, Primordial, Aether
-
----
-
-## Level scaling — affects ability text
-
-Level now scales effect potency: a Level N element applies N stacks/points.  
-- Fire at Level 1 → "Apply 1 [burn]"  
-- Fire at Level 2 → "Apply 2 [burn]"  
-- Fire at Level 3 → "Apply 3 [burn]"  
-
-The ability text on the card reflects the current level count. In the mockup, show the correct count per level variant.
-
-`effective_damage` formula (damage-dealers only): `base × multiplier × level`  
-Pure-effect elements always have `effective_damage = 0` — that is why the DMG stat is hidden.
-
----
-
-## Card anatomy — 13 items
-
+## Layout — portrait 130×195 fixed
 ```
-┌─────────────────────────────┐  ← [13] Charge Bar strip (6px, battle only)
-│                      [T2]   │  ← [6]  Tier badge, top-right
-│                             │
-│             ♨️               │  ← [4]  Emoji icon, ~46px, centered
-│                             │
-│            Steam            │  ← [5]  Element name, 13px
-│                             │
-│   PURE-EFFECT:   3.5s       │  ← [7]  CD centered alone
-│                  CD         │
-│                             │
-│   DAMAGE-DEALER: 3.5s  5    │  ← [7]+[9] CD + DMG side by side
-│                  CD   DMG   │
-│  ───────────────────────    │  ← separator
-│  REACTIVE                   │  ← [10] Trigger label
-│  When [burn] is applied,    │  ← [11] Ability text, 2 lines max
-│  deal 1 bonus damage.       │
-│                      [8g]   │  ← [12] Price badge (shop only)
-└─────────────────────────────┘
-  [1] bg  [2] border  [3] level glow
+┌─────────────────────────┐
+│█████████████████████████│ ← [13] Charge Bar 6px top · battle only
+│                   [T2]  │ ← [6] Tier badge · top-right pill
+│            ♨️           │ ← [4] art/emoji ~46px centered
+│          Steam          │ ← [5] name 13px centered
+│   3.5s          1       │ ← pure:  [7] CD left · [9] count+label right
+│    CD          BURN     │
+│   3.5s          5       │ ← dealer:[7] CD left · [9] DMG right
+│    CD          DMG      │
+│  ─────────────────────  │ ← separator
+│  REACTIVE               │ ← [10] trigger 10px
+│  When [burn] applied,   │ ← [11] ability text 10px · 2 lines
+│  deal 1 bonus dmg.      │
+│                  [8g]   │ ← [12] price · shop only
+└─────────────────────────┘
+[1] bg  [2] border  [3] level glow
 ```
 
+## Items
 | # | Item | Spec |
-|---|------|------|
-| 1 | **Background** | Tier-colored fill |
-| 2 | **Border** | Tier accent color, 2px, 4px corner radius |
-| 3 | **Level indicator** | Border brightness + outer glow. L1: no glow. L2: border +25%, soft glow. L3: border +50%, strong glow. No number label. |
-| 4 | **Emoji icon** | ~46px, centered, top section |
-| 5 | **Element name** | 13px, centered, single line, ellipsis on overflow |
-| 6 | **Tier badge** | "T1"/"T2"/"T3"/"T4" · top-right · dark semi-transparent pill · 10px bold |
-| 7 | **Cooldown** | Stat value + "CD" label below. Centered alone on pure-effect cards. Left of DMG on damage-dealers. |
-| 8 | ~~Base Dmg~~ | **Excluded** |
-| 9 | **Eff. Dmg** | `base × mult × level`. Right of CD. **Only shown on damage-dealer cards.** Hidden entirely on pure-effect. |
-| 10 | **Trigger label** | Human label: "On Fire" · "Every 5s" · "Combat Start" · "Reactive" · "Passive". 10px · UPPERCASE · accent color |
-| 11 | **Ability text** | Max 2 lines, clips. Keywords in accent color, no underline. Level count in text reflects current level (e.g. "Apply 2 [burn]" at L2). |
-| 12 | **Price badge** | Bottom-right · gold text · dark pill · **shop context only** |
-| 13 | **Charge Bar** | 6px strip pinned to very top of card · fills left→right · **battle context only** · shifts blue→white at ≥85% |
-
-Items 14, 15 deferred.
-
----
-
-## Color tokens
-
-| Token name (GDScript) | CSS hex | Role |
 |---|---|---|
-| `TIER_1_BG` | `#193821` | T1 card fill |
-| `TIER_1_BORDER` | `#73cc73` | T1 border at Level 1 |
-| `TIER_2_BG` | `#172940` | T2 card fill |
-| `TIER_2_BORDER` | `#5999fa` | T2 border at Level 1 |
-| `TIER_3_BG` | `#2e1a47` | T3 card fill |
-| `TIER_3_BORDER` | `#b86bff` | T3 border at Level 1 |
-| `TIER_4_BG` | `#3d2b0a` | T4 card fill |
-| `TIER_4_BORDER` | `#fabd33` | T4 border at Level 1 |
-| `BATTLE_PROGRESS_FILL` | `#4da6ff` | Charge bar fill (blue phase) |
-| `CARD_CHARGE_FIRE_FILL` ★ | `#ffffff` | Charge bar fill at ≥85% |
-| `COLOR_COMP_TRIGGER` | `#8fd3ff` | Trigger label + keyword accent |
-| `COLOR_COMP_ABILITY` | `#c8caf2` | Ability body text |
-| `CARD_TIER_BADGE_BG` ★ | `rgba(0,0,0,0.50)` | Tier badge pill bg |
-| `CARD_PRICE_COLOR` ★ | `#ebcf73` | Price badge gold text |
-| `TEXT_PRIMARY` | `#e8eaf4` | Name, stat values |
-| `TEXT_DIM` | `#9a9cb8` | Stat labels (CD, DMG) |
-| `PAGE_BG` | `#0a0c18` | Scene background |
+| 1 | Background | Tier fill. T1 green / T2 blue / T3 purple / T4 gold. |
+| 2 | Border | Tier accent. 2px solid, 4px radius. |
+| 3 | Level glow | Border luminosity + outer glow only, no number. L1 base/no glow · L2 +25% bright+soft · L3 +50% bright+strong. Hue tier-locked; only brightness moves. |
+| 4 | Art/emoji | SVG `assets/elements/{key}.svg` ~46px in darker inset art box (rounded). Emoji fallback. Centered, top. |
+| 5 | Name | 13px centered, single line, ellipsis. |
+| 6 | Tier badge | "T1".."T4" top-right. Dark semi-transparent pill, 10px bold. |
+| 7 | Cooldown | Value bold 11px + "CD" 9px dimmed below. **Always left stat**, paired w/ [9]. |
+| 8 | ~~Base Dmg~~ | **Excluded.** |
+| 9 | Right stat | **Dealer:** Eff.Dmg (`base×mult×level`) bold 11px + "DMG" 9px. **Pure:** effect count/cast (1@L1, 2@L2…) + keyword label below (BURN/SHOCK). Reactive/passive pure w/ no status application: **TBD — deferred to design review.** |
+| 10 | Trigger label | 10px bold UPPERCASE, `#8fd3ff`. "ON FIRE"(on_activate) / "EVERY 5s"(periodic) / "COMBAT START" / "REACTIVE"(on_*) / "PASSIVE". |
+| 11 | Ability text | 10px reg, max 2 lines, ellipsis. `#c8caf2`. Keywords `#8fd3ff` no underline. Potency reflects current level. Godot: `RichTextLabel` `[url=burn]` → TooltipCard. |
+| 12 | Price badge | Bottom-right. Gold `#ebcf73`, dark pill, 11px bold. **Shop only.** |
+| 13 | Charge bar | 6px top strip, fills L→R toward fire. Blue `#4da6ff` 0–84% → white `#ffffff` ≥85%. **Battle only.** |
 
-★ = new constant not yet in `ThemeData.gd` — add during implementation.
-
-**Level glow (per tier border color):**
-
-| Level | Border brightness | Glow spread | Glow alpha |
+## Level glow
+| Lv | Border bright | Glow spread | Alpha |
 |---|---|---|---|
-| L1 | base | none | — |
+| L1 | base | — | — |
 | L2 | +25% | 9px | 0.35 |
 | L3 | +50% | 16px | 0.60 |
+Glow color = tier border color @ alpha.
 
----
-
-## Font sizes (UIScale.gd constants)
-
-| Token name (GDScript) | Size | Role |
+## Color tokens (★ = new, not in ThemeData.gd)
+| Const | Hex | Role |
 |---|---|---|
-| `SLOT_EMOJI` | 46px | Element icon |
-| `SLOT_NAME` | 13px | Element name |
-| `CARD_STAT` ★ | 11px | Stat value (2.5s, 4) |
-| `CARD_STAT_LABEL` ★ | 9px | Stat key (CD, DMG) |
-| `CARD_TRIGGER` ★ | 10px | Trigger label |
-| `CARD_ABILITY` ★ | 10px | Ability description |
-| `CARD_TIER_BADGE` ★ | 10px | Tier badge text |
-| `CARD_PRICE` ★ | 11px | Price badge text |
+| `TIER_1_BG` | `#193821` | T1 bg |
+| `TIER_1_BORDER` | `#73cc73` | T1 border (L1) |
+| `TIER_2_BG` | `#172940` | T2 bg |
+| `TIER_2_BORDER` | `#5999fa` | T2 border |
+| `TIER_3_BG` | `#2e1a47` | T3 bg |
+| `TIER_3_BORDER` | `#b86bff` | T3 border |
+| `TIER_4_BG` | `#3d2b0a` | T4 bg |
+| `TIER_4_BORDER` | `#fabd33` | T4 border |
+| `BATTLE_PROGRESS_BG` | `#140f1a` | charge tray |
+| `BATTLE_PROGRESS_FILL` | `#4da6ff` | charge 0–84% |
+| `CARD_CHARGE_FIRE_FILL` ★ | `#ffffff` | charge ≥85% |
+| `COLOR_COMP_TRIGGER` | `#8fd3ff` | trigger + keyword |
+| `COLOR_COMP_ABILITY` | `#c8caf2` | ability body |
+| `CARD_TIER_BADGE_BG` ★ | `rgba(0,0,0,.50)` | tier pill |
+| `CARD_PRICE_COLOR` ★ | `#ebcf73` | price gold |
+| `CARD_PRICE_BADGE_BG` ★ | `rgba(0,0,0,.55)` | price pill |
+| `SLOT_BG_EMPTY` | `#1a1a24` | empty slot bg |
+| `SLOT_BORDER_EMPTY` | `#474758` | empty slot border |
+| `PAGE_BG` | `#0a0c18` | page bg |
+| `TEXT_PRIMARY` | `#e8eaf4` | name, stat values |
+| `TEXT_DIM` | `#9a9cb8` | stat labels, secondary |
 
----
-
-## Sections to produce
-
-### Section 1 — All four tiers (Level 1, inventory context, pure-effect examples)
-
-| Element | Emoji | Tier | CD | Ability |
-|---|---|---|---|---|
-| Fire | 🔥 | T1 | 2.5s | On Fire · Apply 1 [burn] to the opponent. |
-| Steam | ♨️ | T2 | 3.5s | Reactive · When [burn] is applied, deal 1 bonus damage. |
-| Inferno | 🌋 | T3 | 4.5s | Every 6s · Apply 3 [burn] + 1 [curse] to opponent. |
-| Maelstrom | 🌪️ | T4 | 5.0s | Combat Start · — ability design pending — |
-
-No price badge, no charge bar.
-
-### Section 2 — Archetype split (pure-effect vs damage-dealer)
-
-Show two cards side by side at Level 1:
-
-| Element | Emoji | Tier | Type | Stats row | Ability |
-|---|---|---|---|---|---|
-| Fire | 🔥 | T1 | Pure-effect | CD only (2.5s) | On Fire · Apply 1 [burn] to the opponent. |
-| Lava | 🟠 | T2 | Damage-dealer | CD (5.0s) + DMG | Every 6s · Apply 2 [burn] to the opponent. |
-
-This is the most important section — the layout difference must be immediately obvious.
-
-### Section 3 — Level luminosity (T1 Fire, L1 → L2 → L3)
-
-Show the same pure-effect card at three levels. Note the ability text changes:
-- L1: "Apply 1 [burn]"
-- L2: "Apply 2 [burn]" + soft glow
-- L3: "Apply 3 [burn]" + strong glow
-
-Also show T4 Maelstrom (damage-dealer) at L3 for the gold glow.
-
-### Section 4 — Three contexts (T2 Steam L1, pure-effect)
-
-- **Shop:** price badge `8g` bottom-right
-- **Shop unaffordable:** `filter: brightness(0.55) saturate(0.45)`
-- **Inventory:** clean — no badge, no bar
-- **Battle 65%:** charge bar at 65% (blue fill)
-- **Battle ≥85%:** charge bar near full (white fill, about to fire)
-- **Battle frozen:** desaturated + dimmed + ❄ emoji overlay
-- **Empty slot:** neutral dark fill (`#1a1a24` / `#474758` border), "＋" centered
-
-### Section 5 — Design token reference table
-
-Full table of all color + font-size tokens with GDScript name, CSS value, and role. Mark ★ new constants clearly.
-
----
+## Font tokens (★ = new, not in UIScale.gd)
+| Const | px | Role |
+|---|---|---|
+| `SLOT_EMOJI` | 46 | emoji |
+| `SLOT_NAME` | 13 | name |
+| `CARD_STAT` ★ | 11 | stat value bold |
+| `CARD_STAT_LABEL` ★ | 9 | stat label |
+| `CARD_TRIGGER` ★ | 10 | trigger bold uppercase |
+| `CARD_ABILITY` ★ | 10 | ability text |
+| `CARD_TIER_BADGE` ★ | 10 | tier badge bold |
+| `CARD_PRICE` ★ | 11 | price bold |
 
 ## Geometry
+W 130px (`--card-w`, parameterized) · H 195px fixed · radius 4px · border 2px · charge bar 6px full-width top · padding 7 sides / 8 top / 28 bottom (reserves price) · separator 1px `rgba(255,255,255,.08)`.
 
-| Property | Value |
+## States
+| State | Treatment |
 |---|---|
-| Width | `130px` — CSS variable `--card-w` (parameterised; future grid growth tunes one variable) |
-| Height | `195px` fixed — uniform across all cards and contexts |
-| Corner radius | `4px` — intentionally sharp, fits the uncanny aesthetic |
-| Border | `2px` solid |
-| Charge bar | `6px` height, full width, top edge of card |
+| Default | tier bg + border |
+| L2 | border +25% + soft glow |
+| L3 | border +50% + strong glow |
+| Hover (shop/inv) | `brightness(1.10)` |
+| Unaffordable | `brightness(.55) saturate(.45)` |
+| Frozen (battle) | `brightness(.65) saturate(.35) hue-rotate(155deg)` + ❄ ~38px centered |
+| Charging 0–84% | blue bar |
+| Charging ≥85% | white bar |
+| Empty slot | `SLOT_BG_EMPTY` + `SLOT_BORDER_EMPTY` + "＋" centered |
 
----
+## Examples (real data, Eff.Dmg @ L1)
+**T1 — all pure-effect (CD left + effect right)**
+| Elem | Emoji | CD | Count L1 | Label | Trigger | Text L1 |
+|---|---|---|---|---|---|---|
+| Fire | 🔥 | 2.5s | 1 | BURN | ON FIRE | Apply 1 [burn] to opponent. |
+| Water | 💧 | 3.0s | 1 | CLEANSE | ON FIRE | Apply 1 [cleanse] to your side. |
+| Lightning | ⚡ | 1.8s | 1 | SHOCK | ON FIRE | Apply 1 [shock] to opponent. |
+| Metal | ⚙️ | 5.0s | 1 | PLATING | ON FIRE | Apply 1 [plating] to your side. |
+| Frost | 🌨️ | 3.0s | 1 | WEAKEN | ON FIRE | Apply 1 [weaken] to opponent. |
 
-## Card states summary
+**T2 — mixed**
+| Elem | Emoji | Type | CD | Dmg | Trigger | Text |
+|---|---|---|---|---|---|---|
+| Steam | ♨️ | pure | 3.5s | — | REACTIVE | When [burn] applied, deal 1 bonus dmg. |
+| Rain | 🌧️ | pure | 3.0s | — | EVERY 8s | Apply 2 [cleanse] to your side. |
+| Lava | 🟠 | dealer | 5.0s | 5 | EVERY 6s | Apply 2 [burn] to opponent. |
+| Shrapnel | 💥 | dealer | 2.5s | 4 | ON FIRE | Every 3rd activation, apply 1 [shock]. |
+| Flint | ⛏️ | dealer | 6.0s | 6 | PASSIVE | 15% chance apply 1 [weaken] on hit. |
 
-| State | Visual treatment |
-|---|---|
-| Default | Tier bg + border |
-| Level 2 | Border +25% brightness + soft outer glow |
-| Level 3 | Border +50% brightness + strong outer glow |
-| Hover (shop) | `filter: brightness(1.10)` on whole card |
-| Unaffordable | `filter: brightness(0.55) saturate(0.45)` |
-| Frozen (battle) | `filter: brightness(0.65) saturate(0.35) hue-rotate(155deg)` + ❄ overlay |
-| Charge ≥85% | Charge bar fill shifts to white |
-| Empty slot | `SLOT_BG_EMPTY` + `SLOT_BORDER_EMPTY`, "＋" glyph |
+**T3 — mixed**
+| Elem | Emoji | Type | CD | Dmg | Trigger | Text |
+|---|---|---|---|---|---|---|
+| Inferno | 🌋 | pure | 4.5s | — | EVERY 6s | Apply 3 [burn] + 1 [curse] to opponent. |
+| Mountain | 🏔️ | dealer | 5.0s | 8 | COMBAT START | Armor floor: absorb ≥1 dmg per hit. |
+| Glacier | 🧊 | dealer | 5.0s | 7 | COMBAT START | Freeze 1 random opponent slot 2s. |
 
----
+**T4 — mixed (8 dealers, 2 pure)**
+| Elem | Emoji | Type | CD | Dmg | Trigger | Text |
+|---|---|---|---|---|---|---|
+| Maelstrom | 🌪️ | dealer | 5.0s | 12 | COMBAT START | — pending — |
+| Supernova | 💫 | dealer | 5.0s | 14 | COMBAT START | — pending — |
+| Pandemic | 🦠 | pure | 4.0s | — | EVERY 5s | Apply 3 [poison] to opponent. |
 
-## What NOT to do
+## Mockup sections to produce
+1. **Four tiers, L1, inventory** — Fire T1, Steam T2, Inferno T3, Maelstrom T4 (pure). No price/charge. Shows [6][7][9][10][11].
+2. **Archetype split (most important)** — Fire 🔥 T1 pure (CD 2.5s + count 1/BURN, "Apply 1 [burn]") vs Lava 🟠 T2 dealer (CD 5.0s + DMG 5, "Every 6s · Apply 2 [burn]"). Layout diff must be obvious.
+3. **Level luminosity** — Fire T1 L1→L2→L3 (text: Apply 1/2/3 [burn]; glow none/soft/strong). + Maelstrom T4 L3 (gold glow, dealer).
+4. **All states** — Steam T2 L1 row: shop / shop-unaffordable / inventory / battle 65% / battle 90%+ / frozen / empty.
+5. **Token reference** — full table grouped: tier fills, borders, glow, charge, text, badges, geometry. Mark ★.
 
-- Do not replace emojis with illustrations
-- Do not add items 14 (effect icon) or 15 (made-from hint) — deferred
-- Do not show DMG stat on pure-effect cards — hidden entirely, not shown as 0
-- Do not use `+tier` in the eff. dmg formula — it has been removed (ADR 0013)
-- Do not use corner radius > 4px
-- Do not use layout techniques that can't be expressed as a Godot VBoxContainer stack
+## Constraints — do NOT
+- Omit inner art box (SVG primary, emoji fallback).
+- Per-element accent colors — tier-based only.
+- Show DMG on pure-effect (absent, never "0").
+- Add items 14 (effect icon) / 15 (made-from) — deferred.
+- Old eff.dmg formula `base×level+tier` — dropped in ADR 0013.
+- Radius >4px.
+- Layout not expressible as vertical stack.
+- Hover animations — static mockup.
+- Design the Battlegrid — card is sole scope.

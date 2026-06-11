@@ -299,6 +299,34 @@ func test_preview_bench_shows_result_name() -> void:
 	assert_true(ForgeSystem.preview(_state_with_bench("water", "fire"), {"kind": "forge_bench"}).contains("Steam"))
 
 
+# ── result_element (the hoverable result instance) ──────────────────────────────
+
+func test_result_element_bench_returns_forged_instance() -> void:
+	var elem: Variant = ForgeSystem.result_element(_state_with_bench("water", "fire"), {"kind": "forge_bench"})
+	assert_not_null(elem)
+	assert_eq((elem as Dictionary)["element_id"], "steam")
+
+
+func test_result_element_bench_applies_forge_level_penalty() -> void:
+	# Two Level-2 inputs → Level-1 result (min 2 − penalty 1), no scene math.
+	var elem: Variant = ForgeSystem.result_element(_state_with_bench("water", "fire", 2, 2), {"kind": "forge_bench"})
+	assert_eq((elem as Dictionary)["level"], 1)
+
+
+func test_result_element_bench_null_when_inputs_below_min_level() -> void:
+	assert_null(ForgeSystem.result_element(_state_with_bench("water", "fire", 1, 1), {"kind": "forge_bench"}))
+
+
+func test_result_element_bench_null_without_recipe() -> void:
+	assert_null(ForgeSystem.result_element(_state_with_bench("steam", "mud"), {"kind": "forge_bench"}))
+
+
+func test_result_element_pair_returns_forged_instance() -> void:
+	var elem: Variant = ForgeSystem.result_element(_state_with("water", "fire", 2, 2), {"kind": "forge_pair", "a": 0, "b": 1})
+	assert_not_null(elem)
+	assert_eq((elem as Dictionary)["element_id"], "steam")
+
+
 # ── to_bench (move / quick) ─────────────────────────────────────────────────────
 
 func _state_with_inv(id: String, inv_slot: int = 0) -> Dictionary:
@@ -537,3 +565,13 @@ func test_recipes_for_pairs_are_findable_elements() -> void:
 	for pair: Dictionary in RecipeData.recipes_for("glacier"):
 		assert_false(ElementData.find(pair["a"] as String).is_empty())
 		assert_false(ElementData.find(pair["b"] as String).is_empty())
+
+
+func test_describe_pair_resolves_both_ingredients() -> void:
+	var resolved: Dictionary = RecipeData.describe_pair({"a": "frost", "b": "metal"})
+	assert_eq((resolved["a"] as Dictionary)["id"], "frost")
+	assert_eq((resolved["b"] as Dictionary)["id"], "metal")
+
+
+func test_describe_pair_empty_when_id_unknown() -> void:
+	assert_true(RecipeData.describe_pair({"a": "frost", "b": "nonexistent"}).is_empty())

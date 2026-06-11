@@ -122,6 +122,37 @@ func test_no_tier4_ability_defined() -> void:
 			assert_true(AbilityData.get_ability(elem["id"] as String).is_empty(), elem["id"] + " T4 should be stubbed")
 
 
+# ── trigger_label (single display source for Battle Summary + Compendium) ───────
+
+func test_trigger_label_empty_for_ability_without_trigger() -> void:
+	assert_eq(AbilityData.trigger_label(AbilityData.get_ability("fire")), "")
+
+
+func test_trigger_label_fixed_trigger_from_table() -> void:
+	assert_eq(AbilityData.trigger_label({"trigger": "combat_start"}), "Combat start")
+
+
+func test_trigger_label_periodic_formats_interval_seconds() -> void:
+	assert_eq(AbilityData.trigger_label({"trigger": "periodic", "interval_deciseconds": 80}), "Every 8s")
+
+
+func test_trigger_label_on_status_applied_names_the_status() -> void:
+	assert_eq(AbilityData.trigger_label({"trigger": "on_status_applied", "status": "weaken"}), "On [weaken]")
+
+
+func test_trigger_label_on_activate_every_n() -> void:
+	assert_eq(AbilityData.trigger_label({"trigger": "on_activate", "every_n": 3}), "Every 3 activations")
+	assert_eq(AbilityData.trigger_label({"trigger": "on_activate"}), "On activation")
+
+
+func test_trigger_label_appends_multicast_suffix() -> void:
+	assert_eq(AbilityData.trigger_label({"trigger": "combat_start", "multicast": 1}), "Combat start  ×2")
+
+
+func test_trigger_label_unknown_trigger_falls_back_to_raw() -> void:
+	assert_eq(AbilityData.trigger_label({"trigger": "on_future_event"}), "on_future_event")
+
+
 # ── integration through to_battle ─────────────────────────────────────────────
 
 func _battle_with_player(element_id: String) -> Dictionary:

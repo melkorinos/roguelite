@@ -229,10 +229,11 @@ func _render_made_from(element_id: String) -> void:
 	header.modulate = Color(0.55, 0.55, 0.62)
 	_madefrom_box.add_child(header)
 	for pair: Dictionary in made:
-		var a: Dictionary = ElementData.find(pair["a"] as String)
-		var b: Dictionary = ElementData.find(pair["b"] as String)
-		if a.is_empty() or b.is_empty():
+		var resolved: Dictionary = RecipeData.describe_pair(pair)
+		if resolved.is_empty():
 			continue
+		var a: Dictionary = resolved["a"]
+		var b: Dictionary = resolved["b"]
 		var row := Label.new()
 		row.text = "%s %s + %s %s" % [a["emoji"], a["name"], b["emoji"], b["name"]]
 		row.autowrap_mode = TextServer.AUTOWRAP_WORD

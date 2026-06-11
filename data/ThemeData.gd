@@ -101,6 +101,26 @@ const STATUS_READOUT_BORDER := Color(0.55, 0.55, 0.72, 0.95)
 const STATUS_READOUT_TEXT   := Color(0.90, 0.92, 1.00)
 
 
+# ── Floating combat labels (Battle) ───────────────────────────────────────────
+# Generic popups + the per-effect status-label colors. Effect labels are keyed by
+# effect id (the text + emoji come from EffectRegistry.float_label).
+const FLOAT_DAMAGE := Color(1.00, 0.35, 0.35, 1.0)  # "-N" damage popup
+const FLOAT_MISS   := Color(0.55, 0.55, 0.55, 0.9)  # "MISS"
+const FLOAT_HEAL   := Color(0.30, 1.00, 0.55)       # heal / leech "+N HP"
+const FLOAT_LABEL_COLORS: Dictionary = {
+	"burn":    Color(1.00, 0.55, 0.15),
+	"poison":  Color(0.55, 0.92, 0.28),
+	"shock":   Color(0.50, 0.80, 1.00),
+	"blind":   Color(0.75, 0.75, 0.75),
+	"curse":   Color(0.75, 0.32, 1.00),
+	"weaken":  Color(0.38, 0.80, 0.80),
+	"armor":   Color(0.72, 0.72, 0.72),
+	"plating": Color(0.60, 0.65, 0.72),
+	"cleanse": Color(0.92, 0.92, 0.45),
+	"haste":   Color(0.55, 0.92, 0.92),
+}
+
+
 # ── Event overlay (ADR 0011) ──────────────────────────────────────────────────
 const EVENT_DIMMER             := Color(0.0, 0.0, 0.0, 0.7)
 const EVENT_PANEL_BG           := Color(0.08, 0.08, 0.13, 0.98)

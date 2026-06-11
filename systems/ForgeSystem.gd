@@ -42,6 +42,21 @@ static func preview(state: Dictionary, op: Dictionary) -> String:
 	return ""
 
 
+# The Element instance a successful operation would produce — the same result
+# preview() describes with "→", or null when there is none (incomplete, no recipe,
+# or inputs below the forge-input Level). Lets a caller render the result as an
+# Element Card without re-deriving the ADR-0008 level rule.
+static func result_element(state: Dictionary, op: Dictionary) -> Variant:
+	match op.get("kind", "") as String:
+		"forge_bench":
+			var slots: Array = state["forge_slots"]
+			return _result_for(slots[0], slots[1], false)
+		"forge_pair":
+			var inv: Array = state["inventory"]
+			return _result_for(inv[op["a"] as int], inv[op["b"] as int], true)
+	return null
+
+
 static func _noop(state: Dictionary) -> Dictionary:
 	return { "state": state, "outcome": "no_op" }
 
@@ -245,6 +260,26 @@ static func _inputs_below_min_level(da: Dictionary, db: Dictionary) -> bool:
 # With min-input 2 and penalty 1, the floor case (two Level-2s) yields Level 1.
 static func _forged_level(level_a: int, level_b: int) -> int:
 	return maxi(1, mini(level_a, level_b) - TuningData.FORGE_RESULT_LEVEL_PENALTY)
+
+
+# The Element instance produced by forging (recipe) or, when allow_merge, merging
+# (same element + matching level → level+1) two slots, or null if neither applies.
+# Mirrors the "→" branch of the preview functions so callers don't re-derive it.
+static func _result_for(ea: Variant, eb: Variant, allow_merge: bool) -> Variant:
+	if ea == null or eb == null:
+		return null
+	var da: Dictionary = ea as Dictionary
+	var db: Dictionary = eb as Dictionary
+	var result_id: String = RecipeData.find_result(da["element_id"], db["element_id"])
+	if not result_id.is_empty():
+		if _inputs_below_min_level(da, db):
+			return null
+		return ElementData.instantiate(result_id, _forged_level(da["level"] as int, db["level"] as int))
+	if allow_merge and da["element_id"] == db["element_id"] and (da["level"] as int) == (db["level"] as int):
+		var merged: Dictionary = da.duplicate()
+		merged["level"] = (da["level"] as int) + 1
+		return merged
+	return null
 
 
 static func _first_empty_inv_slot(inventory: Array) -> int:
