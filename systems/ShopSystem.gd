@@ -286,7 +286,7 @@ static func sell_item(state: Dictionary, slot_index: int) -> Dictionary:
 	var s: Dictionary = state.duplicate(true)
 	var elem: Dictionary = item as Dictionary
 	@warning_ignore("integer_division")
-	var refund: int = (elem["price"] as int) / TuningData.SELL_REFUND_DIVISOR
+	var refund: int = ((elem["price"] as int) * (elem.get("level", 1) as int)) / TuningData.SELL_REFUND_DIVISOR
 	s["gold"] = (s["gold"] as int) + refund
 	s["inventory"][slot_index] = null
 	return s
@@ -302,7 +302,7 @@ static func sell_grid_item(state: Dictionary, grid_slot: int) -> Dictionary:
 	var s: Dictionary = state.duplicate(true)
 	var elem: Dictionary = item as Dictionary
 	@warning_ignore("integer_division")
-	var refund: int = (elem["price"] as int) / TuningData.SELL_REFUND_DIVISOR
+	var refund: int = ((elem["price"] as int) * (elem.get("level", 1) as int)) / TuningData.SELL_REFUND_DIVISOR
 	s["gold"] = (s["gold"] as int) + refund
 	s["battle_grid"][grid_slot] = null
 	return s

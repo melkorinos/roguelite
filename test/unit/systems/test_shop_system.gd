@@ -253,6 +253,15 @@ func test_sell_does_not_mutate_original() -> void:
 	assert_not_null(state["inventory"][0])
 
 
+func test_sell_level2_refunds_double_lv1() -> void:
+	var state := _state_with_inv_item(0, "water")
+	(state["inventory"][0] as Dictionary)["level"] = 2
+	state["gold"] = 0
+	var s := ShopSystem.sell_item(state, 0)
+	# water price=5, Lv2 → (5*2)/2 = 5
+	assert_eq(s["gold"], 5)
+
+
 func test_sell_grid_item_refunds_and_clears() -> void:
 	var state := _make_state()
 	var elem: Dictionary = ElementData.find("fire").duplicate()
