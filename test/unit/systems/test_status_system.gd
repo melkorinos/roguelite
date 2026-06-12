@@ -733,3 +733,87 @@ func test_compute_does_not_mutate_attacker() -> void:
 	var atk: Dictionary = _s()
 	StatusSystem.compute_incoming_damage(5, atk, _s())
 	assert_eq((atk["armor"] as Dictionary)["value"] as int, 0)
+
+
+# ── next-tick primers (prime_dot atom support) ────────────────────────────────
+
+func test_burn_next_tick_bonus_consumed_on_tick() -> void:
+	var s: Dictionary = _apply(_s(), "burn")
+	(s["burn"] as Dictionary)["next_tick_bonus"] = 3
+	var r: Dictionary = StatusSystem.tick(s)
+	assert_eq(r["damage"] as int, 1 * TuningData.BURN_DAMAGE_PER_STACK + 3, "primer adds to this tick")
+	assert_eq(((r["statuses"] as Dictionary)["burn"] as Dictionary)["next_tick_bonus"] as int, 0, "primer is one-shot")
+
+
+func test_poison_next_tick_bonus_consumed_on_tick() -> void:
+	var s: Dictionary = _apply(_s(), "poison")
+	(s["poison"] as Dictionary)["next_tick_bonus"] = 2
+	var r: Dictionary = StatusSystem.tick(s)
+	assert_eq(r["damage"] as int, 1 * TuningData.POISON_DAMAGE_PER_STACK + 2)
+	assert_eq(((r["statuses"] as Dictionary)["poison"] as Dictionary)["next_tick_bonus"] as int, 0)
+
+
+func test_primer_waits_when_dot_not_ticking() -> void:
+	# No burn stacks → the tick never consumes the primer; it waits for a real tick.
+	var s: Dictionary = _s()
+	(s["burn"] as Dictionary)["next_tick_bonus"] = 3
+	var r: Dictionary = StatusSystem.tick(s)
+	assert_eq(r["damage"] as int, 0)
+	assert_eq(((r["statuses"] as Dictionary)["burn"] as Dictionary)["next_tick_bonus"] as int, 3, "primer persists until burn ticks")
+
+
+# ── Acid passive: stripped armor cannot regenerate ────────────────────────────
+
+func test_acid_blocks_armor_gain_after_strip() -> void:
+	var s: Dictionary = _s()
+	var armor: Dictionary = s["armor"] as Dictionary
+	armor["regen_blocked"] = true
+	armor["stripped"] = true
+	var out: Dictionary = _apply(s, "armor")
+	assert_eq((out["armor"] as Dictionary)["value"] as int, 0, "stripped + regen_blocked swallows armor gains")
+
+
+func test_acid_allows_armor_gain_before_strip() -> void:
+	var s: Dictionary = _s()
+	(s["armor"] as Dictionary)["regen_blocked"] = true
+	var out: Dictionary = _apply(s, "armor")
+	assert_eq((out["armor"] as Dictionary)["value"] as int, 1, "regen_blocked alone does not stop gains")
+
+
+func test_armor_stripped_flag_set_by_direct_hit() -> void:
+	var s: Dictionary = _s()
+	(s["armor"] as Dictionary)["value"] = 2
+	var r: Dictionary = StatusSystem.compute_incoming_damage(5, _s(), s)
+	var armor: Dictionary = (r["defender_statuses"] as Dictionary)["armor"] as Dictionary
+	assert_eq(armor["value"] as int, 0)
+	assert_true(armor["stripped"] as bool, "strip-to-0 by a hit records the strip")
+
+
+func test_armor_stripped_flag_set_by_burn_absorption() -> void:
+	var s: Dictionary = _s()
+	(s["armor"] as Dictionary)["value"] = 1
+	(s["burn"] as Dictionary)["stacks"] = 4  # raw 4 → absorbable 1 at half rate
+	var r: Dictionary = StatusSystem.tick(s)
+	var armor: Dictionary = (r["statuses"] as Dictionary)["armor"] as Dictionary
+	assert_eq(armor["value"] as int, 0)
+	assert_true(armor["stripped"] as bool, "strip-to-0 by burn absorption records the strip")
+
+
+# ── Tempest passive: shock cannot be cleansed ─────────────────────────────────
+
+func test_tempest_shock_survives_cleanse() -> void:
+	var s: Dictionary = _s()
+	var shock: Dictionary = s["shock"] as Dictionary
+	shock["n"] = 3
+	shock["cleanse_immune"] = true
+	(s["weaken"] as Dictionary)["stacks"] = 2
+	var out: Dictionary = _apply(s, "cleanse")
+	assert_eq((out["shock"] as Dictionary)["n"] as int, 3, "cleanse-immune shock keeps its stacks")
+	assert_eq((out["weaken"] as Dictionary)["stacks"] as int, 1, "other debuffs still cleansed")
+
+
+func test_shock_cleansed_normally_without_immunity() -> void:
+	var s: Dictionary = _s()
+	(s["shock"] as Dictionary)["n"] = 3
+	var out: Dictionary = _apply(s, "cleanse")
+	assert_eq((out["shock"] as Dictionary)["n"] as int, 2)

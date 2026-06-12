@@ -16,6 +16,9 @@ static func empty_statuses() -> Dictionary:
 		if not shape.is_empty():
 			result[effect as String] = shape.duplicate(true)
 	result["cooldown_modifier_deciseconds"] = 0
+	# Side-wide one-shot bonus consumed by this side's NEXT damaging direct hit
+	# (primed by the prime_next_hit ability atom — Crystal, Aether).
+	result["next_hit_bonus"] = 0
 	return result
 
 
@@ -160,9 +163,12 @@ static func apply_effect(statuses: Dictionary, effect: String, potency: int = 1,
 			_credit_source(d, source_slot, (d["stacks"] as int) - before)
 		"armor":
 			var d: Dictionary = s["armor"] as Dictionary
-			var before: int = d["value"] as int
-			d["value"] = mini(before + p, MAX_STACKS)
-			_credit_source(d, source_slot, (d["value"] as int) - before)
+			# Acid passive: once this side's armor has been stripped to 0, it cannot
+			# regenerate — further armor applications are swallowed.
+			if not ((d["regen_blocked"] as bool) and (d["stripped"] as bool)):
+				var before: int = d["value"] as int
+				d["value"] = mini(before + p, MAX_STACKS)
+				_credit_source(d, source_slot, (d["value"] as int) - before)
 		"plating":
 			var d: Dictionary = s["plating"] as Dictionary
 			var before: int = d["value"] as int
@@ -201,7 +207,9 @@ static func apply_effect(statuses: Dictionary, effect: String, potency: int = 1,
 			poison_d["stacks"] = maxi(0, (poison_d["stacks"] as int) - remove)
 			_decrement_source(poison_d["by_source"] as Dictionary, remove)
 			var shock_d: Dictionary = s["shock"] as Dictionary
-			shock_d["n"] = maxi(0, (shock_d["n"] as int) - remove)
+			# Tempest passive: shock on this side cannot be cleansed away.
+			if not (shock_d["cleanse_immune"] as bool):
+				shock_d["n"] = maxi(0, (shock_d["n"] as int) - remove)
 			var slow_d: Dictionary = s["slow"] as Dictionary
 			slow_d["n"] = maxi(0, (slow_d["n"] as int) - remove)
 			var weaken_d: Dictionary = s["weaken"] as Dictionary
@@ -246,13 +254,17 @@ static func tick(statuses: Dictionary) -> Dictionary:
 	var burn: Dictionary = s["burn"] as Dictionary
 	var burn_stacks: int = burn["stacks"] as int
 	if burn_stacks > 0:
-		var raw_burn: int = burn_stacks * TuningData.BURN_DAMAGE_PER_STACK + (burn["tick_damage_bonus"] as int)
+		# next_tick_bonus is a one-shot primer (prime_dot atom) consumed by this tick.
+		var raw_burn: int = burn_stacks * TuningData.BURN_DAMAGE_PER_STACK + (burn["tick_damage_bonus"] as int) + (burn["next_tick_bonus"] as int)
+		burn["next_tick_bonus"] = 0
 		var armor: Dictionary = s["armor"] as Dictionary
 		var armor_val: int = armor["value"] as int
 		var absorbable: int = maxi(0, armor_val - (armor["floor"] as int))
 		@warning_ignore("integer_division")
 		var armor_absorbed: int = mini(absorbable, raw_burn / TuningData.ARMOR_BURN_ABSORB_DIVISOR)
 		armor["value"] = armor_val - armor_absorbed
+		if armor_val > 0 and (armor["value"] as int) == 0:
+			armor["stripped"] = true
 		if armor_absorbed > 0:
 			_merge_split(blocked_by_source, _split_proportional(armor["by_source"] as Dictionary, armor_absorbed))
 			_decrement_source(armor["by_source"] as Dictionary, armor_absorbed)
@@ -267,7 +279,9 @@ static func tick(statuses: Dictionary) -> Dictionary:
 	var poison: Dictionary = s["poison"] as Dictionary
 	var poison_stacks: int = poison["stacks"] as int
 	if poison_stacks > 0:
-		var poison_dealt: int = poison_stacks * TuningData.POISON_DAMAGE_PER_STACK + (poison["tick_damage_bonus"] as int)
+		# next_tick_bonus is a one-shot primer (prime_dot atom) consumed by this tick.
+		var poison_dealt: int = poison_stacks * TuningData.POISON_DAMAGE_PER_STACK + (poison["tick_damage_bonus"] as int) + (poison["next_tick_bonus"] as int)
+		poison["next_tick_bonus"] = 0
 		hp_damage += poison_dealt
 		attribution["poison"] = _split_proportional(poison["by_source"] as Dictionary, poison_dealt)
 		events.append("on_poison_tick")
@@ -396,6 +410,8 @@ static func compute_incoming_damage(raw: int, attacker_statuses: Dictionary, def
 		blocked_by_source = _split_proportional(armor["by_source"] as Dictionary, absorbed)
 		_decrement_source(armor["by_source"] as Dictionary, points_spent)
 		armor["value"] = armor_val - points_spent
+		if armor_val > 0 and (armor["value"] as int) == 0:
+			armor["stripped"] = true
 		dmg -= absorbed
 
 	# Curse v2: a damaging hit consumes one curse stack and adds damage_amplifier. A hit

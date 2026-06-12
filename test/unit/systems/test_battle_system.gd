@@ -523,3 +523,41 @@ func test_compute_result_draw_on_mutual_elimination() -> void:
 	state["player_hp"] = 0
 	state["opponent_hp"] = 0
 	assert_eq(BattleSystem.compute_result(state), "draw")
+
+
+# ── adjacency aura + next-hit primer through the combat tick ──────────────────
+
+func test_aura_neighbor_buffs_damage_dealer_hit() -> void:
+	# Boulder in slot 0, an aura holder in adjacent slot 1 → the hit lands harder.
+	var plain := PhaseSystem.to_battle(_state_with_player_element(DEALER), _fixture())
+	_silence_opponent(plain)
+	var buffed := PhaseSystem.to_battle(_state_with_player_element(DEALER), _fixture())
+	_silence_opponent(buffed)
+	(buffed["battle_grid"] as Array)[1] = { "element_id": "aura_test", "cooldown_deciseconds": 99, "damage": 0, "level": 1,
+		"ability": { "trigger": "passive", "aura": { "adjacent_damage_bonus": 2 }, "effects": [] } }
+	var a := BattleSystem.tick_battle(plain, _dealer_cooldown())
+	var b := BattleSystem.tick_battle(buffed, _dealer_cooldown())
+	var plain_dmg: int = (plain["opponent_hp"] as int) - (a["opponent_hp"] as int)
+	var buffed_dmg: int = (buffed["opponent_hp"] as int) - (b["opponent_hp"] as int)
+	assert_eq(buffed_dmg, plain_dmg + 2, "adjacent aura adds flat damage to the hit")
+
+
+func test_aura_does_not_give_pure_effect_elements_a_hit() -> void:
+	# Fire (T1, pure-effect) next to an aura holder still deals 0 direct damage (ADR 0013).
+	var empty_opp: Dictionary = { "grid": [null, null, null, null], "round": 1 }
+	var st := PhaseSystem.to_battle(_state_with_player_element("fire"), empty_opp)
+	(st["battle_grid"] as Array)[1] = { "element_id": "aura_test", "cooldown_deciseconds": 99, "damage": 0, "level": 1,
+		"ability": { "trigger": "passive", "aura": { "adjacent_damage_bonus": 2 }, "effects": [] } }
+	var before: int = st["opponent_hp"] as int
+	var s := BattleSystem.tick_battle(st, 2.5)  # fire cooldown → fires (burn only)
+	assert_eq(s["opponent_hp"] as int, before, "pure-effect element still deals no direct hit")
+
+
+func test_next_hit_primer_consumed_by_first_hit_only() -> void:
+	var st := PhaseSystem.to_battle(_state_with_player_element(DEALER), _fixture())
+	_silence_opponent(st)
+	(st["player_statuses"] as Dictionary)["next_hit_bonus"] = 3
+	var s := BattleSystem.tick_battle(st, _dealer_cooldown())
+	var first_hit: int = (st["opponent_hp"] as int) - (s["opponent_hp"] as int)
+	assert_eq(first_hit, ElementData.effective_damage(ElementData.instantiate(DEALER, 1)) + 3, "primed hit lands harder")
+	assert_eq((s["player_statuses"] as Dictionary)["next_hit_bonus"] as int, 0, "primer is spent")

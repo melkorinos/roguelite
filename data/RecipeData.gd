@@ -1,6 +1,6 @@
 class_name RecipeData
 
-# 191 recipes across 4 tiers. Multiple recipes may share a result (alternate discovery paths).
+# 221 recipes across 4 tiers. Multiple recipes may share a result (alternate discovery paths).
 # All combinations are order-independent: a+b == b+a. Self-combos (a==b) are valid.
 # The recipe graph, built once at load and shared (zero-copy, read-only to callers).
 const RECIPES: Array[Dictionary] = [
@@ -91,17 +91,17 @@ const RECIPES: Array[Dictionary] = [
 		# ══ Tier 3 — original T2 cross (all T2 + T2) ════════════════════════════
 		{ "a": "steam",  "b": "gust",     "result": "cloud"      },
 		{ "a": "steam",  "b": "boulder",  "result": "geyser"     },
-		{ "a": "steam",  "b": "rain",     "result": "fog"        },
+		{ "a": "steam",  "b": "chill",    "result": "fog"        },
 		{ "a": "rain",   "b": "solar",    "result": "rainbow"    },
 		{ "a": "rain",   "b": "gust",     "result": "storm"      },
 		{ "a": "rain",   "b": "root",     "result": "plant"      },
-		{ "a": "mud",    "b": "rain",     "result": "swamp"      },
+		{ "a": "mud",    "b": "abyss",    "result": "swamp"      },
 		{ "a": "mud",    "b": "blaze",    "result": "brick"      },
 		{ "a": "smoke",  "b": "blaze",    "result": "ash"        },
-		{ "a": "smoke",  "b": "rain",     "result": "acid"       },
+		{ "a": "smoke",  "b": "blight",   "result": "acid"       },
 		{ "a": "lava",   "b": "sea",      "result": "obsidian"   },
-		{ "a": "lava",   "b": "boulder",  "result": "volcano"    },
-		{ "a": "dust",   "b": "boulder",  "result": "sand"       },
+		{ "a": "lava",   "b": "flint",    "result": "volcano"    },
+		{ "a": "dust",   "b": "crystal",  "result": "sand"       },
 		{ "a": "dust",   "b": "gust",     "result": "sandstorm"  },
 		{ "a": "dust",   "b": "rain",     "result": "clay"       },
 		# ══ Tier 3 — Frost cluster ════════════════════════════════════════════════
@@ -126,9 +126,8 @@ const RECIPES: Array[Dictionary] = [
 		{ "a": "plasma",     "b": "hail",       "result": "tempest"      },
 		# ══ Tier 3 — Earth cluster ════════════════════════════════════════════════
 		{ "a": "boulder",    "b": "flint",      "result": "mountain"     },
-		{ "a": "boulder",    "b": "permafrost", "result": "mountain"     },
 		{ "a": "sea",        "b": "boulder",    "result": "tsunami"      },
-		{ "a": "sea",        "b": "permafrost", "result": "tsunami"      },
+		{ "a": "abyss",      "b": "surge",      "result": "tsunami"      },
 		# ══ Tier 3 — Light / Dark cluster ════════════════════════════════════════
 		{ "a": "void",       "b": "radiance",   "result": "eclipse"      },
 		{ "a": "umbra",      "b": "radiance",   "result": "eclipse"      },
@@ -202,7 +201,7 @@ const RECIPES: Array[Dictionary] = [
 		{ "a": "hemogoblin",     "b": "nightveil",  "result": "carnage"      },
 		{ "a": "arcbeam",        "b": "aurora",     "result": "tempest"      },
 		{ "a": "crystal",        "b": "lodestone",  "result": "mountain"     },
-		{ "a": "prism",          "b": "rain",       "result": "rainbow"      },
+		{ "a": "prism",          "b": "bloom",      "result": "rainbow"      },
 		# T3 → T4
 		{ "a": "cloud",          "b": "fog",        "result": "maelstrom"    },
 		{ "a": "sandstorm",      "b": "hurricane",  "result": "maelstrom"    },
@@ -215,19 +214,58 @@ const RECIPES: Array[Dictionary] = [
 		# ══ Tier 3 — second paths (recipe rebalance 2026-06-11): give every single-gated
 		# original-cross T3 a 2nd discovery path; `arc+surge` rerouted here off Tempest.
 		{ "a": "steam", "b": "smoke", "result": "cloud" },
-		{ "a": "lava", "b": "rain", "result": "geyser" },
-		{ "a": "smoke", "b": "sea", "result": "fog" },
+		{ "a": "lava", "b": "steam", "result": "geyser" },
+		{ "a": "smoke", "b": "haze", "result": "fog" },
 		{ "a": "arc", "b": "surge", "result": "storm" },
-		{ "a": "mud", "b": "root", "result": "plant" },
+		{ "a": "photosynthesis", "b": "root", "result": "plant" },
 		{ "a": "mud", "b": "forest", "result": "swamp" },
-		{ "a": "mud", "b": "lava", "result": "brick" },
-		{ "a": "smoke", "b": "lava", "result": "ash" },
-		{ "a": "smoke", "b": "mud", "result": "acid" },
-		{ "a": "lava", "b": "freeze", "result": "obsidian" },
+		{ "a": "mud", "b": "steel", "result": "brick" },
+		{ "a": "ember", "b": "lava", "result": "ash" },
+		{ "a": "mud", "b": "sporeflow", "result": "acid" },
+		{ "a": "molten", "b": "freeze", "result": "obsidian" },
 		{ "a": "lava", "b": "lava", "result": "volcano" },
 		{ "a": "dust", "b": "dust", "result": "sand" },
 		{ "a": "dust", "b": "smoke", "result": "sandstorm" },
 		{ "a": "dust", "b": "sea", "result": "clay" },
+		# ══ Out-degree rebalance (2026-06-12): every T2/T3 now feeds ≥2 recipes ═══
+		# New pairs combine previously single-use elements, cluster-themed; T3/T4
+		# in-degree stays ≤4 (meteorite 5, structurally forced).
+		# T2 → T3
+		{ "a": "static",     "b": "voltspore",  "result": "tempest"      },
+		{ "a": "magnet",     "b": "lodestone",  "result": "mountain"     },
+		{ "a": "tempered",   "b": "boulder",    "result": "mountain"     },
+		{ "a": "shrapnel",   "b": "ironblood",  "result": "carnage"      },
+		{ "a": "rust",       "b": "moldsteel",  "result": "underrot"     },
+		{ "a": "whiteout",   "b": "frostburn",  "result": "blizzard"     },
+		{ "a": "wither",     "b": "frostbite",  "result": "tundra"       },
+		{ "a": "miasma",     "b": "mycelium",   "result": "plague"       },
+		{ "a": "murk",       "b": "nightveil",  "result": "eclipse"      },
+		{ "a": "hexcore",    "b": "voidspark",  "result": "voidrift"     },
+		{ "a": "shade",      "b": "bloom",      "result": "rainforest"   },
+		{ "a": "prism",      "b": "aurora",     "result": "rainbow"      },
+		{ "a": "arcbeam",    "b": "beacon",     "result": "storm"        },
+		{ "a": "lucent",     "b": "miasma",     "result": "fog"          },
+		{ "a": "wildrot",    "b": "pollen",     "result": "plant"        },
+		{ "a": "lifebloom",  "b": "rot",        "result": "plant"        },
+		{ "a": "fireshroom", "b": "blight",     "result": "inferno"      },
+		{ "a": "pulse",      "b": "fever",      "result": "hemorrhage"   },
+		{ "a": "hemowind",   "b": "sparkblood", "result": "hurricane"    },
+		{ "a": "hemospore",  "b": "cryptbloom", "result": "swamp"        },
+		{ "a": "hemogoblin", "b": "rust",       "result": "acid"         },
+		{ "a": "rain",       "b": "bloomspark", "result": "cloud"        },
+		# T3 → T4
+		{ "a": "storm",      "b": "cloud",      "result": "maelstrom"    },
+		{ "a": "fog",        "b": "ash",        "result": "singularity"  },
+		{ "a": "sand",       "b": "sandstorm",  "result": "tectonic"     },
+		# tectonic sits at 5 paths like meteorite: it is the only earth-family T4
+		# sink for 7 earthy T3s, so the convergence is structurally forced.
+		{ "a": "clay",       "b": "obsidian",   "result": "tectonic"     },
+		{ "a": "brick",      "b": "tundra",     "result": "iceage"       },
+		{ "a": "swamp",      "b": "geyser",     "result": "primordial"   },
+		{ "a": "rainbow",    "b": "plant",      "result": "worldtree"    },
+		{ "a": "obsidian",   "b": "carnage",    "result": "ragnarok"     },
+		{ "a": "acid",       "b": "swamp",      "result": "pandemic"     },
+		{ "a": "hurricane",  "b": "tempest",    "result": "aether"       },
 	]
 
 

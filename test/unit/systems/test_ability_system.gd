@@ -355,3 +355,81 @@ func test_on_hit_status_chances_aggregates_passive_on_hit() -> void:
 	var chances: Array = AbilitySystem.on_hit_status_chances(st["battle_grid"] as Array)
 	assert_eq(chances.size(), 1)
 	assert_eq((chances[0] as Dictionary)["chance"] as int, 15)
+
+
+# ── new atoms: add_max_hp / prime_dot / prime_next_hit ────────────────────────
+
+func test_add_max_hp_raises_hp_and_bar_max() -> void:
+	var ability: Dictionary = { "trigger": "combat_start",
+		"effects": [{ "kind": "add_max_hp", "amount": 8, "target": "own" }] }
+	var st: Dictionary = _with_ability("player", 0, ability)
+	var hp_before: int = st["player_hp"] as int
+	var max_before: int = st["player_starting_hp"] as int
+	var s: Dictionary = AbilitySystem.resolve_combat_start(st)
+	assert_eq(s["player_hp"] as int, hp_before + 8)
+	assert_eq(s["player_starting_hp"] as int, max_before + 8, "the HP-bar max grows with it")
+
+
+func test_add_max_hp_scales_with_level() -> void:
+	var ability: Dictionary = { "trigger": "combat_start",
+		"effects": [{ "kind": "add_max_hp", "amount": 8, "target": "own" }] }
+	var st: Dictionary = _with_ability("player", 0, ability)
+	(st["battle_grid"][0] as Dictionary)["level"] = 2
+	var hp_before: int = st["player_hp"] as int
+	var s: Dictionary = AbilitySystem.resolve_combat_start(st)
+	assert_eq(s["player_hp"] as int, hp_before + 16, "a Lv2 element grants double")
+
+
+func test_prime_dot_sets_burn_next_tick_bonus() -> void:
+	var ability: Dictionary = { "trigger": "combat_start",
+		"effects": [{ "kind": "prime_dot", "status": "burn", "amount": 2, "target": "opponent" }] }
+	var s: Dictionary = AbilitySystem.resolve_combat_start(_with_ability("player", 0, ability))
+	assert_eq(((s["opponent_statuses"] as Dictionary)["burn"] as Dictionary)["next_tick_bonus"] as int, 2)
+
+
+func test_prime_next_hit_sets_own_side_bonus() -> void:
+	var ability: Dictionary = { "trigger": "combat_start",
+		"effects": [{ "kind": "prime_next_hit", "amount": 2, "target": "own" }] }
+	var s: Dictionary = AbilitySystem.resolve_combat_start(_with_ability("player", 0, ability))
+	assert_eq((s["player_statuses"] as Dictionary)["next_hit_bonus"] as int, 2)
+
+
+# ── adjacency damage aura ─────────────────────────────────────────────────────
+
+func _aura_element(bonus: int, level: int = 1) -> Dictionary:
+	return { "element_id": "aura_test", "cooldown_deciseconds": 30, "damage": 0, "level": level,
+		"ability": { "trigger": "passive", "aura": { "adjacent_damage_bonus": bonus }, "effects": [] } }
+
+
+func test_adjacent_damage_bonus_from_neighbor_aura() -> void:
+	# 2x2 grid: slot 0 and slot 1 are adjacent.
+	var grid: Array = [null, null, null, null]
+	grid[1] = _aura_element(1)
+	assert_eq(AbilitySystem.adjacent_damage_bonus(grid, 0), 1)
+
+
+func test_adjacent_damage_bonus_scales_with_aura_level() -> void:
+	var grid: Array = [null, null, null, null]
+	grid[1] = _aura_element(1, 3)
+	assert_eq(AbilitySystem.adjacent_damage_bonus(grid, 0), 3)
+
+
+func test_adjacent_damage_bonus_ignores_non_adjacent() -> void:
+	# 2x2 grid: slot 0 (top-left) and slot 3 (bottom-right) are diagonal — not neighbors.
+	var grid: Array = [null, null, null, null]
+	grid[3] = _aura_element(1)
+	assert_eq(AbilitySystem.adjacent_damage_bonus(grid, 0), 0)
+
+
+func test_adjacent_damage_bonus_zero_without_aura() -> void:
+	var grid: Array = [null, null, null, null]
+	grid[1] = { "element_id": "plain", "cooldown_deciseconds": 30, "damage": 1, "level": 1,
+		"ability": { "trigger": "passive", "effects": [] } }
+	assert_eq(AbilitySystem.adjacent_damage_bonus(grid, 0), 0)
+
+
+func test_adjacent_damage_bonus_sums_multiple_auras() -> void:
+	var grid: Array = [null, null, null, null]
+	grid[1] = _aura_element(1)
+	grid[2] = _aura_element(2)
+	assert_eq(AbilitySystem.adjacent_damage_bonus(grid, 0), 3)

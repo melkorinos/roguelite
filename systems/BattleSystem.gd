@@ -210,7 +210,16 @@ static func _fire_element_once(s: Dictionary, ctx: Dictionary, side: String, ele
 	var dmg: int = raw
 	# Pure-effect elements (raw == 0) skip the whole damage block — no mitigation, no
 	# armour-strip, no curse-vulnerability — and just fire a 0-damage event + their effect.
+	# Damage-dealers pick up adjacency auras (Root/Obsidian/Primordial) and consume the
+	# side's one-shot next-hit primer; pure-effect elements stay at 0 (ADR 0013).
 	if raw > 0 and use_effects:
+		raw += AbilitySystem.adjacent_damage_bonus(s[k["grid"] as String] as Array, slot_index)
+		var own_statuses: Dictionary = s[own_statuses_key] as Dictionary
+		var next_hit_bonus: int = own_statuses.get("next_hit_bonus", 0) as int
+		if next_hit_bonus > 0:
+			raw += next_hit_bonus
+			own_statuses["next_hit_bonus"] = 0
+		dmg = raw
 		var armor_before: int = ((s[opp_statuses_key] as Dictionary)["armor"] as Dictionary)["value"] as int
 		var hit: Dictionary = StatusSystem.compute_incoming_damage(raw, s[own_statuses_key] as Dictionary, s[opp_statuses_key] as Dictionary)
 		dmg = hit["damage"] as int

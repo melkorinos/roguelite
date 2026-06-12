@@ -115,11 +115,32 @@ func test_gore_pairs_leech_action_with_weaken_ability() -> void:
 	assert_eq(ability["trigger"] as String, "on_activate")
 
 
-func test_no_tier4_ability_defined() -> void:
-	# T4 is intentionally stubbed this session.
+func test_every_tier4_has_an_ability() -> void:
+	# T4 Phenomena were filled 2026-06-12 — the payoff tier must carry a real ability.
 	for elem: Dictionary in ElementData.all_elements():
 		if (elem["tier"] as int) == 4:
-			assert_true(AbilityData.get_ability(elem["id"] as String).is_empty(), elem["id"] + " T4 should be stubbed")
+			var ability: Dictionary = AbilityData.get_ability(elem["id"] as String)
+			assert_true((ability.get("trigger", "") as String) != "", elem["id"] + " T4 should declare a trigger")
+
+
+func test_only_three_periodic_abilities_remain() -> void:
+	# Trigger-mix policy (2026-06-12): "every X seconds" overlaps the element's own
+	# cooldown rhythm, so periodic is capped at the 3 iconic engines.
+	var periodic: Array[String] = []
+	for element_id: String in AbilityData.ABILITIES.keys():
+		if ((AbilityData.ABILITIES[element_id] as Dictionary).get("trigger", "") as String) == "periodic":
+			periodic.append(element_id)
+	periodic.sort()
+	assert_eq(periodic, ["lava", "rainbow", "volcano"], "exactly these three stay periodic")
+
+
+func test_dead_passives_now_carry_wired_effects() -> void:
+	# Acid / Tempest described unwired passives until 2026-06-12; Voltspore fired
+	# blanks. Each must now declare at least one effect (Carnage's bare multicast is
+	# legitimate — it is a damage-dealer, so the doubled fire IS the ability).
+	for element_id: String in ["acid", "tempest", "voltspore"]:
+		var ability: Dictionary = AbilityData.get_ability(element_id)
+		assert_true((ability.get("effects", []) as Array).size() > 0, element_id + " should declare effects")
 
 
 # ── trigger_label (single display source for Battle Summary + Compendium) ───────

@@ -7,12 +7,14 @@ so we strip comments + trailing commas and json.loads. Then we compute recipe in
 degree, family lineage, ability summaries, damage-dealer stats, and flagged
 observations, and render a self-contained dark HTML with a vis-network forge graph.
 """
-import json, re, pathlib
+import json, re, pathlib, datetime
 from collections import Counter, defaultdict
 
 ROOT = pathlib.Path(__file__).resolve().parents[3]
 DATA = ROOT / "data"
-OUT = pathlib.Path(__file__).resolve().parent / "game-elements-forge-20260611.html"
+TODAY = datetime.date.today().strftime("%Y%m%d")
+TODAY_DASH = datetime.date.today().isoformat()
+OUT = pathlib.Path(__file__).resolve().parent / f"game-elements-forge-{TODAY}.html"
 
 # ── parse the GDScript literals ────────────────────────────────────────────────
 def strip_literal(text, open_ch, close_ch):
@@ -62,7 +64,8 @@ STATUS_EMOJI = {
 TRIGGER_LABELS = {
     "combat_start":"Combat start","passive":"Passive","passive_on_hit":"On hit",
     "on_burn_applied":"On [burn]","on_heal_applied":"On [heal]","on_leech":"On [leech]",
-    "on_poison_tick":"On [poison] tick","on_armor_stripped":"On armor strip","on_haste_applied":"On [haste]",
+    "on_poison_tick":"On [poison] tick","on_burn_tick":"On [burn] tick",
+    "on_damage_dealt":"On damage dealt","on_armor_stripped":"On armor strip","on_haste_applied":"On [haste]",
 }
 
 def trigger_label(ab):
@@ -101,6 +104,12 @@ def ability_tags(ab):
             tags.append("⏱")
         elif kind == "haste_timers":
             tags.append("💨")
+        elif kind == "add_max_hp":
+            tags.append("❤️")
+        elif kind in ("prime_dot", "prime_next_hit"):
+            tags.append("🎯")
+    if ab.get("aura"):
+        tags.append("⚔️")
     out, seen = [], set()
     for t in tags:
         if t not in seen:
@@ -208,15 +217,18 @@ single_t4 = sorted([r["id"] for r in records if r["tier"]==4 and r["inDeg"]==1])
 overconv = sorted([r for r in records if r["inDeg"]>=4], key=lambda r:-r["inDeg"])
 # heavily-used non-T1 ingredients (out-degree)
 heavy_used = sorted([r for r in records if r["tier"]>=2], key=lambda r:-r["outDeg"])[:12]
-# empty-effect abilities
+# empty-effect abilities — exempt aura carriers (the aura field IS the ability)
+# and bare-multicast damage-dealers (the doubled hit IS the ability, e.g. carnage)
 empty_eff = sorted([eid for eid,ab in abilities.items()
-                    if ab.get("trigger") and ab.get("effects",None)==[]])
+                    if ab.get("trigger") and ab.get("effects",None)==[]
+                    and not ab.get("aura")
+                    and not (ab.get("multicast",0)>0 and eid in damage_dealers)])
 # duplicate ability signatures
 def sig(ab):
     effs = sorted(json.dumps(e, sort_keys=True) for e in ab.get("effects",[]))
     return json.dumps({"t":ab.get("trigger"),"i":ab.get("interval_deciseconds"),
         "m":ab.get("multicast"),"s":ab.get("status"),"n":ab.get("every_n"),
-        "c":ab.get("chance"),"e":effs}, sort_keys=True)
+        "c":ab.get("chance"),"a":ab.get("aura"),"e":effs}, sort_keys=True)
 sig_groups = defaultdict(list)
 for eid,ab in abilities.items():
     if by_id.get(eid,{}).get("tier",1)==1: continue
@@ -257,17 +269,20 @@ for eid,ab in abilities.items():
 STATUS_MECHANICS = [
     ("🔥","Burn","DOT","stacks × 1 dmg / tick (+bonus)","Ramping DOT. −1 stack each 1s tick. Armor absorbs it at HALF rate (raw/2), never below armor floor. Steel's plating can also shave it. A DOT tick is a 'damaging event' → consumes a curse charge."),
     ("🧪","Poison","DOT","stacks × 1 dmg / tick (+bonus)","Permanent DOT — stacks NEVER decrement. Armor does NOT soak poison at all (only plating-reduces_dot can). Underrot adds +1/tick. The slow-burn win condition."),
-    ("🛡️","Armor","Mitigation","absorbs 1 dmg / point","Depletes as it soaks direct hits + half of burn; never below its floor (Mountain floors it at 2). Acid stops stripped armor from regenerating. Strip-to-0 emits on_armor_stripped."),
+    ("🛡️","Armor","Mitigation","absorbs 1 dmg / point","Depletes as it soaks direct hits + half of burn; never below its floor (Mountain floors it at 2). Acid (WIRED): once stripped to 0, armor cannot regenerate for the combat. Strip-to-0 emits on_armor_stripped."),
     ("🧱","Plating","Mitigation","−1 dmg / point, flat","Flat reduction on EVERY direct hit; never depletes. Only touches DOT when reduces_dot is set (Steel). The anti-chip-damage wall."),
     ("🙈","Blind","Miss","+15% / stack, cap 50%","Per-fire miss roll from the seeded RNG. A blinded element may fire and do nothing. Caps at 50% so it can't lock a board."),
-    ("⚡","Shock","Slow","50·n/(n+5) % slower CD","Cooldown tax with diminishing returns (1→8%, 3→19%, 10→33%). Plasma treats n as +3; Tempest stops decay. Pure tempo denial."),
+    ("⚡","Shock","Slow","50·n/(n+5) % slower CD","Cooldown tax with diminishing returns (1→8%, 3→19%, 10→33%). Plasma treats n as +3; Tempest (WIRED) makes it cleanse-proof. Pure tempo denial."),
     ("💨","Haste","Speed","−0.3s / stack","Side-wide cooldown reduction. Gust upgrades it to −0.5s. The only self-speed status."),
     ("📉","Weaken","Debuff","−1 dmg / stack, 3 ticks","Reduces the WEAKENED element's direct hits only (lives on the attacker). Timed — expires after 3 ticks (Blackice +2). Does NOT touch DOT."),
     ("🌑","Curse","Amplify","+1 dmg / charge consumed","v2: each damaging event (a hit OR a DOT tick > 0) consumes one charge and adds the amplifier. No duration — runs out of charges. Void/Voidrift apply a deep 10-charge curse; Shade/Umbra/Eclipse raise the amplifier."),
     ("🩸","Leech","Lifesteal","heal = damage dealt","Instant self-heal equal to damage dealt on fire. Pulse adds +1; Ichor doubles it. Only meaningful on elements that actually deal damage."),
     ("💚","Heal","Sustain","+1 HP / application","Instant side heal. Fuels on_heal_applied reactors (Ember, Lifebloom, Bloomspark, Photosynthesis)."),
     ("🫧","Cleanse","Removal","remove 1 stack / application","Strips 1 stack each from burn/poison/shock/slow/weaken/blind on your side. The only debuff answer."),
-    ("🧊","Freeze","Lockout","pause an element N seconds","Not a StatusSystem status — own per-side timer. Frozen slot can't fire and its cooldown stalls. Anti-permalock target selection. Permafrost 5s, Freeze 8s, Glacier 2×5s."),
+    ("🧊","Freeze","Lockout","pause an element N seconds","Not a StatusSystem status — own per-side timer. Frozen slot can't fire and its cooldown stalls. Anti-permalock target selection. Permafrost 5s, Freeze 8s, Glacier 2×5s, Ice Age 2×8s."),
+    ("🎯","Primers","One-shot buff","+N on the NEXT tick / hit","NEW (2026-06-12). prime_dot: the target's next burn/poison tick deals +N, then resets (waits until that DOT actually ticks — Blight, Molten). prime_next_hit: your side's next damaging direct hit deals +N (Crystal, Aether)."),
+    ("❤️","Max HP","Per-fight bulk","+N HP and bar max","NEW (2026-06-12). add_max_hp raises the side's HP AND its bar max for this fight only. Level-scaled. Ironwood +6, Ancient Grove +10, World Tree +1 per activation (it keeps growing)."),
+    ("⚔️","Aura","Adjacency buff","adjacent hits +N","NEW (2026-06-12). A passive aura: adjacent damage-dealers hit +N harder (level-scaled; pure-effect neighbors stay at 0 per ADR 0013). Root +1, Obsidian +2, Primordial +3. Placement now matters."),
 ]
 
 # ════════════════════════════════════════════════════════════════════════════════
@@ -357,32 +372,47 @@ dupe_html = "".join(f'<li><span class="mono text-amber-200">{esc(trigger_label(a
 dd_fam_html = "".join(f'<li><span style="color:{FAMILY_COLOR[f]}">{FAMILY_NAME[f]}</span>: {names(ids)}</li>'
     for f,ids in sorted(dd_by_family.items(), key=lambda kv:-len(kv[1])))
 
+# out-degree spread for the rebalance-status card
+out_dist = Counter(r["outDeg"] for r in records if r["tier"] in (2,3))
+out_dist_str = ", ".join(f'{d} path{"s" if d!=1 else ""}: {n}' for d,n in sorted(out_dist.items()))
+ramp_cd = sorted([eid for eid,ab in abilities.items() if any(
+    (e.get("kind")=="modify_cooldown") for e in ab.get("effects",[])) and ab.get("trigger") in ("on_activate","on_status_applied")])
+
 OBS = []
-OBS.append(obs_card("⚖️ Recipe convergence is wildly uneven (your main concern)",
-    f'<p class="text-sm text-slate-300">{len(overconv)} results are reachable by ≥4 recipes — '
-    f'<strong>{names([r["id"] for r in overconv[:6]])}</strong> (meteorite has 6 paths) — while '
-    f'<strong>{len(single_t3)} T3</strong> and <strong>{len(single_t4)} T4</strong> results have exactly ONE recipe. '
-    f'A lot of recipe budget is spent giving a few apex elements many redundant paths while many mid-tier results are single-gated.</p>'
-    f'<p class="text-xs text-slate-400 mt-2"><strong>Single-path T3:</strong> {names(single_t3)}</p>'
-    f'<p class="text-xs text-slate-400 mt-1"><strong>Single-path T4:</strong> {names(single_t4)}</p>', "warn"))
-OBS.append(obs_card("🔁 Duplicate abilities (no mechanical reason to pick one over the other)",
-    f'<ul class="text-sm text-slate-300 list-disc ml-5 space-y-1">{dupe_html}</ul>'
-    f'<p class="text-xs text-slate-500 mt-2">Same trigger + same effects. They differ only in cooldown/flavour. Candidates to differentiate or merge.</p>', "warn"))
-OBS.append(obs_card("🕳️ Abilities whose effects list is empty",
-    f'<p class="text-sm text-slate-300">{names(empty_eff)} carry a description but <span class="mono">effects: []</span>. '
-    f'<strong>{by_id["voltspore"]["emoji"]} Voltspore</strong> is the worst: a pure-effect element with "fires twice" but nothing to fire → it does literally nothing. '
-    f'Tempest / Acid describe a passive (no-decay / no-regen) that needs an engine hook — verify it is actually wired.</p>', "warn"))
+OBS.append(obs_card("✅ FIXED 2026-06-12 — forge-path spread (your concern #2)",
+    f'<p class="text-sm text-slate-300">Every T2/T3 now feeds <strong>≥2 recipes</strong> (was: 65 elements at exactly 1), capped at 6 '
+    f'(was: Rain 10, four elements at 7). Spread today: <span class="mono">{esc(out_dist_str)}</span>. T1 stays at 12 each — they are the roots, by design. '
+    f'Done via 14 thematic ingredient swaps + 31 new recipes pairing previously single-use elements (191 → {len(recipes)}).</p>'
+    f'<p class="text-xs text-amber-200 mt-2">Cost to push back on: T3/T4 in-degree drifted up — most results now have 4 paths (band 2–5; meteorite + tectonic at 5, both structurally forced as sole metal/earth sinks). '
+    f'The out-degree floor and the in-degree compression pull against each other; this is the chosen trade.</p>', "note"))
+OBS.append(obs_card("✅ FIXED 2026-06-12 — trigger mix + dead abilities",
+    f'<p class="text-sm text-slate-300">combat_start 37 → {trigger_counts.get("Combat start",0)} (true setup only) · '
+    f'"Every Xs" periodic 31 → 3 iconic engines (lava, volcano, rainbow) · on_activate is the new workhorse (rides the element\'s own cooldown). '
+    f'New vocabulary: 🎯 primers (next-tick / next-hit), ❤️ max-HP-for-the-fight, ⚔️ adjacency auras, build-up payoffs (every_n 3–4), ×3 multicast at T4. '
+    f'All 7 duplicate-ability pairs differentiated; Voltspore/Acid/Tempest wired for real; all 10 T4 Phenomena designed.</p>'
+    + (f'<p class="text-xs text-rose-300 mt-2">Still empty-effect (regression check): {names(empty_eff)}</p>' if empty_eff else
+       '<p class="text-xs text-slate-500 mt-2">Zero dead abilities remain (Carnage\'s bare ×2 multicast is real damage — it is a damage-dealer).</p>'), "note"))
+if dupe_groups:
+    OBS.append(obs_card("🔁 Duplicate abilities (regression check)",
+        f'<ul class="text-sm text-slate-300 list-disc ml-5 space-y-1">{dupe_html}</ul>', "warn"))
+OBS.append(obs_card("⚖️ Haste & blind redistribution — strength still unreviewed",
+    f'<p class="text-sm text-slate-300">Blind appliers trimmed 22 → {status_usage.get("blind",0)}; haste appliers raised 3 → {status_usage.get("haste",0)} '
+    f'(air, beacon, cloud, storm, rainbow, aether + Gust\'s upgrade + Aurora\'s reactor). '
+    f'<strong>Open question for the step-⑥ status review:</strong> haste is a permanent, stacking, side-wide −0.3s; with more appliers it may now be the strongest buff in the game. '
+    f'Counterplay exists (shock, freeze, cooldown penalties) but the magnitude knob (HASTE_REDUCTION_DECISECONDS) has never been balance-passed.</p>', "warn"))
+OBS.append(obs_card("⏱ New ramping cooldown-modifier abilities — watch the floor",
+    f'<p class="text-sm text-slate-300">{names(ramp_cd)} now ramp the side-wide cooldown modifier every activation/event. '
+    f'Penalties stack without cap (slowing ramps are bounded only by combat length) and reductions race to the 1s floor. '
+    f'Deliberate tempo identity — but simulate matchups stacking two of them before trusting the numbers.</p>', "warn"))
 OBS.append(obs_card("💥 Damage-dealers cluster in a few families",
     f'<p class="text-sm text-slate-300">Only {sum(len(v) for v in dd_by_family.values())} of 132 elements deal direct damage. By family:</p>'
     f'<ul class="text-xs text-slate-300 list-disc ml-5 mt-1 space-y-0.5">{dd_fam_html}</ul>'
-    f'<p class="text-xs text-amber-200 mt-2">Families with NO damage-dealer at all: {esc(", ".join(fams_no_dd))} — these are pure-effect lineages (intended by ADR 0013, but worth confirming each has a viable status win-con).</p>', "note"))
-OBS.append(obs_card("🪨 T4 apex elements are ability-stubbed",
-    f'<p class="text-sm text-slate-300">All {len(t4_stub)} T4 "Phenomena" ({names(t4_stub)}) have base damage but <strong>no ability</strong> — '
-    f'{len([r for r in records if r["tier"]==4 and r["dd"]])} are damage-dealers, the rest currently do nothing on fire. The payoff tier is the least designed.</p>', "note"))
-OBS.append(obs_card("⏱ Cooldown spread",
-    f'<p class="text-sm text-slate-300">Slowest firers: '
-    + ", ".join(f'{r["emoji"]} {esc(r["name"])} ({r["cds"]}s)' for r in slow_cd)
-    + f'. After the ×0.7 global dial + 1s floor these are the heavy-hitter / payoff elements; check they actually land before Sandstorm (t=30s).</p>', "note"))
+    f'<p class="text-xs text-amber-200 mt-2">Families with NO damage-dealer at all: {esc(", ".join(fams_no_dd))} — intended by ADR 0013, but the new ⚔️ auras only help damage-dealers, so aura value is uneven across families.</p>', "note"))
+OBS.append(obs_card("🌀 Naming collision + leftover flags",
+    f'<p class="text-sm text-slate-300"><strong>Sandstorm the element</strong> (T3 🌀) vs <strong>Sandstorm the sudden-death storm</strong> (ADR 0012) collide in UI copy — rename one before players meet both. '
+    f'15 Group-G placeholder T2 names still pending. Slowest firers: '
+    + ", ".join(f'{r["emoji"]} {esc(r["name"])} ({r["cds"]}s)' for r in slow_cd[:5])
+    + f' — with build-up every_n gates on top (Tsunami every 4th ≈ 17s between crashes), check payoffs land before the storm (t=30s).</p>', "warn"))
 
 NODES_JSON = json.dumps(nodes)
 EDGES_JSON = json.dumps(edges)
@@ -444,7 +474,7 @@ html = """<!DOCTYPE html>
     <div class="card p-5"><h3 class="text-base font-semibold text-white mb-2">Reading the numbers</h3>
       <table class="k text-sm"><tr><th>In-degree</th><td>how many recipes PRODUCE this element → low = single-gated discovery, high = many redundant paths</td></tr>
       <tr><th>Out-degree</th><td>how many recipes this element FEEDS as an ingredient → your "feeds 7–8 combos" axis</td></tr>
-      <tr><th>DD</th><td>damage-dealer: one of the 22 that deal a direct hit (everything else's status IS its damage)</td></tr>
+      <tr><th>DD</th><td>damage-dealer: one of the __NDD__ that deal a direct hit (everything else's status IS its damage)</td></tr>
       <tr><th>Family</th><td>dominant Tier-1 root traced through the recipe tree (colouring aid)</td></tr></table></div>
   </div>
 </section>
@@ -520,7 +550,7 @@ html = """<!DOCTYPE html>
 <section id="dd" class="mb-12">
   <h2 class="text-2xl font-bold text-amber-300 border-b border-amber-900 pb-2 mb-4">⑤ Damage-dealers (the only direct-hit elements)</h2>
   <div class="card p-5">
-    <p class="text-slate-400 mb-3 text-sm">22 of 132. <span class="mono">effective_damage = base × level</span> (multiplier vestigial). Everyone else returns 0 — their status carries the damage. Lv1/2/3 columns show how the hit scales with merges.</p>
+    <p class="text-slate-400 mb-3 text-sm">__NDD__ of __NEL__. <span class="mono">effective_damage = base × level</span> (multiplier vestigial). Everyone else returns 0 — their status carries the damage. Lv1/2/3 columns show how the hit scales with merges.</p>
     <table class="k text-sm"><tr><th>Element</th><th>Tier</th><th>Family</th><th>Base</th><th>Lv1</th><th>Lv2</th><th>Lv3</th><th>CD</th><th>Ability</th></tr>__DDROWS__</table>
   </div>
 </section>
@@ -535,12 +565,12 @@ html = """<!DOCTYPE html>
   <div class="card p-5 mt-6">
     <h3 class="text-lg font-semibold text-white mb-2">Trigger vocabulary</h3>
     <table class="k text-sm">
-      <tr><th>combat_start</th><td>fires once at t=0 — front-loaded setup (armor walls, deep curse, freezes).</td></tr>
-      <tr><th>periodic</th><td>first fire at +interval, then every interval. The DOT/control engines (lava, plague, storm).</td></tr>
-      <tr><th>passive</th><td>queried at the calc site — modifies a rule for the whole combat (Blaze burn+1, Plasma shock+3, Steel plating-vs-DOT).</td></tr>
-      <tr><th>passive_on_hit</th><td>% roll on every damage hit (seeded RNG) — Dust/Static/Flint/Pollen/Sand sprinkle a status.</td></tr>
-      <tr><th>on_activate</th><td>each fire (optional every_n) — compound on-fire payloads the single effect field can't hold.</td></tr>
-      <tr><th>on_* reactive</th><td>depth-1 reaction to an event: on_burn_applied, on_heal_applied, on_leech, on_poison_tick, on_armor_stripped, on_haste_applied, on_status_applied. The synergy chains.</td></tr>
+      <tr><th>combat_start</th><td>fires once at t=0 — reserved for TRUE setup since the 2026-06-12 rebalance: walls (boulder/brick), freezes (glacier/iceage), deep curse (void/voidrift), max-HP bulk (ironwood/ancientgrove).</td></tr>
+      <tr><th>periodic</th><td>first fire at +interval, then every interval. Capped at 3 iconic engines (lava, volcano, rainbow) — the element's own cooldown already provides "every X seconds", so on_activate carries that rhythm now.</td></tr>
+      <tr><th>passive</th><td>queried at the calc site — modifies a rule for the whole combat (Blaze burn+1, Plasma shock+3, Acid armor-no-regen, Tempest cleanse-proof shock) or carries an adjacency aura (Root/Obsidian/Primordial).</td></tr>
+      <tr><th>passive_on_hit</th><td>% roll on every damage hit (seeded RNG) — Dust/Static/Flint/Pollen/Sand/Haze sprinkle a status.</td></tr>
+      <tr><th>on_activate</th><td>each fire (optional every_n gate, optional multicast) — the workhorse trigger post-rebalance: rides the element's own cooldown. Build-up payoffs (Tsunami every 4th, Supernova every 3rd) create timing decisions.</td></tr>
+      <tr><th>on_* reactive</th><td>depth-1 reaction to an event: on_burn_applied, on_heal_applied, on_leech, on_damage_dealt, on_poison_tick, on_burn_tick, on_armor_stripped, on_haste_applied, on_status_applied. The synergy chains — now ~1/3 of the roster.</td></tr>
     </table>
     <p class="text-xs text-slate-500 mt-2">Multicast (×2 at T2/T3, ×3 at T4) repeats the whole fire, each repeat an independent reactive trigger. Reactives never re-trigger reactives (depth-1).</p>
   </div>
@@ -554,7 +584,7 @@ html = """<!DOCTYPE html>
 </section>
 
 <footer class="text-xs text-slate-600 border-t border-slate-800 pt-4 mt-8">
-  Generated from live data 2026-06-11 · ElementData.gd · RecipeData.gd · AbilityData.gd · EffectRegistry.gd · StatusSystem.gd · rebuild via <span class="mono">_build_elements_review.py</span>.
+  Generated from live data __DATE__ · ElementData.gd · RecipeData.gd · AbilityData.gd · EffectRegistry.gd · StatusSystem.gd · rebuild via <span class="mono">_build_elements_review.py</span>.
 </footer>
 </div>
 
@@ -635,6 +665,7 @@ repl = {
  "__GLOSSROWS__": "".join(gloss_rows),
  "__OBSCARDS__": "".join(OBS),
  "__NODES__": NODES_JSON, "__EDGES__": EDGES_JSON,
+ "__DATE__": TODAY_DASH,
 }
 # fix tier bar labels (avoid double name)
 repl["__TIERBARS__"] = bar_rows(Counter({TIER_NAME[t]:c for t,c in tier_counts.items()}), "#6366f1")

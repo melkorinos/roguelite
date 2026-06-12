@@ -25,6 +25,8 @@
       "Edit(systems/*.gd)",
       "Edit(scenes/**/*.gd)",
       "Edit(test/**/*.gd)",
+      "Edit(**/*.py)",
+      "Write(**/*.py)",
       "Edit(CONTEXT.md)",
       "Edit(*.md)",
       "Write(*.md)",
