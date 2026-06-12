@@ -15,7 +15,7 @@ const ELEMENTS: Array[Dictionary] = [
 		{ "id": "light",     "name": "Light",     "emoji": "☀️",  "tier": 1, "price": 5, "cooldown_deciseconds": 25, "damage": 1, "effect": "blind"    },
 		{ "id": "dark",      "name": "Dark",      "emoji": "🌑", "tier": 1, "price": 5, "cooldown_deciseconds": 30, "damage": 2, "effect": "curse"    },
 		{ "id": "metal",     "name": "Metal",     "emoji": "⚙️",  "tier": 1, "price": 5, "cooldown_deciseconds": 50, "damage": 3, "effect": "plating"  },
-		{ "id": "fungus",    "name": "Fungus",    "emoji": "🍄", "tier": 1, "price": 5, "cooldown_deciseconds": 35, "damage": 1, "effect": "poison"   },
+		{ "id": "fungus",    "name": "Fungus",    "emoji": "🍄", "tier": 1, "price": 5, "cooldown_deciseconds": 45, "damage": 1, "effect": "poison"   },
 		{ "id": "blood",     "name": "Blood",     "emoji": "🩸", "tier": 1, "price": 5, "cooldown_deciseconds": 25, "damage": 1, "effect": "leech"    },
 		{ "id": "frost",     "name": "Frost",     "emoji": "🌨️", "tier": 1, "price": 5, "cooldown_deciseconds": 30, "damage": 1, "effect": "weaken"   },
 		# ── Tier 2 — cross-combos (original 4 × original 4) ─────────────────────
@@ -41,7 +41,7 @@ const ELEMENTS: Array[Dictionary] = [
 		{ "id": "haze",         "name": "Haze",         "emoji": "💚",  "tier": 2, "price": 8, "cooldown_deciseconds": 20, "damage": 1 },
 		{ "id": "rootrot",      "name": "Rootrot",      "emoji": "🍂",  "tier": 2, "price": 8, "cooldown_deciseconds": 45, "damage": 2 },
 		# ── Tier 2 — cross-combos (Blood × all) ─────────────────────────────────
-		{ "id": "pulse",        "name": "Pulse",        "emoji": "💓",  "tier": 2, "price": 8, "cooldown_deciseconds": 30, "damage": 1 },
+		{ "id": "pulse",        "name": "Pulse",        "emoji": "💓",  "tier": 2, "price": 8, "cooldown_deciseconds": 30, "damage": 2 },
 		{ "id": "fever",        "name": "Fever",        "emoji": "🌡️",  "tier": 2, "price": 8, "cooldown_deciseconds": 25, "damage": 2 },
 		{ "id": "nightveil",    "name": "Nightveil",    "emoji": "💀",  "tier": 2, "price": 8, "cooldown_deciseconds": 30, "damage": 2 },
 		{ "id": "gore",         "name": "Gore",         "emoji": "⚔️",  "tier": 2, "price": 8, "cooldown_deciseconds": 30, "damage": 2, "effect": "leech" },
@@ -74,7 +74,7 @@ const ELEMENTS: Array[Dictionary] = [
 		{ "id": "steel",      "name": "Steel",       "emoji": "🔩", "tier": 2, "price": 8, "cooldown_deciseconds": 45, "damage": 4 },
 		{ "id": "mycelium",   "name": "Mycelium",    "emoji": "🕸️", "tier": 2, "price": 8, "cooldown_deciseconds": 15, "damage": 2 },
 		{ "id": "freeze",     "name": "Freeze",      "emoji": "❄️",  "tier": 2, "price": 8, "cooldown_deciseconds": 35, "damage": 2 },
-		{ "id": "ichor",      "name": "Ichor",        "emoji": "💉",  "tier": 2, "price": 8, "cooldown_deciseconds": 20, "damage": 2 },
+		{ "id": "ichor",      "name": "Ichor",        "emoji": "💉",  "tier": 2, "price": 8, "cooldown_deciseconds": 20, "damage": 1 },
 		# ── Tier 3 ──────────────────────────────────────────────────────────────
 		{ "id": "cloud",      "name": "Cloud",       "emoji": "☁️",  "tier": 3, "price": 12, "cooldown_deciseconds": 30, "damage": 2 },
 		{ "id": "geyser",     "name": "Geyser",      "emoji": "💦", "tier": 3, "price": 12, "cooldown_deciseconds": 60, "damage": 4 },
@@ -164,10 +164,14 @@ static func instantiate(element_id: String, level: int = 1) -> Dictionary:
 # "pure-effect" — its Status IS its damage (burn/poison ticks, etc.). A privilege of
 # some T2+ (impact/physical theme), skewed to higher tiers. See docs/adr (damage redesign).
 const DAMAGE_DEALERS: Dictionary = {
+	# T1
+	"blood": true,
 	# T2
-	"lava": true, "boulder": true, "molten": true, "steel": true, "gore": true,
+	"lava": true, "boulder": true, "molten": true, "steel": true,
+	"gore": true, "pulse": true, "nightveil": true, "fever": true, "ichor": true,
 	# T3
 	"volcano": true, "obsidian": true, "meteorite": true, "mountain": true, "tsunami": true, "glacier": true, "carnage": true,
+	"hemorrhage": true,
 	# T4
 	"iceage": true, "maelstrom": true, "tectonic": true, "supernova": true, "singularity": true,
 	"ragnarok": true, "primordial": true, "aether": true,

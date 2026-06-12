@@ -1,62 +1,188 @@
 {
   "board_slots": 6,
   "cross_tier_fights": 100,
-  "elapsed_seconds": 1104.609,
+  "elapsed_seconds": 788.144,
   "elements": [
     {
       "contrib": {
-        "blocked": 0.1,
+        "blocked": 0.95,
         "burn": 0.0,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
       },
-      "delta": 0.075,
-      "fires": 11.8,
+      "delta": 0.0666666666666667,
+      "fires": 12.1666666666667,
       "id": "water",
       "tier": 1,
-      "win_with": 0.6
+      "win_with": 0.575
     },
     {
       "contrib": {
-        "blocked": 0.0,
-        "burn": 11.4833333333333,
+        "blocked": 0.433333333333333,
+        "burn": 12.0333333333333,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
       },
-      "delta": 0.025,
-      "fires": 12.5833333333333,
+      "delta": 0.0333333333333333,
+      "fires": 12.95,
       "id": "fire",
       "tier": 1,
-      "win_with": 0.516666666666667
+      "win_with": 0.55
     },
     {
       "contrib": {
-        "blocked": 0.15,
+        "blocked": 0.183333333333333,
         "burn": 0.0,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
       },
-      "delta": -0.133333333333333,
-      "fires": 17.8,
+      "delta": -0.108333333333333,
+      "fires": 18.1666666666667,
       "id": "air",
       "tier": 1,
       "win_with": 0.408333333333333
     },
     {
       "contrib": {
+        "blocked": 0.683333333333333,
+        "burn": 0.0,
+        "direct": 0.0,
+        "heal": 0.0,
+        "poison": 0.0
+      },
+      "delta": -0.1,
+      "fires": 8.13333333333333,
+      "id": "earth",
+      "tier": 1,
+      "win_with": 0.358333333333333
+    },
+    {
+      "contrib": {
+        "blocked": 0.116666666666667,
+        "burn": 0.0,
+        "direct": 0.0,
+        "heal": 0.0,
+        "poison": 0.0
+      },
+      "delta": -0.0333333333333333,
+      "fires": 19.5333333333333,
+      "id": "lightning",
+      "tier": 1,
+      "win_with": 0.475
+    },
+    {
+      "contrib": {
+        "blocked": 0.0,
+        "burn": 0.0,
+        "direct": 0.0,
+        "heal": 8.9,
+        "poison": 0.0
+      },
+      "delta": -0.0333333333333333,
+      "fires": 8.9,
+      "id": "nature",
+      "tier": 1,
+      "win_with": 0.416666666666667
+    },
+    {
+      "contrib": {
+        "blocked": 0.316666666666667,
+        "burn": 0.0,
+        "direct": 0.0,
+        "heal": 0.0,
+        "poison": 0.0
+      },
+      "delta": 0.0333333333333333,
+      "fires": 13.8166666666667,
+      "id": "light",
+      "tier": 1,
+      "win_with": 0.566666666666667
+    },
+    {
+      "contrib": {
+        "blocked": 0.566666666666667,
+        "burn": 0.0,
+        "direct": 0.0,
+        "heal": 0.0,
+        "poison": 0.0
+      },
+      "delta": 0.0166666666666667,
+      "fires": 10.4666666666667,
+      "id": "dark",
+      "tier": 1,
+      "win_with": 0.533333333333333
+    },
+    {
+      "contrib": {
+        "blocked": 0.316666666666667,
+        "burn": 0.0,
+        "direct": 0.0,
+        "heal": 0.0,
+        "poison": 0.0
+      },
+      "delta": -0.0833333333333333,
+      "fires": 6.36666666666667,
+      "id": "metal",
+      "tier": 1,
+      "win_with": 0.4
+    },
+    {
+      "contrib": {
+        "blocked": 0.333333333333333,
+        "burn": 0.0,
+        "direct": 0.0,
+        "heal": 0.0,
+        "poison": 60.3666666666667
+      },
+      "delta": 0.208333333333333,
+      "fires": 6.05,
+      "id": "fungus",
+      "tier": 1,
+      "win_with": 0.725
+    },
+    {
+      "contrib": {
+        "blocked": 0.05,
+        "burn": 0.0,
+        "direct": 5.16666666666667,
+        "heal": 5.16666666666667,
+        "poison": 0.0
+      },
+      "delta": 0.025,
+      "fires": 13.1,
+      "id": "blood",
+      "tier": 1,
+      "win_with": 0.491666666666667
+    },
+    {
+      "contrib": {
+        "blocked": 0.05,
+        "burn": 0.0,
+        "direct": 0.0,
+        "heal": 0.0,
+        "poison": 0.0
+      },
+      "delta": -0.075,
+      "fires": 11.1833333333333,
+      "id": "frost",
+      "tier": 1,
+      "win_with": 0.416666666666667
+    },
+    {
+      "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
       },
-      "delta": -0.0583333333333333,
-      "fires": 7.8,
-      "id": "earth",
-      "tier": 1,
+      "delta": -0.0833333333333333,
+      "fires": 6.51666666666667,
+      "id": "steam",
+      "tier": 2,
       "win_with": 0.408333333333333
     },
     {
@@ -67,52 +193,10 @@
         "heal": 0.0,
         "poison": 0.0
       },
-      "delta": -0.0333333333333333,
-      "fires": 18.9,
-      "id": "lightning",
-      "tier": 1,
-      "win_with": 0.483333333333333
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 8.6,
-        "poison": 0.0
-      },
-      "delta": 0.0,
-      "fires": 8.6,
-      "id": "nature",
-      "tier": 1,
-      "win_with": 0.425
-    },
-    {
-      "contrib": {
-        "blocked": 0.0666666666666667,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": 0.05,
-      "fires": 13.75,
-      "id": "light",
-      "tier": 1,
-      "win_with": 0.575
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": 0.025,
-      "fires": 10.1333333333333,
-      "id": "dark",
-      "tier": 1,
+      "delta": 0.133333333333333,
+      "fires": 10.7666666666667,
+      "id": "rain",
+      "tier": 2,
       "win_with": 0.566666666666667
     },
     {
@@ -123,135 +207,9 @@
         "heal": 0.0,
         "poison": 0.0
       },
-      "delta": -0.0666666666666667,
-      "fires": 6.31666666666667,
-      "id": "metal",
-      "tier": 1,
-      "win_with": 0.425
-    },
-    {
-      "contrib": {
-        "blocked": 0.0333333333333333,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 67.1833333333333
-      },
-      "delta": 0.3,
-      "fires": 7.01666666666667,
-      "id": "fungus",
-      "tier": 1,
-      "win_with": 0.791666666666667
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": -0.116666666666667,
-      "fires": 12.8166666666667,
-      "id": "blood",
-      "tier": 1,
-      "win_with": 0.366666666666667
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": -0.0583333333333333,
-      "fires": 10.8166666666667,
-      "id": "frost",
-      "tier": 1,
-      "win_with": 0.408333333333333
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": -0.0416666666666667,
-      "fires": 9.18333333333333,
-      "id": "steam",
-      "tier": 2,
-      "win_with": 0.5
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": 0.108333333333333,
-      "fires": 12.6333333333333,
-      "id": "rain",
-      "tier": 2,
-      "win_with": 0.575
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": 0.025,
-      "fires": 7.91666666666667,
+      "delta": -0.025,
+      "fires": 6.25,
       "id": "mud",
-      "tier": 2,
-      "win_with": 0.4
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": 0.0,
-      "fires": 13.2333333333333,
-      "id": "smoke",
-      "tier": 2,
-      "win_with": 0.458333333333333
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 12.85,
-        "direct": 13.9833333333333,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": 0.108333333333333,
-      "fires": 6.33333333333333,
-      "id": "lava",
-      "tier": 2,
-      "win_with": 0.65
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": -0.00833333333333333,
-      "fires": 12.9666666666667,
-      "id": "dust",
       "tier": 2,
       "win_with": 0.533333333333333
     },
@@ -263,11 +221,25 @@
         "heal": 0.0,
         "poison": 0.0
       },
-      "delta": 0.0833333333333333,
-      "fires": 12.4,
-      "id": "surge",
+      "delta": 0.0583333333333333,
+      "fires": 10.75,
+      "id": "smoke",
       "tier": 2,
-      "win_with": 0.525
+      "win_with": 0.6
+    },
+    {
+      "contrib": {
+        "blocked": 0.0,
+        "burn": 28.2,
+        "direct": 12.5666666666667,
+        "heal": 0.0,
+        "poison": 0.0
+      },
+      "delta": 0.125,
+      "fires": 3.56666666666667,
+      "id": "lava",
+      "tier": 2,
+      "win_with": 0.633333333333333
     },
     {
       "contrib": {
@@ -277,135 +249,9 @@
         "heal": 0.0,
         "poison": 0.0
       },
-      "delta": -0.0333333333333333,
-      "fires": 12.8666666666667,
-      "id": "arc",
-      "tier": 2,
-      "win_with": 0.425
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": 0.0166666666666667,
-      "fires": 17.9333333333333,
-      "id": "static",
-      "tier": 2,
-      "win_with": 0.575
-    },
-    {
-      "contrib": {
-        "blocked": 0.683333333333333,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": 0.025,
-      "fires": 6.98333333333333,
-      "id": "lodestone",
-      "tier": 2,
-      "win_with": 0.475
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 4.0,
-        "poison": 0.0
-      },
-      "delta": 0.00833333333333333,
-      "fires": 8.31666666666667,
-      "id": "bloom",
-      "tier": 2,
-      "win_with": 0.491666666666667
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": -0.025,
-      "fires": 10.9,
-      "id": "ember",
-      "tier": 2,
-      "win_with": 0.416666666666667
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": 0.416666666666667,
-      "fires": 10.95,
-      "id": "pollen",
-      "tier": 2,
-      "win_with": 0.866666666666667
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": -0.05,
-      "fires": 7.08333333333333,
-      "id": "root",
-      "tier": 2,
-      "win_with": 0.516666666666667
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": 0.0333333333333333,
-      "fires": 23.3333333333333,
-      "id": "prism",
-      "tier": 2,
-      "win_with": 0.425
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 16.7166666666667,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": 0.116666666666667,
-      "fires": 13.7,
-      "id": "solar",
-      "tier": 2,
-      "win_with": 0.583333333333333
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": -0.0333333333333333,
-      "fires": 16.5333333333333,
-      "id": "aurora",
+      "delta": -0.00833333333333333,
+      "fires": 8.6,
+      "id": "dust",
       "tier": 2,
       "win_with": 0.383333333333333
     },
@@ -417,11 +263,11 @@
         "heal": 0.0,
         "poison": 0.0
       },
-      "delta": -0.0583333333333333,
-      "fires": 8.05,
-      "id": "crystal",
+      "delta": -0.0416666666666667,
+      "fires": 9.58333333333333,
+      "id": "surge",
       "tier": 2,
-      "win_with": 0.475
+      "win_with": 0.441666666666667
     },
     {
       "contrib": {
@@ -431,149 +277,9 @@
         "heal": 0.0,
         "poison": 0.0
       },
-      "delta": -0.00833333333333333,
-      "fires": 6.28333333333333,
-      "id": "abyss",
-      "tier": 2,
-      "win_with": 0.483333333333333
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": -0.1,
-      "fires": 9.96666666666667,
-      "id": "blight",
-      "tier": 2,
-      "win_with": 0.416666666666667
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": -0.116666666666667,
-      "fires": 13.2,
-      "id": "miasma",
-      "tier": 2,
-      "win_with": 0.3
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": -0.0833333333333333,
-      "fires": 8.15,
-      "id": "shade",
-      "tier": 2,
-      "win_with": 0.35
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": -0.025,
-      "fires": 7.7,
-      "id": "rust",
-      "tier": 2,
-      "win_with": 0.466666666666667
-    },
-    {
-      "contrib": {
-        "blocked": 5.25,
-        "burn": 0.0,
-        "direct": 13.6,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": 0.0916666666666667,
-      "fires": 6.53333333333333,
-      "id": "molten",
-      "tier": 2,
-      "win_with": 0.5
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 19.5,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": 0.0666666666666667,
-      "fires": 13.1833333333333,
-      "id": "shrapnel",
-      "tier": 2,
-      "win_with": 0.575
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 10.8833333333333,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": 0.00833333333333333,
-      "fires": 5.43333333333333,
-      "id": "flint",
-      "tier": 2,
-      "win_with": 0.525
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 95.8666666666667
-      },
-      "delta": 0.341666666666667,
-      "fires": 7.53333333333333,
-      "id": "sporeflow",
-      "tier": 2,
-      "win_with": 0.866666666666667
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": -0.0583333333333333,
-      "fires": 13.2166666666667,
-      "id": "fireshroom",
-      "tier": 2,
-      "win_with": 0.4
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": 0.00833333333333333,
-      "fires": 17.5333333333333,
-      "id": "haze",
+      "delta": 0.0416666666666667,
+      "fires": 13.2666666666667,
+      "id": "static",
       "tier": 2,
       "win_with": 0.516666666666667
     },
@@ -583,11 +289,25 @@
         "burn": 0.0,
         "direct": 0.0,
         "heal": 0.0,
-        "poison": 74.2166666666667
+        "poison": 0.0
       },
-      "delta": 0.308333333333333,
-      "fires": 6.5,
-      "id": "rootrot",
+      "delta": -0.108333333333333,
+      "fires": 7.46666666666667,
+      "id": "ember",
+      "tier": 2,
+      "win_with": 0.333333333333333
+    },
+    {
+      "contrib": {
+        "blocked": 0.0,
+        "burn": 0.0,
+        "direct": 0.0,
+        "heal": 0.0,
+        "poison": 0.0
+      },
+      "delta": 0.25,
+      "fires": 7.21666666666667,
+      "id": "pollen",
       "tier": 2,
       "win_with": 0.708333333333333
     },
@@ -599,9 +319,37 @@
         "heal": 0.0,
         "poison": 0.0
       },
-      "delta": -0.0166666666666667,
-      "fires": 9.95,
-      "id": "pulse",
+      "delta": -0.0833333333333333,
+      "fires": 4.88333333333333,
+      "id": "root",
+      "tier": 2,
+      "win_with": 0.433333333333333
+    },
+    {
+      "contrib": {
+        "blocked": 0.0,
+        "burn": 36.7,
+        "direct": 0.0,
+        "heal": 0.0,
+        "poison": 0.0
+      },
+      "delta": 0.141666666666667,
+      "fires": 9.46666666666667,
+      "id": "solar",
+      "tier": 2,
+      "win_with": 0.641666666666667
+    },
+    {
+      "contrib": {
+        "blocked": 0.0,
+        "burn": 0.0,
+        "direct": 0.0,
+        "heal": 0.0,
+        "poison": 0.0
+      },
+      "delta": -0.0916666666666667,
+      "fires": 5.56666666666667,
+      "id": "crystal",
       "tier": 2,
       "win_with": 0.466666666666667
     },
@@ -613,177 +361,9 @@
         "heal": 0.0,
         "poison": 0.0
       },
-      "delta": -0.05,
-      "fires": 13.7,
-      "id": "fever",
-      "tier": 2,
-      "win_with": 0.533333333333333
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
       "delta": -0.0583333333333333,
-      "fires": 17.1833333333333,
-      "id": "hemowind",
-      "tier": 2,
-      "win_with": 0.458333333333333
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": -0.0666666666666667,
-      "fires": 8.21666666666667,
-      "id": "ironblood",
-      "tier": 2,
-      "win_with": 0.4
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": -0.0583333333333333,
-      "fires": 16.35,
-      "id": "sparkblood",
-      "tier": 2,
-      "win_with": 0.341666666666667
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": -0.0166666666666667,
-      "fires": 11.6,
-      "id": "lifebloom",
-      "tier": 2,
-      "win_with": 0.516666666666667
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": -0.0833333333333333,
-      "fires": 11.9666666666667,
-      "id": "hemogoblin",
-      "tier": 2,
-      "win_with": 0.441666666666667
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": -0.0916666666666667,
-      "fires": 9.61666666666667,
-      "id": "nightveil",
-      "tier": 2,
-      "win_with": 0.441666666666667
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 15.9,
-        "heal": 16.9833333333333,
-        "poison": 0.0
-      },
-      "delta": 0.2,
-      "fires": 10.55,
-      "id": "gore",
-      "tier": 2,
-      "win_with": 0.641666666666667
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 3.85
-      },
-      "delta": -0.0166666666666667,
-      "fires": 11.4333333333333,
-      "id": "hemospore",
-      "tier": 2,
-      "win_with": 0.35
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": -0.00833333333333333,
-      "fires": 11.3666666666667,
-      "id": "frostbite",
-      "tier": 2,
-      "win_with": 0.5
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": -0.075,
-      "fires": 9.01666666666667,
-      "id": "blackice",
-      "tier": 2,
-      "win_with": 0.558333333333333
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": -0.0583333333333333,
-      "fires": 10.65,
-      "id": "frostburn",
-      "tier": 2,
-      "win_with": 0.375
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": -0.025,
-      "fires": 18.0666666666667,
-      "id": "razorwind",
+      "fires": 7.11666666666667,
+      "id": "blight",
       "tier": 2,
       "win_with": 0.391666666666667
     },
@@ -795,8 +375,176 @@
         "heal": 0.0,
         "poison": 0.0
       },
-      "delta": -0.0416666666666667,
-      "fires": 6.23333333333333,
+      "delta": -0.0833333333333333,
+      "fires": 6.0,
+      "id": "shade",
+      "tier": 2,
+      "win_with": 0.458333333333333
+    },
+    {
+      "contrib": {
+        "blocked": 0.0,
+        "burn": 0.0,
+        "direct": 0.0,
+        "heal": 0.0,
+        "poison": 0.0
+      },
+      "delta": -0.0333333333333333,
+      "fires": 5.05,
+      "id": "rust",
+      "tier": 2,
+      "win_with": 0.466666666666667
+    },
+    {
+      "contrib": {
+        "blocked": 11.75,
+        "burn": 0.0,
+        "direct": 13.9166666666667,
+        "heal": 0.0,
+        "poison": 0.0
+      },
+      "delta": 0.1,
+      "fires": 4.61666666666667,
+      "id": "molten",
+      "tier": 2,
+      "win_with": 0.533333333333333
+    },
+    {
+      "contrib": {
+        "blocked": 0.0,
+        "burn": 0.0,
+        "direct": 0.0,
+        "heal": 0.0,
+        "poison": 93.2666666666667
+      },
+      "delta": 0.35,
+      "fires": 5.11666666666667,
+      "id": "sporeflow",
+      "tier": 2,
+      "win_with": 0.791666666666667
+    },
+    {
+      "contrib": {
+        "blocked": 0.0,
+        "burn": 0.0,
+        "direct": 0.0,
+        "heal": 0.0,
+        "poison": 0.0
+      },
+      "delta": 0.0416666666666667,
+      "fires": 11.3833333333333,
+      "id": "haze",
+      "tier": 2,
+      "win_with": 0.608333333333333
+    },
+    {
+      "contrib": {
+        "blocked": 0.0,
+        "burn": 0.0,
+        "direct": 0.0,
+        "heal": 0.0,
+        "poison": 66.3166666666667
+      },
+      "delta": 0.233333333333333,
+      "fires": 3.93333333333333,
+      "id": "rootrot",
+      "tier": 2,
+      "win_with": 0.708333333333333
+    },
+    {
+      "contrib": {
+        "blocked": 0.0,
+        "burn": 0.0,
+        "direct": 13.6333333333333,
+        "heal": 0.0,
+        "poison": 0.0
+      },
+      "delta": 0.00833333333333333,
+      "fires": 7.28333333333333,
+      "id": "pulse",
+      "tier": 2,
+      "win_with": 0.575
+    },
+    {
+      "contrib": {
+        "blocked": 0.0,
+        "burn": 0.0,
+        "direct": 15.6833333333333,
+        "heal": 0.0,
+        "poison": 0.0
+      },
+      "delta": 0.025,
+      "fires": 9.66666666666667,
+      "id": "fever",
+      "tier": 2,
+      "win_with": 0.483333333333333
+    },
+    {
+      "contrib": {
+        "blocked": 0.0,
+        "burn": 0.0,
+        "direct": 13.4666666666667,
+        "heal": 0.0,
+        "poison": 0.0
+      },
+      "delta": 0.00833333333333333,
+      "fires": 7.15,
+      "id": "nightveil",
+      "tier": 2,
+      "win_with": 0.591666666666667
+    },
+    {
+      "contrib": {
+        "blocked": 0.0,
+        "burn": 0.0,
+        "direct": 12.9666666666667,
+        "heal": 13.9833333333333,
+        "poison": 0.0
+      },
+      "delta": 0.1,
+      "fires": 8.16666666666667,
+      "id": "gore",
+      "tier": 2,
+      "win_with": 0.566666666666667
+    },
+    {
+      "contrib": {
+        "blocked": 0.0,
+        "burn": 0.0,
+        "direct": 0.0,
+        "heal": 0.0,
+        "poison": 0.0
+      },
+      "delta": -0.116666666666667,
+      "fires": 7.53333333333333,
+      "id": "blackice",
+      "tier": 2,
+      "win_with": 0.433333333333333
+    },
+    {
+      "contrib": {
+        "blocked": 0.0,
+        "burn": 0.0,
+        "direct": 0.0,
+        "heal": 0.0,
+        "poison": 0.0
+      },
+      "delta": -0.141666666666667,
+      "fires": 8.2,
+      "id": "frostburn",
+      "tier": 2,
+      "win_with": 0.4
+    },
+    {
+      "contrib": {
+        "blocked": 0.0,
+        "burn": 0.0,
+        "direct": 0.0,
+        "heal": 0.0,
+        "poison": 0.0
+      },
+      "delta": -0.116666666666667,
+      "fires": 5.0,
       "id": "permafrost",
       "tier": 2,
       "win_with": 0.458333333333333
@@ -809,93 +557,9 @@
         "heal": 0.0,
         "poison": 0.0
       },
-      "delta": 0.025,
-      "fires": 26.6666666666667,
+      "delta": -0.025,
+      "fires": 18.6333333333333,
       "id": "hail",
-      "tier": 2,
-      "win_with": 0.541666666666667
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": -0.05,
-      "fires": 9.8,
-      "id": "chill",
-      "tier": 2,
-      "win_with": 0.508333333333333
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": -0.075,
-      "fires": 13.3166666666667,
-      "id": "whiteout",
-      "tier": 2,
-      "win_with": 0.383333333333333
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": 0.0,
-      "fires": 9.05,
-      "id": "wither",
-      "tier": 2,
-      "win_with": 0.483333333333333
-    },
-    {
-      "contrib": {
-        "blocked": 3.88333333333333,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": -0.00833333333333333,
-      "fires": 6.21666666666667,
-      "id": "tempered",
-      "tier": 2,
-      "win_with": 0.558333333333333
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": -0.0833333333333333,
-      "fires": 9.35,
-      "id": "cryptbloom",
-      "tier": 2,
-      "win_with": 0.325
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": -0.05,
-      "fires": 8.2,
-      "id": "murk",
       "tier": 2,
       "win_with": 0.475
     },
@@ -907,9 +571,233 @@
         "heal": 0.0,
         "poison": 0.0
       },
-      "delta": 0.0416666666666667,
-      "fires": 29.2666666666667,
+      "delta": -0.0833333333333333,
+      "fires": 8.91666666666667,
+      "id": "whiteout",
+      "tier": 2,
+      "win_with": 0.35
+    },
+    {
+      "contrib": {
+        "blocked": 0.0,
+        "burn": 0.0,
+        "direct": 0.0,
+        "heal": 0.0,
+        "poison": 0.0
+      },
+      "delta": -0.00833333333333333,
+      "fires": 6.68333333333333,
+      "id": "wither",
+      "tier": 2,
+      "win_with": 0.475
+    },
+    {
+      "contrib": {
+        "blocked": 19.8833333333333,
+        "burn": 0.0,
+        "direct": 0.0,
+        "heal": 0.0,
+        "poison": 0.0
+      },
+      "delta": -0.0333333333333333,
+      "fires": 4.53333333333333,
+      "id": "tempered",
+      "tier": 2,
+      "win_with": 0.441666666666667
+    },
+    {
+      "contrib": {
+        "blocked": 0.0,
+        "burn": 0.0,
+        "direct": 0.0,
+        "heal": 0.0,
+        "poison": 0.0
+      },
+      "delta": -0.0666666666666667,
+      "fires": 19.9,
       "id": "voltspore",
+      "tier": 2,
+      "win_with": 0.533333333333333
+    },
+    {
+      "contrib": {
+        "blocked": 0.0,
+        "burn": 0.0,
+        "direct": 0.0,
+        "heal": 0.0,
+        "poison": 0.0
+      },
+      "delta": -0.141666666666667,
+      "fires": 7.68333333333333,
+      "id": "photosynthesis",
+      "tier": 2,
+      "win_with": 0.408333333333333
+    },
+    {
+      "contrib": {
+        "blocked": 0.0,
+        "burn": 0.0,
+        "direct": 0.0,
+        "heal": 12.0,
+        "poison": 0.0
+      },
+      "delta": -0.0666666666666667,
+      "fires": 5.56666666666667,
+      "id": "ironwood",
+      "tier": 2,
+      "win_with": 0.375
+    },
+    {
+      "contrib": {
+        "blocked": 0.0,
+        "burn": 0.0,
+        "direct": 0.0,
+        "heal": 0.0,
+        "poison": 0.0
+      },
+      "delta": -0.0916666666666667,
+      "fires": 9.13333333333333,
+      "id": "lucent",
+      "tier": 2,
+      "win_with": 0.341666666666667
+    },
+    {
+      "contrib": {
+        "blocked": 0.0,
+        "burn": 0.0,
+        "direct": 0.0,
+        "heal": 0.0,
+        "poison": 0.0
+      },
+      "delta": -0.025,
+      "fires": 5.28333333333333,
+      "id": "hexcore",
+      "tier": 2,
+      "win_with": 0.475
+    },
+    {
+      "contrib": {
+        "blocked": 0.0,
+        "burn": 0.0,
+        "direct": 0.0,
+        "heal": 0.0,
+        "poison": 82.1166666666667
+      },
+      "delta": 0.266666666666667,
+      "fires": 5.56666666666667,
+      "id": "rot",
+      "tier": 2,
+      "win_with": 0.691666666666667
+    },
+    {
+      "contrib": {
+        "blocked": 0.0,
+        "burn": 0.0,
+        "direct": 0.0,
+        "heal": 0.0,
+        "poison": 0.0
+      },
+      "delta": -0.0166666666666667,
+      "fires": 7.96666666666667,
+      "id": "umbra",
+      "tier": 2,
+      "win_with": 0.341666666666667
+    },
+    {
+      "contrib": {
+        "blocked": 18.3333333333333,
+        "burn": 0.0,
+        "direct": 0.0,
+        "heal": 0.0,
+        "poison": 82.5333333333333
+      },
+      "delta": 0.308333333333333,
+      "fires": 5.78333333333333,
+      "id": "moldsteel",
+      "tier": 2,
+      "win_with": 0.708333333333333
+    },
+    {
+      "contrib": {
+        "blocked": 0.0,
+        "burn": 0.0,
+        "direct": 0.0,
+        "heal": 0.0,
+        "poison": 0.0
+      },
+      "delta": 0.0,
+      "fires": 7.06666666666667,
+      "id": "sea",
+      "tier": 2,
+      "win_with": 0.491666666666667
+    },
+    {
+      "contrib": {
+        "blocked": 0.0,
+        "burn": 0.0,
+        "direct": 0.0,
+        "heal": 0.0,
+        "poison": 0.0
+      },
+      "delta": -0.0333333333333333,
+      "fires": 30.0,
+      "id": "blaze",
+      "tier": 2,
+      "win_with": 0.433333333333333
+    },
+    {
+      "contrib": {
+        "blocked": 0.0,
+        "burn": 0.0,
+        "direct": 0.0,
+        "heal": 0.0,
+        "poison": 0.0
+      },
+      "delta": -0.108333333333333,
+      "fires": 15.5666666666667,
+      "id": "gust",
+      "tier": 2,
+      "win_with": 0.441666666666667
+    },
+    {
+      "contrib": {
+        "blocked": 5.1,
+        "burn": 0.0,
+        "direct": 13.9666666666667,
+        "heal": 0.0,
+        "poison": 0.0
+      },
+      "delta": -0.0666666666666667,
+      "fires": 3.43333333333333,
+      "id": "boulder",
+      "tier": 2,
+      "win_with": 0.441666666666667
+    },
+    {
+      "contrib": {
+        "blocked": 0.0,
+        "burn": 0.0,
+        "direct": 0.0,
+        "heal": 0.0,
+        "poison": 0.0
+      },
+      "delta": -0.0166666666666667,
+      "fires": 17.7166666666667,
+      "id": "plasma",
+      "tier": 2,
+      "win_with": 0.391666666666667
+    },
+    {
+      "contrib": {
+        "blocked": 0.0,
+        "burn": 0.0,
+        "direct": 0.0,
+        "heal": 9.2,
+        "poison": 0.0
+      },
+      "delta": -0.05,
+      "fires": 5.1,
+      "id": "forest",
       "tier": 2,
       "win_with": 0.516666666666667
     },
@@ -921,79 +809,9 @@
         "heal": 0.0,
         "poison": 0.0
       },
-      "delta": -0.0583333333333333,
-      "fires": 11.1,
-      "id": "photosynthesis",
-      "tier": 2,
-      "win_with": 0.483333333333333
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 6.0,
-        "poison": 0.0
-      },
-      "delta": -0.0416666666666667,
-      "fires": 7.21666666666667,
-      "id": "ironwood",
-      "tier": 2,
-      "win_with": 0.483333333333333
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": -0.0666666666666667,
-      "fires": 8.23333333333333,
-      "id": "beacon",
-      "tier": 2,
-      "win_with": 0.475
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": -0.0583333333333333,
-      "fires": 13.1833333333333,
-      "id": "lucent",
-      "tier": 2,
-      "win_with": 0.416666666666667
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": -0.00833333333333333,
-      "fires": 7.23333333333333,
-      "id": "hexcore",
-      "tier": 2,
-      "win_with": 0.441666666666667
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": -0.0666666666666667,
-      "fires": 10.6833333333333,
-      "id": "bloomspark",
+      "delta": 0.0333333333333333,
+      "fires": 12.4,
+      "id": "radiance",
       "tier": 2,
       "win_with": 0.458333333333333
     },
@@ -1005,177 +823,9 @@
         "heal": 0.0,
         "poison": 0.0
       },
-      "delta": -0.0666666666666667,
-      "fires": 11.0833333333333,
-      "id": "arcbeam",
-      "tier": 2,
-      "win_with": 0.358333333333333
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": -0.0416666666666667,
-      "fires": 10.9333333333333,
-      "id": "voidspark",
-      "tier": 2,
-      "win_with": 0.466666666666667
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": -0.1,
-      "fires": 11.4833333333333,
-      "id": "magnet",
-      "tier": 2,
-      "win_with": 0.483333333333333
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 90.85
-      },
-      "delta": 0.325,
-      "fires": 8.71666666666667,
-      "id": "rot",
-      "tier": 2,
-      "win_with": 0.825
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 19.0
-      },
-      "delta": -0.025,
-      "fires": 10.35,
-      "id": "wildrot",
-      "tier": 2,
-      "win_with": 0.525
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
       "delta": -0.05,
-      "fires": 11.6333333333333,
-      "id": "umbra",
-      "tier": 2,
-      "win_with": 0.491666666666667
-    },
-    {
-      "contrib": {
-        "blocked": 7.48333333333333,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 93.4
-      },
-      "delta": 0.383333333333333,
-      "fires": 9.08333333333333,
-      "id": "moldsteel",
-      "tier": 2,
-      "win_with": 0.875
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": -0.00833333333333333,
-      "fires": 7.85,
-      "id": "sea",
-      "tier": 2,
-      "win_with": 0.541666666666667
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": -0.0166666666666667,
-      "fires": 41.9333333333333,
-      "id": "blaze",
-      "tier": 2,
-      "win_with": 0.441666666666667
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": -0.025,
-      "fires": 20.7333333333333,
-      "id": "gust",
-      "tier": 2,
-      "win_with": 0.541666666666667
-    },
-    {
-      "contrib": {
-        "blocked": 1.56666666666667,
-        "burn": 0.0,
-        "direct": 14.4666666666667,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": 0.0166666666666667,
-      "fires": 4.95,
-      "id": "boulder",
-      "tier": 2,
-      "win_with": 0.608333333333333
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": -0.0416666666666667,
-      "fires": 26.2166666666667,
-      "id": "plasma",
-      "tier": 2,
-      "win_with": 0.483333333333333
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 6.53333333333333,
-        "poison": 0.0
-      },
-      "delta": -0.00833333333333333,
-      "fires": 7.06666666666667,
-      "id": "forest",
+      "fires": 6.18333333333333,
+      "id": "void",
       "tier": 2,
       "win_with": 0.408333333333333
     },
@@ -1183,99 +833,15 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
-        "direct": 0.0,
+        "direct": 17.2,
         "heal": 0.0,
         "poison": 0.0
       },
       "delta": 0.05,
-      "fires": 18.0666666666667,
-      "id": "radiance",
-      "tier": 2,
-      "win_with": 0.5
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": -0.025,
-      "fires": 8.38333333333333,
-      "id": "void",
-      "tier": 2,
-      "win_with": 0.541666666666667
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 23.7333333333333,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": 0.05,
-      "fires": 7.1,
+      "fires": 5.16666666666667,
       "id": "steel",
       "tier": 2,
-      "win_with": 0.625
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": -0.0583333333333333,
-      "fires": 21.1166666666667,
-      "id": "mycelium",
-      "tier": 2,
-      "win_with": 0.416666666666667
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": -0.0333333333333333,
-      "fires": 9.93333333333333,
-      "id": "freeze",
-      "tier": 2,
-      "win_with": 0.466666666666667
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": -0.0583333333333333,
-      "fires": 32.0333333333333,
-      "id": "ichor",
-      "tier": 2,
-      "win_with": 0.416666666666667
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": -0.05,
-      "fires": 8.6,
-      "id": "cloud",
-      "tier": 3,
-      "win_with": 0.4
+      "win_with": 0.458333333333333
     },
     {
       "contrib": {
@@ -1286,10 +852,66 @@
         "poison": 0.0
       },
       "delta": -0.0833333333333333,
-      "fires": 4.65,
+      "fires": 14.9333333333333,
+      "id": "mycelium",
+      "tier": 2,
+      "win_with": 0.483333333333333
+    },
+    {
+      "contrib": {
+        "blocked": 0.0,
+        "burn": 0.0,
+        "direct": 0.0,
+        "heal": 0.0,
+        "poison": 0.0
+      },
+      "delta": 0.025,
+      "fires": 6.75,
+      "id": "freeze",
+      "tier": 2,
+      "win_with": 0.558333333333333
+    },
+    {
+      "contrib": {
+        "blocked": 0.0,
+        "burn": 0.0,
+        "direct": 24.75,
+        "heal": 0.0,
+        "poison": 0.0
+      },
+      "delta": 0.0833333333333333,
+      "fires": 21.1333333333333,
+      "id": "ichor",
+      "tier": 2,
+      "win_with": 0.533333333333333
+    },
+    {
+      "contrib": {
+        "blocked": 0.0,
+        "burn": 0.0,
+        "direct": 0.0,
+        "heal": 0.0,
+        "poison": 0.0
+      },
+      "delta": -0.0666666666666667,
+      "fires": 6.08333333333333,
+      "id": "cloud",
+      "tier": 3,
+      "win_with": 0.35
+    },
+    {
+      "contrib": {
+        "blocked": 0.0,
+        "burn": 0.0,
+        "direct": 0.0,
+        "heal": 0.0,
+        "poison": 0.0
+      },
+      "delta": -0.133333333333333,
+      "fires": 3.26666666666667,
       "id": "geyser",
       "tier": 3,
-      "win_with": 0.441666666666667
+      "win_with": 0.316666666666667
     },
     {
       "contrib": {
@@ -1299,93 +921,23 @@
         "heal": 0.0,
         "poison": 0.0
       },
-      "delta": -0.05,
-      "fires": 8.08333333333333,
+      "delta": -0.108333333333333,
+      "fires": 5.85,
       "id": "fog",
       "tier": 3,
-      "win_with": 0.433333333333333
+      "win_with": 0.391666666666667
     },
     {
       "contrib": {
-        "blocked": 2.6,
+        "blocked": 6.1,
         "burn": 0.0,
         "direct": 0.0,
-        "heal": 16.05,
+        "heal": 37.05,
         "poison": 0.0
       },
-      "delta": 0.0916666666666667,
-      "fires": 6.75,
+      "delta": 0.1,
+      "fires": 5.08333333333333,
       "id": "rainbow",
-      "tier": 3,
-      "win_with": 0.55
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": -0.0583333333333333,
-      "fires": 10.8666666666667,
-      "id": "storm",
-      "tier": 3,
-      "win_with": 0.491666666666667
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 6.83333333333333,
-        "poison": 0.0
-      },
-      "delta": -0.0333333333333333,
-      "fires": 7.26666666666667,
-      "id": "plant",
-      "tier": 3,
-      "win_with": 0.441666666666667
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": -0.0416666666666667,
-      "fires": 5.36666666666667,
-      "id": "swamp",
-      "tier": 3,
-      "win_with": 0.541666666666667
-    },
-    {
-      "contrib": {
-        "blocked": 14.1833333333333,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": -0.0166666666666667,
-      "fires": 4.63333333333333,
-      "id": "brick",
-      "tier": 3,
-      "win_with": 0.408333333333333
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": -0.075,
-      "fires": 12.2666666666667,
-      "id": "ash",
       "tier": 3,
       "win_with": 0.575
     },
@@ -1397,39 +949,109 @@
         "heal": 0.0,
         "poison": 0.0
       },
+      "delta": -0.0583333333333333,
+      "fires": 6.98333333333333,
+      "id": "storm",
+      "tier": 3,
+      "win_with": 0.466666666666667
+    },
+    {
+      "contrib": {
+        "blocked": 0.0,
+        "burn": 0.0,
+        "direct": 0.0,
+        "heal": 13.9,
+        "poison": 0.0
+      },
+      "delta": 0.0666666666666667,
+      "fires": 5.25,
+      "id": "plant",
+      "tier": 3,
+      "win_with": 0.533333333333333
+    },
+    {
+      "contrib": {
+        "blocked": 0.0,
+        "burn": 0.0,
+        "direct": 0.0,
+        "heal": 0.0,
+        "poison": 0.0
+      },
+      "delta": -0.0416666666666667,
+      "fires": 3.75,
+      "id": "swamp",
+      "tier": 3,
+      "win_with": 0.533333333333333
+    },
+    {
+      "contrib": {
+        "blocked": 28.9666666666667,
+        "burn": 0.0,
+        "direct": 0.0,
+        "heal": 0.0,
+        "poison": 0.0
+      },
+      "delta": 0.0166666666666667,
+      "fires": 3.23333333333333,
+      "id": "brick",
+      "tier": 3,
+      "win_with": 0.416666666666667
+    },
+    {
+      "contrib": {
+        "blocked": 0.0,
+        "burn": 0.0,
+        "direct": 0.0,
+        "heal": 0.0,
+        "poison": 0.0
+      },
+      "delta": -0.00833333333333333,
+      "fires": 8.11666666666667,
+      "id": "ash",
+      "tier": 3,
+      "win_with": 0.591666666666667
+    },
+    {
+      "contrib": {
+        "blocked": 0.0,
+        "burn": 0.0,
+        "direct": 0.0,
+        "heal": 0.0,
+        "poison": 0.0
+      },
       "delta": -0.125,
-      "fires": 9.08333333333333,
+      "fires": 6.5,
       "id": "acid",
       "tier": 3,
-      "win_with": 0.425
+      "win_with": 0.458333333333333
     },
     {
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
-        "direct": 8.15,
+        "direct": 12.7833333333333,
         "heal": 0.0,
         "poison": 0.0
       },
-      "delta": -0.0666666666666667,
-      "fires": 3.98333333333333,
+      "delta": -0.0583333333333333,
+      "fires": 2.65,
       "id": "obsidian",
       "tier": 3,
-      "win_with": 0.408333333333333
+      "win_with": 0.375
     },
     {
       "contrib": {
         "blocked": 0.0,
-        "burn": 35.75,
-        "direct": 19.9166666666667,
+        "burn": 86.7,
+        "direct": 17.65,
         "heal": 0.0,
         "poison": 0.0
       },
-      "delta": 0.275,
-      "fires": 5.7,
+      "delta": 0.35,
+      "fires": 2.16666666666667,
       "id": "volcano",
       "tier": 3,
-      "win_with": 0.741666666666667
+      "win_with": 0.841666666666667
     },
     {
       "contrib": {
@@ -1439,79 +1061,9 @@
         "heal": 0.0,
         "poison": 0.0
       },
-      "delta": 0.025,
-      "fires": 8.23333333333333,
+      "delta": -0.0583333333333333,
+      "fires": 5.1,
       "id": "sand",
-      "tier": 3,
-      "win_with": 0.491666666666667
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": 0.0583333333333333,
-      "fires": 10.4166666666667,
-      "id": "sandstorm",
-      "tier": 3,
-      "win_with": 0.541666666666667
-    },
-    {
-      "contrib": {
-        "blocked": 1.35,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": -0.133333333333333,
-      "fires": 6.48333333333333,
-      "id": "clay",
-      "tier": 3,
-      "win_with": 0.425
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 8.61666666666667,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": -0.025,
-      "fires": 3.65,
-      "id": "glacier",
-      "tier": 3,
-      "win_with": 0.441666666666667
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": 0.025,
-      "fires": 17.1666666666667,
-      "id": "blizzard",
-      "tier": 3,
-      "win_with": 0.583333333333333
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": -0.0833333333333333,
-      "fires": 5.15,
-      "id": "tundra",
       "tier": 3,
       "win_with": 0.475
     },
@@ -1523,39 +1075,39 @@
         "heal": 0.0,
         "poison": 0.0
       },
-      "delta": -0.0916666666666667,
-      "fires": 5.23333333333333,
-      "id": "rainforest",
+      "delta": 0.05,
+      "fires": 6.66666666666667,
+      "id": "sandstorm",
       "tier": 3,
-      "win_with": 0.466666666666667
+      "win_with": 0.541666666666667
     },
     {
       "contrib": {
-        "blocked": 1.43333333333333,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 10.0,
-        "poison": 0.0
-      },
-      "delta": -0.00833333333333333,
-      "fires": 4.05,
-      "id": "ancientgrove",
-      "tier": 3,
-      "win_with": 0.566666666666667
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
+        "blocked": 2.9,
         "burn": 0.0,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
       },
       "delta": -0.0583333333333333,
-      "fires": 11.2833333333333,
-      "id": "hurricane",
+      "fires": 4.91666666666667,
+      "id": "clay",
       "tier": 3,
-      "win_with": 0.491666666666667
+      "win_with": 0.483333333333333
+    },
+    {
+      "contrib": {
+        "blocked": 0.0,
+        "burn": 0.0,
+        "direct": 12.3833333333333,
+        "heal": 0.0,
+        "poison": 0.0
+      },
+      "delta": -0.0166666666666667,
+      "fires": 2.56666666666667,
+      "id": "glacier",
+      "tier": 3,
+      "win_with": 0.466666666666667
     },
     {
       "contrib": {
@@ -1565,37 +1117,93 @@
         "heal": 0.0,
         "poison": 0.0
       },
-      "delta": -0.116666666666667,
-      "fires": 11.9833333333333,
-      "id": "tempest",
+      "delta": 0.075,
+      "fires": 12.5333333333333,
+      "id": "blizzard",
+      "tier": 3,
+      "win_with": 0.608333333333333
+    },
+    {
+      "contrib": {
+        "blocked": 0.0,
+        "burn": 0.0,
+        "direct": 0.0,
+        "heal": 0.0,
+        "poison": 0.0
+      },
+      "delta": -0.133333333333333,
+      "fires": 3.95,
+      "id": "tundra",
+      "tier": 3,
+      "win_with": 0.433333333333333
+    },
+    {
+      "contrib": {
+        "blocked": 0.0,
+        "burn": 0.0,
+        "direct": 0.0,
+        "heal": 0.0,
+        "poison": 0.0
+      },
+      "delta": -0.158333333333333,
+      "fires": 3.66666666666667,
+      "id": "rainforest",
       "tier": 3,
       "win_with": 0.383333333333333
     },
     {
       "contrib": {
-        "blocked": 0.0,
+        "blocked": 4.76666666666667,
         "burn": 0.0,
-        "direct": 11.3666666666667,
-        "heal": 0.0,
+        "direct": 0.0,
+        "heal": 30.0,
         "poison": 0.0
       },
-      "delta": 0.00833333333333333,
-      "fires": 3.5,
-      "id": "mountain",
+      "delta": 0.0666666666666667,
+      "fires": 3.13333333333333,
+      "id": "ancientgrove",
       "tier": 3,
-      "win_with": 0.525
+      "win_with": 0.608333333333333
     },
     {
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
-        "direct": 14.1166666666667,
+        "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
       },
-      "delta": 0.025,
-      "fires": 4.1,
-      "id": "tsunami",
+      "delta": -0.0416666666666667,
+      "fires": 7.85,
+      "id": "hurricane",
+      "tier": 3,
+      "win_with": 0.433333333333333
+    },
+    {
+      "contrib": {
+        "blocked": 0.0,
+        "burn": 0.0,
+        "direct": 0.0,
+        "heal": 0.0,
+        "poison": 0.0
+      },
+      "delta": -0.125,
+      "fires": 9.26666666666667,
+      "id": "tempest",
+      "tier": 3,
+      "win_with": 0.358333333333333
+    },
+    {
+      "contrib": {
+        "blocked": 0.0,
+        "burn": 0.0,
+        "direct": 19.7166666666667,
+        "heal": 0.0,
+        "poison": 0.0
+      },
+      "delta": 0.0,
+      "fires": 2.58333333333333,
+      "id": "mountain",
       "tier": 3,
       "win_with": 0.491666666666667
     },
@@ -1603,69 +1211,27 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
+        "direct": 19.2,
+        "heal": 0.0,
+        "poison": 0.0
+      },
+      "delta": -0.00833333333333333,
+      "fires": 2.55,
+      "id": "tsunami",
+      "tier": 3,
+      "win_with": 0.408333333333333
+    },
+    {
+      "contrib": {
+        "blocked": 0.0,
+        "burn": 0.0,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
       },
-      "delta": 0.0166666666666667,
-      "fires": 6.68333333333333,
+      "delta": 0.025,
+      "fires": 4.41666666666667,
       "id": "eclipse",
-      "tier": 3,
-      "win_with": 0.508333333333333
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": 0.0,
-      "fires": 5.96666666666667,
-      "id": "voidrift",
-      "tier": 3,
-      "win_with": 0.45
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 114.616666666667
-      },
-      "delta": 0.5,
-      "fires": 7.73333333333333,
-      "id": "plague",
-      "tier": 3,
-      "win_with": 0.883333333333333
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": -0.05,
-      "fires": 4.73333333333333,
-      "id": "underrot",
-      "tier": 3,
-      "win_with": 0.425
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 4.55,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": -0.05,
-      "fires": 9.68333333333333,
-      "id": "inferno",
       "tier": 3,
       "win_with": 0.483333333333333
     },
@@ -1677,123 +1243,179 @@
         "heal": 0.0,
         "poison": 0.0
       },
-      "delta": -0.108333333333333,
-      "fires": 7.66666666666667,
-      "id": "hemorrhage",
+      "delta": 0.0166666666666667,
+      "fires": 4.31666666666667,
+      "id": "voidrift",
       "tier": 3,
-      "win_with": 0.408333333333333
+      "win_with": 0.466666666666667
     },
     {
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
-        "direct": 20.6166666666667,
+        "direct": 0.0,
         "heal": 0.0,
-        "poison": 0.0
+        "poison": 107.683333333333
       },
-      "delta": 0.0916666666666667,
-      "fires": 13.0666666666667,
-      "id": "carnage",
+      "delta": 0.366666666666667,
+      "fires": 4.03333333333333,
+      "id": "plague",
       "tier": 3,
-      "win_with": 0.55
+      "win_with": 0.791666666666667
     },
     {
       "contrib": {
-        "blocked": 6.43333333333333,
+        "blocked": 0.0,
         "burn": 0.0,
-        "direct": 14.5,
+        "direct": 0.0,
+        "heal": 0.0,
+        "poison": 0.0
+      },
+      "delta": -0.0333333333333333,
+      "fires": 3.1,
+      "id": "underrot",
+      "tier": 3,
+      "win_with": 0.5
+    },
+    {
+      "contrib": {
+        "blocked": 0.0,
+        "burn": 5.68333333333333,
+        "direct": 0.0,
+        "heal": 0.0,
+        "poison": 0.0
+      },
+      "delta": -0.133333333333333,
+      "fires": 6.11666666666667,
+      "id": "inferno",
+      "tier": 3,
+      "win_with": 0.433333333333333
+    },
+    {
+      "contrib": {
+        "blocked": 0.0,
+        "burn": 0.0,
+        "direct": 20.7,
+        "heal": 0.0,
+        "poison": 0.0
+      },
+      "delta": -0.05,
+      "fires": 5.05,
+      "id": "hemorrhage",
+      "tier": 3,
+      "win_with": 0.491666666666667
+    },
+    {
+      "contrib": {
+        "blocked": 0.0,
+        "burn": 0.0,
+        "direct": 32.85,
         "heal": 0.0,
         "poison": 0.0
       },
       "delta": 0.0,
-      "fires": 4.83333333333333,
-      "id": "meteorite",
+      "fires": 9.6,
+      "id": "carnage",
       "tier": 3,
       "win_with": 0.516666666666667
     },
     {
       "contrib": {
-        "blocked": 0.0,
+        "blocked": 13.1,
         "burn": 0.0,
-        "direct": 10.5666666666667,
+        "direct": 25.2166666666667,
         "heal": 0.0,
         "poison": 0.0
       },
-      "delta": 0.025,
-      "fires": 2.0,
+      "delta": 0.108333333333333,
+      "fires": 3.58333333333333,
+      "id": "meteorite",
+      "tier": 3,
+      "win_with": 0.583333333333333
+    },
+    {
+      "contrib": {
+        "blocked": 0.0,
+        "burn": 0.0,
+        "direct": 10.5833333333333,
+        "heal": 0.0,
+        "poison": 0.0
+      },
+      "delta": 0.125,
+      "fires": 0.533333333333333,
       "id": "iceage",
       "tier": 4,
-      "win_with": 0.458333333333333
+      "win_with": 0.591666666666667
     },
     {
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
-        "direct": 52.4,
+        "direct": 63.0166666666667,
         "heal": 0.0,
         "poison": 0.0
       },
-      "delta": 0.358333333333333,
-      "fires": 17.25,
+      "delta": 0.325,
+      "fires": 6.35,
       "id": "maelstrom",
       "tier": 4,
-      "win_with": 0.816666666666667
+      "win_with": 0.858333333333333
     },
     {
       "contrib": {
-        "blocked": 1.93333333333333,
+        "blocked": 2.53333333333333,
         "burn": 0.0,
-        "direct": 7.85,
+        "direct": 8.35,
         "heal": 0.0,
         "poison": 0.0
       },
-      "delta": -0.0416666666666667,
-      "fires": 1.36666666666667,
+      "delta": -0.0916666666666667,
+      "fires": 0.35,
       "id": "tectonic",
       "tier": 4,
-      "win_with": 0.583333333333333
+      "win_with": 0.558333333333333
     },
     {
       "contrib": {
         "blocked": 0.0,
-        "burn": 2.95,
-        "direct": 13.7166666666667,
+        "burn": 1.58333333333333,
+        "direct": 17.5,
         "heal": 0.0,
         "poison": 0.0
       },
-      "delta": 0.0916666666666667,
-      "fires": 2.81666666666667,
+      "delta": -0.0166666666666667,
+      "fires": 0.95,
       "id": "supernova",
       "tier": 4,
-      "win_with": 0.583333333333333
+      "win_with": 0.508333333333333
     },
     {
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
-        "direct": 9.46666666666667,
+        "direct": 10.7833333333333,
         "heal": 0.0,
+        "poison": 0.0
+      },
+      "delta": 0.0,
+      "fires": 0.6,
+      "id": "singularity",
+      "tier": 4,
+      "win_with": 0.45
+    },
+    {
+      "contrib": {
+        "blocked": 0.0,
+        "burn": 0.0,
+        "direct": 0.0,
+        "heal": 13.8666666666667,
         "poison": 0.0
       },
       "delta": -0.075,
-      "fires": 2.01666666666667,
-      "id": "singularity",
-      "tier": 4,
-      "win_with": 0.408333333333333
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 10.4666666666667,
-        "poison": 0.0
-      },
-      "delta": -0.0666666666666667,
-      "fires": 2.61666666666667,
+      "fires": 0.866666666666667,
       "id": "worldtree",
       "tier": 4,
-      "win_with": 0.4
+      "win_with": 0.383333333333333
     },
     {
       "contrib": {
@@ -1803,81 +1425,81 @@
         "heal": 0.0,
         "poison": 0.0
       },
-      "delta": -0.175,
-      "fires": 3.98333333333333,
+      "delta": -0.133333333333333,
+      "fires": 1.46666666666667,
       "id": "pandemic",
       "tier": 4,
-      "win_with": 0.375
+      "win_with": 0.45
     },
     {
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
-        "direct": 16.8333333333333,
+        "direct": 23.0333333333333,
         "heal": 0.0,
         "poison": 0.0
       },
-      "delta": -0.05,
-      "fires": 4.03333333333333,
+      "delta": -0.0333333333333333,
+      "fires": 1.68333333333333,
       "id": "ragnarok",
       "tier": 4,
-      "win_with": 0.475
+      "win_with": 0.525
     },
     {
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
-        "direct": 8.83333333333333,
+        "direct": 12.2,
         "heal": 0.0,
         "poison": 0.0
       },
       "delta": -0.0416666666666667,
-      "fires": 1.85,
+      "fires": 0.65,
       "id": "primordial",
       "tier": 4,
-      "win_with": 0.541666666666667
+      "win_with": 0.558333333333333
     },
     {
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
-        "direct": 15.2166666666667,
+        "direct": 20.7833333333333,
         "heal": 0.0,
         "poison": 0.0
       },
-      "delta": -0.1,
-      "fires": 4.4,
+      "delta": 0.0,
+      "fires": 1.61666666666667,
       "id": "aether",
       "tier": 4,
-      "win_with": 0.45
+      "win_with": 0.591666666666667
     }
   ],
   "mirror_hp": 130,
   "samples_per_element": 60,
   "tier_matrix": {
     "1": {
-      "1": 0.485,
-      "2": 0.545,
-      "3": 0.42,
-      "4": 0.095
+      "1": 0.49,
+      "2": 0.24,
+      "3": 0.16,
+      "4": 0.0
     },
     "2": {
-      "1": 0.495,
-      "2": 0.45,
-      "3": 0.32,
-      "4": 0.145
+      "1": 0.8,
+      "2": 0.47,
+      "3": 0.23,
+      "4": 0.065
     },
     "3": {
-      "1": 0.625,
-      "2": 0.665,
-      "3": 0.505,
-      "4": 0.275
+      "1": 0.865,
+      "2": 0.705,
+      "3": 0.495,
+      "4": 0.27
     },
     "4": {
-      "1": 0.905,
-      "2": 0.805,
-      "3": 0.74,
-      "4": 0.565
+      "1": 0.99,
+      "2": 0.915,
+      "3": 0.715,
+      "4": 0.575
     }
   }
 }
