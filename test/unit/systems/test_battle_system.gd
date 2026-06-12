@@ -372,15 +372,15 @@ func test_on_activate_ability_applies_through_tick() -> void:
 	assert_eq(((s["opponent_statuses"] as Dictionary)["poison"] as Dictionary)["stacks"] as int, 1)
 
 
-func test_shrapnel_applies_shock_only_every_third_fire() -> void:
-	var st := PhaseSystem.to_battle(_state_with_player_element("shrapnel"), _fixture())
+func test_storm_applies_shock_only_every_third_fire() -> void:
+	var st := PhaseSystem.to_battle(_state_with_player_element("storm"), _fixture())
 	_silence_opponent(st)
-	var cooldown: float = float(ElementData.find("shrapnel")["cooldown_deciseconds"] as int) / 10.0
+	var cooldown: float = float(ElementData.find("storm")["cooldown_deciseconds"] as int) / 10.0
 	var s := BattleSystem.tick_battle(st, cooldown)        # fire 1
 	s = BattleSystem.tick_battle(s, cooldown)              # fire 2
 	assert_eq(((s["opponent_statuses"] as Dictionary)["shock"] as Dictionary)["n"] as int, 0, "no shock before the 3rd fire")
-	s = BattleSystem.tick_battle(s, cooldown)              # fire 3 → shock
-	assert_eq(((s["opponent_statuses"] as Dictionary)["shock"] as Dictionary)["n"] as int, 1, "shock on the 3rd fire")
+	s = BattleSystem.tick_battle(s, cooldown)              # fire 3 → 2 shock × T3 potency 3
+	assert_eq(((s["opponent_statuses"] as Dictionary)["shock"] as Dictionary)["n"] as int, 6, "shock lands on the 3rd fire")
 
 
 func test_rainbow_periodic_heals_and_armors_own_side() -> void:

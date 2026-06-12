@@ -82,15 +82,17 @@ static func _side_keys(side: String) -> Dictionary:
 	return CombatSide.keys(side)
 
 
-# The Level of the element at source_slot on its side — the potency for status scaling.
+# The potency of the element at source_slot on its side — Level × tier multiplier
+# (ElementData.scaled_potency), the quantity scalar for every status application.
 # 1 when the slot is unknown (-1) or empty.
-static func _source_level(state: Dictionary, source_side: String, source_slot: int) -> int:
+static func _source_potency(state: Dictionary, source_side: String, source_slot: int) -> int:
 	if source_slot < 0:
 		return 1
 	var grid: Array = state.get(CombatSide.keys(source_side)["grid"], []) as Array
 	if source_slot >= grid.size() or grid[source_slot] == null:
 		return 1
-	return maxi(1, (grid[source_slot] as Dictionary).get("level", 1) as int)
+	var element: Dictionary = grid[source_slot] as Dictionary
+	return ElementData.scaled_potency(element.get("tier", 1) as int, element.get("level", 1) as int)
 
 
 # ── effect application (mutates the passed state) ─────────────────────────────
@@ -223,10 +225,10 @@ static func adjacent_damage_bonus(grid: Array, slot: int) -> int:
 
 
 # source_slot >= 0 attributes the applied statuses to that element's Summary row.
-# `potency` (the source element's Level) scales every status quantity applied here — a
-# Lv-N element applies N stacks/points. Derived from source_slot; 1 when unknown.
+# `potency` (Level × tier multiplier) scales every status quantity applied here.
+# Derived from source_slot; 1 when unknown.
 static func _apply_effects(state: Dictionary, effects: Array, source_side: String, source_slot: int = -1) -> void:
-	var potency: int = _source_level(state, source_side, source_slot)
+	var potency: int = _source_potency(state, source_side, source_slot)
 	# Own-side HP delta over this application is the source element's healing (heal +
 	# leech) — credited to its heal Contribution. Raw, so overheal counts.
 	var own_hp_key: String = _side_keys(source_side)["hp"] as String
@@ -506,10 +508,12 @@ static func on_hit_status_chances(grid: Array) -> Array:
 			continue
 		for effect: Variant in ability.get("effects", []) as Array:
 			var e: Dictionary = effect as Dictionary
+			var element: Dictionary = slot as Dictionary
 			chances.append({
 				"status": e["status"] as String,
 				"chance": e.get("chance", 0) as int,
 				"target": e.get("target", "opponent") as String,
-				"level": (slot as Dictionary).get("level", 1) as int,  # potency for status scaling
+				# potency for status scaling — Level × tier multiplier
+				"potency": ElementData.scaled_potency(element.get("tier", 1) as int, element.get("level", 1) as int),
 			})
 	return chances

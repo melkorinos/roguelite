@@ -27,66 +27,39 @@ const ELEMENTS: Array[Dictionary] = [
 		{ "id": "dust",       "name": "Dust",        "emoji": "💨", "tier": 2, "price": 8, "cooldown_deciseconds": 25, "damage": 1 },
 		# ── Tier 2 — cross-combos (Lightning / Nature / Light / Dark / Metal / Fungus × original 4) ──
 		{ "id": "surge",        "name": "Surge",        "emoji": "💫",  "tier": 2, "price": 8, "cooldown_deciseconds": 25, "damage": 2 },
-		{ "id": "arc",          "name": "Arc",          "emoji": "🌠",  "tier": 2, "price": 8, "cooldown_deciseconds": 25, "damage": 2 },
 		{ "id": "static",       "name": "Static",       "emoji": "💠",  "tier": 2, "price": 8, "cooldown_deciseconds": 20, "damage": 1 },
-		{ "id": "lodestone",    "name": "Lodestone",    "emoji": "🧲",  "tier": 2, "price": 8, "cooldown_deciseconds": 50, "damage": 2 },
-		{ "id": "bloom",        "name": "Bloom",        "emoji": "🌸",  "tier": 2, "price": 8, "cooldown_deciseconds": 40, "damage": 1 },
 		{ "id": "ember",        "name": "Ember",        "emoji": "🪵",  "tier": 2, "price": 8, "cooldown_deciseconds": 30, "damage": 2 },
 		{ "id": "pollen",       "name": "Pollen",       "emoji": "🌼",  "tier": 2, "price": 8, "cooldown_deciseconds": 25, "damage": 1 },
 		{ "id": "root",         "name": "Root",         "emoji": "🌱",  "tier": 2, "price": 8, "cooldown_deciseconds": 45, "damage": 1 },
-		{ "id": "prism",        "name": "Prism",        "emoji": "💎",  "tier": 2, "price": 8, "cooldown_deciseconds": 30, "damage": 2 },
 		{ "id": "solar",        "name": "Solar",        "emoji": "🌞",  "tier": 2, "price": 8, "cooldown_deciseconds": 25, "damage": 2 },
-		{ "id": "aurora",       "name": "Aurora",       "emoji": "🌌",  "tier": 2, "price": 8, "cooldown_deciseconds": 20, "damage": 1 },
 		{ "id": "crystal",      "name": "Crystal",      "emoji": "🔮",  "tier": 2, "price": 8, "cooldown_deciseconds": 40, "damage": 2 },
-		{ "id": "abyss",        "name": "Abyss",        "emoji": "🌊",  "tier": 2, "price": 8, "cooldown_deciseconds": 50, "damage": 3 },
 		{ "id": "blight",       "name": "Blight",       "emoji": "🥀",  "tier": 2, "price": 8, "cooldown_deciseconds": 35, "damage": 2 },
-		{ "id": "miasma",       "name": "Miasma",       "emoji": "☣️",  "tier": 2, "price": 8, "cooldown_deciseconds": 25, "damage": 1 },
 		{ "id": "shade",        "name": "Shade",        "emoji": "🌘",  "tier": 2, "price": 8, "cooldown_deciseconds": 40, "damage": 2 },
 		{ "id": "rust",         "name": "Rust",         "emoji": "🟤",  "tier": 2, "price": 8, "cooldown_deciseconds": 45, "damage": 1 },
 		{ "id": "molten",       "name": "Molten",       "emoji": "🔶",  "tier": 2, "price": 8, "cooldown_deciseconds": 50, "damage": 3 },
-		{ "id": "shrapnel",     "name": "Shrapnel",     "emoji": "💥",  "tier": 2, "price": 8, "cooldown_deciseconds": 25, "damage": 2 },
-		{ "id": "flint",        "name": "Flint",        "emoji": "⛏️",  "tier": 2, "price": 8, "cooldown_deciseconds": 60, "damage": 3 },
 		{ "id": "sporeflow",    "name": "Sporeflow",    "emoji": "🫧",  "tier": 2, "price": 8, "cooldown_deciseconds": 30, "damage": 1 },
-		{ "id": "fireshroom",   "name": "Fireshroom",   "emoji": "🎇",  "tier": 2, "price": 8, "cooldown_deciseconds": 25, "damage": 2 },
 		{ "id": "haze",         "name": "Haze",         "emoji": "💚",  "tier": 2, "price": 8, "cooldown_deciseconds": 20, "damage": 1 },
 		{ "id": "rootrot",      "name": "Rootrot",      "emoji": "🍂",  "tier": 2, "price": 8, "cooldown_deciseconds": 45, "damage": 2 },
 		# ── Tier 2 — cross-combos (Blood × all) ─────────────────────────────────
 		{ "id": "pulse",        "name": "Pulse",        "emoji": "💓",  "tier": 2, "price": 8, "cooldown_deciseconds": 30, "damage": 1 },
 		{ "id": "fever",        "name": "Fever",        "emoji": "🌡️",  "tier": 2, "price": 8, "cooldown_deciseconds": 25, "damage": 2 },
-		{ "id": "hemowind",     "name": "Hemowind",     "emoji": "🫁",  "tier": 2, "price": 8, "cooldown_deciseconds": 20, "damage": 1 },
-		{ "id": "ironblood",    "name": "Ironblood",    "emoji": "⛓️",  "tier": 2, "price": 8, "cooldown_deciseconds": 40, "damage": 2 },
-		{ "id": "sparkblood",   "name": "Sparkblood",   "emoji": "🔴",  "tier": 2, "price": 8, "cooldown_deciseconds": 20, "damage": 2 },
-		{ "id": "lifebloom",    "name": "Lifebloom",    "emoji": "🌺",  "tier": 2, "price": 8, "cooldown_deciseconds": 30, "damage": 2 },
-		{ "id": "hemogoblin",   "name": "Hemogoblin",   "emoji": "👺",  "tier": 2, "price": 8, "cooldown_deciseconds": 30, "damage": 2 },
 		{ "id": "nightveil",    "name": "Nightveil",    "emoji": "💀",  "tier": 2, "price": 8, "cooldown_deciseconds": 30, "damage": 2 },
 		{ "id": "gore",         "name": "Gore",         "emoji": "⚔️",  "tier": 2, "price": 8, "cooldown_deciseconds": 30, "damage": 2, "effect": "leech" },
-		{ "id": "hemospore",    "name": "Hemospore",    "emoji": "🦠",  "tier": 2, "price": 8, "cooldown_deciseconds": 30, "damage": 2 },
-		{ "id": "frostbite",    "name": "Frostbite",    "emoji": "🩹",  "tier": 2, "price": 8, "cooldown_deciseconds": 30, "damage": 2 },
 		# ── Tier 2 — cross-combos (Frost × all) ─────────────────────────────────
 		{ "id": "blackice",     "name": "Black Ice",    "emoji": "🧊",  "tier": 2, "price": 8, "cooldown_deciseconds": 35, "damage": 1 },
 		{ "id": "frostburn",    "name": "Frostburn",    "emoji": "💙",  "tier": 2, "price": 8, "cooldown_deciseconds": 30, "damage": 2 },
-		{ "id": "razorwind",    "name": "Razorwind",    "emoji": "🪃",  "tier": 2, "price": 8, "cooldown_deciseconds": 20, "damage": 1 },
 		{ "id": "permafrost",   "name": "Permafrost",   "emoji": "🏔️",  "tier": 2, "price": 8, "cooldown_deciseconds": 50, "damage": 2 },
 		{ "id": "hail",         "name": "Hail",         "emoji": "🔵",  "tier": 2, "price": 8, "cooldown_deciseconds": 25, "damage": 2 },
-		{ "id": "chill",        "name": "Chill",        "emoji": "💤",  "tier": 2, "price": 8, "cooldown_deciseconds": 35, "damage": 1 },
 		{ "id": "whiteout",     "name": "Whiteout",     "emoji": "⬜",  "tier": 2, "price": 8, "cooldown_deciseconds": 25, "damage": 1 },
 		{ "id": "wither",       "name": "Wither",       "emoji": "🍃",  "tier": 2, "price": 8, "cooldown_deciseconds": 35, "damage": 2 },
 		{ "id": "tempered",     "name": "Tempered",     "emoji": "🛡️",  "tier": 2, "price": 8, "cooldown_deciseconds": 50, "damage": 3 },
-		{ "id": "cryptbloom",   "name": "Cryptbloom",   "emoji": "🪦",  "tier": 2, "price": 8, "cooldown_deciseconds": 35, "damage": 1 },
 		# ── Tier 2 — cross-combos (extended T1 × extended T1) ───────────────────
-		{ "id": "murk",            "name": "Murk",            "emoji": "⬛",  "tier": 2, "price": 8, "cooldown_deciseconds": 35, "damage": 2 },
 		{ "id": "voltspore",       "name": "Voltspore",       "emoji": "🔋",  "tier": 2, "price": 8, "cooldown_deciseconds": 25, "damage": 2 },
 		{ "id": "photosynthesis",  "name": "Photosynthesis",  "emoji": "🌻",  "tier": 2, "price": 8, "cooldown_deciseconds": 30, "damage": 1 },
 		{ "id": "ironwood",        "name": "Ironwood",        "emoji": "🌲",  "tier": 2, "price": 8, "cooldown_deciseconds": 45, "damage": 2 },
-		{ "id": "beacon",          "name": "Beacon",          "emoji": "🔦",  "tier": 2, "price": 8, "cooldown_deciseconds": 40, "damage": 2 },
 		{ "id": "lucent",          "name": "Lucent",          "emoji": "🕯️",  "tier": 2, "price": 8, "cooldown_deciseconds": 25, "damage": 2 },
 		{ "id": "hexcore",         "name": "Hexcore",         "emoji": "💜",  "tier": 2, "price": 8, "cooldown_deciseconds": 45, "damage": 3 },
-		{ "id": "bloomspark",     "name": "Bloomspark",     "emoji": "🔌",  "tier": 2, "price": 8, "cooldown_deciseconds": 30, "damage": 2 },
-		{ "id": "arcbeam",         "name": "Arcbeam",         "emoji": "💡",  "tier": 2, "price": 8, "cooldown_deciseconds": 30, "damage": 2 },
-		{ "id": "voidspark",       "name": "Voidspark",       "emoji": "🌓",  "tier": 2, "price": 8, "cooldown_deciseconds": 30, "damage": 2 },
-		{ "id": "magnet",          "name": "Magnet",          "emoji": "🔧",  "tier": 2, "price": 8, "cooldown_deciseconds": 30, "damage": 2 },
 		{ "id": "rot",             "name": "Rot",             "emoji": "🌵",  "tier": 2, "price": 8, "cooldown_deciseconds": 30, "damage": 2 },
-		{ "id": "wildrot",         "name": "Wildrot",         "emoji": "🌾",  "tier": 2, "price": 8, "cooldown_deciseconds": 30, "damage": 2 },
 		{ "id": "umbra",           "name": "Umbra",           "emoji": "☯️",  "tier": 2, "price": 8, "cooldown_deciseconds": 30, "damage": 2 },
 		{ "id": "moldsteel",       "name": "Moldsteel",       "emoji": "🗜️",  "tier": 2, "price": 8, "cooldown_deciseconds": 30, "damage": 2 },
 		# ── Tier 2 — self-combos ─────────────────────────────────────────────────
@@ -192,7 +165,7 @@ static func instantiate(element_id: String, level: int = 1) -> Dictionary:
 # some T2+ (impact/physical theme), skewed to higher tiers. See docs/adr (damage redesign).
 const DAMAGE_DEALERS: Dictionary = {
 	# T2
-	"lava": true, "boulder": true, "shrapnel": true, "flint": true, "molten": true, "steel": true, "gore": true,
+	"lava": true, "boulder": true, "molten": true, "steel": true, "gore": true,
 	# T3
 	"volcano": true, "obsidian": true, "meteorite": true, "mountain": true, "tsunami": true, "glacier": true, "carnage": true,
 	# T4
@@ -201,10 +174,19 @@ const DAMAGE_DEALERS: Dictionary = {
 }
 
 
-# Direct hit damage = base × multiplier × level. Pure-effect elements (not in
-# DAMAGE_DEALERS) return 0 — no tier chip, no hit; their Status carries their damage.
-# (`tier` was dropped: a tier change is a new element with its own base. `multiplier`
-# is vestigial — nothing sets it now.)
+# The tier-scaled potency of one element: how many status stacks/points one
+# application lands AND the damage scalar for direct hits. potency = level ×
+# TIER_POTENCY_MULTIPLIER[tier], rounded, floored at 1 — the single seam that makes
+# a higher-tier element intrinsically stronger than a same-Level lower-tier one
+# (first rough pass 2026-06-12; the multiplier table is the balance knob).
+static func scaled_potency(tier: int, level: int) -> int:
+	var multiplier: float = TuningData.TIER_POTENCY_MULTIPLIER.get(tier, 1.0) as float
+	return maxi(1, int(round(float(maxi(1, level)) * multiplier)))
+
+
+# Direct hit damage = base × multiplier × level × tier multiplier. Pure-effect
+# elements (not in DAMAGE_DEALERS) return 0 — no tier chip, no hit; their Status
+# carries their damage. (`multiplier` is vestigial — nothing sets it now.)
 static func effective_damage(item: Dictionary) -> int:
 	var id: String = item.get("element_id", item.get("id", "")) as String
 	if not DAMAGE_DEALERS.has(id):
@@ -214,4 +196,6 @@ static func effective_damage(item: Dictionary) -> int:
 		return 0
 	var level: int = item.get("level", 1) as int
 	var multiplier: int = item.get("damage_multiplier", 1) as int
-	return base * multiplier * level
+	var tier: int = item.get("tier", 1) as int
+	var tier_multiplier: float = TuningData.TIER_POTENCY_MULTIPLIER.get(tier, 1.0) as float
+	return maxi(1, int(round(float(base * multiplier * level) * tier_multiplier)))

@@ -92,6 +92,14 @@ const BATTLE_TIME_LIMIT: float = 30.0
 # in the cooldown path: a balance scalar, not a per-element design value; the result is
 # still rounded to whole deciseconds and floored.
 const COMBAT_COOLDOWN_MULTIPLIER: float = 0.7
+# Tier power step (2026-06-12, first rough pass): scales an element's potency —
+# status stacks applied per application AND direct hit damage — by its TIER, fixing
+# the flat T1→T2 step the balance harness exposed (status potency previously scaled
+# with Level only, so a Lv1 T2 hit no harder than a Lv1 T1 at +3g). Values are a
+# best-guess 1.5–2.5 band; retune from the next harness run.
+# Lv1 potencies land on 1/2/3/4 per tier (1.5/2.5/3.5 round up) — 2.0/2.5 made
+# T2 and T3 identical at Lv1, flattening the T2→T3 step (probe: 53%).
+const TIER_POTENCY_MULTIPLIER: Dictionary = { 1: 1.0, 2: 1.5, 3: 2.5, 4: 3.5 }
 const OPPONENT_BASE_HP: int = 100         # round-1 opponent HP (placeholder; retune in balance)
 const OPPONENT_HP_GROWTH_PERCENT: int = 15  # +% of base per round: HP = BASE × (1 + pct·(round-1))
 const OPPONENT_HP_MIN: int = 15

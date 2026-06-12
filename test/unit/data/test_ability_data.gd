@@ -94,17 +94,18 @@ func test_get_ability_returns_steam_definition() -> void:
 func test_formerly_stubbed_abilities_now_resolve() -> void:
 	# These 10 were description-only / absent until 2026-06-05. Each must now carry
 	# a trigger + effects so it actually does something in combat.
-	for element_id: String in ["shrapnel", "rootrot", "gore", "rot", "moldsteel",
+	for element_id: String in ["rootrot", "gore", "rot", "moldsteel",
 			"rainbow", "plant", "ash", "ancientgrove", "voidrift"]:
 		var ability: Dictionary = AbilityData.get_ability(element_id)
 		assert_true((ability.get("trigger", "") as String) != "", element_id + " should declare a trigger")
 		assert_true((ability.get("effects", []) as Array).size() > 0, element_id + " should declare effects")
 
 
-func test_shrapnel_gates_shock_every_third_activation() -> void:
-	var shrapnel: Dictionary = AbilityData.get_ability("shrapnel")
-	assert_eq(shrapnel["trigger"] as String, "on_activate")
-	assert_eq(shrapnel["every_n"] as int, 3)
+func test_storm_gates_effects_every_third_activation() -> void:
+	# Storm is the canonical every_n example post-consolidation (Shrapnel was cut).
+	var storm: Dictionary = AbilityData.get_ability("storm")
+	assert_eq(storm["trigger"] as String, "on_activate")
+	assert_eq(storm["every_n"] as int, 3)
 
 
 func test_gore_pairs_leech_action_with_weaken_ability() -> void:
@@ -186,8 +187,9 @@ func _battle_with_player(element_id: String) -> Dictionary:
 
 
 func test_boulder_grants_armor_at_combat_start() -> void:
+	# amount 4 × T2 Lv1 potency 2 (tier-scaled) = 8 armor
 	var s: Dictionary = _battle_with_player("boulder")
-	assert_eq(((s["player_statuses"] as Dictionary)["armor"] as Dictionary)["value"] as int, 4)
+	assert_eq(((s["player_statuses"] as Dictionary)["armor"] as Dictionary)["value"] as int, 8)
 
 
 func test_mud_penalizes_opponent_cooldown_at_combat_start() -> void:

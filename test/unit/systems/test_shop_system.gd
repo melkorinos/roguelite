@@ -359,11 +359,11 @@ func test_unlocked_tiers_t1_only_when_no_discoveries() -> void:
 
 
 func test_t2_locked_below_three_distinct() -> void:
-	assert_false(ShopSystem.unlocked_tiers(["arc", "static"]).has(2))
+	assert_false(ShopSystem.unlocked_tiers(["rust", "static"]).has(2))
 
 
 func test_t2_unlocked_at_three_distinct() -> void:
-	assert_true(ShopSystem.unlocked_tiers(["arc", "static", "surge"]).has(2))
+	assert_true(ShopSystem.unlocked_tiers(["rust", "static", "surge"]).has(2))
 
 
 func test_t3_unlocked_at_two_distinct() -> void:
@@ -374,14 +374,15 @@ func test_eligible_tier1_is_full_pool() -> void:
 	assert_eq(ShopSystem.eligible_for_tier([], 1).size(), 12)
 
 
-func test_eligible_t2_limited_to_used_families() -> void:
-	# Discovered Lightning T2s → families {lightning, fire, air, water}.
-	var eligible: Array[Dictionary] = ShopSystem.eligible_for_tier(["arc", "static", "surge"], 2)
-	var ids: Dictionary = {}
-	for e: Dictionary in eligible:
-		ids[e["id"] as String] = true
-	assert_true(ids.has("arc"), "a discovered element is in its own family")
-	assert_false(ids.has("frostbite"), "blood+frost T2 shares no used family → excluded")
+func test_eligible_t2_is_full_tier_pool() -> void:
+	# Family filter removed with the T2 consolidation (2026-06-12): an unlocked tier
+	# offers its FULL pool regardless of which families were forged.
+	var eligible: Array[Dictionary] = ShopSystem.eligible_for_tier(["rust", "static", "surge"], 2)
+	var expected: int = 0
+	for e: Dictionary in ElementData.all_elements():
+		if (e["tier"] as int) == 2:
+			expected += 1
+	assert_eq(eligible.size(), expected, "unlocked tier offers every element of that tier")
 
 
 func test_reroll_only_tier1_with_no_discoveries() -> void:
@@ -394,7 +395,7 @@ func test_reroll_only_tier1_with_no_discoveries() -> void:
 
 func test_reroll_keeps_tier2_locked_below_threshold() -> void:
 	var state := _make_state()
-	state["run_discoveries"] = ["arc", "static"]  # only 2 distinct T2
+	state["run_discoveries"] = ["rust", "static"]  # only 2 distinct T2
 	for _i: int in 30:
 		var s := ShopSystem.reroll_shop(state, true)
 		for item: Variant in s["shop_items"]:
@@ -404,7 +405,7 @@ func test_reroll_keeps_tier2_locked_below_threshold() -> void:
 
 func test_reroll_shows_tier2_after_unlock() -> void:
 	var state := _make_state()
-	state["run_discoveries"] = ["arc", "static", "surge"]
+	state["run_discoveries"] = ["rust", "static", "surge"]
 	var found_t2: bool = false
 	for _i: int in 40:
 		var s := ShopSystem.reroll_shop(state, true)
@@ -414,11 +415,11 @@ func test_reroll_shows_tier2_after_unlock() -> void:
 	assert_true(found_t2)
 
 
-func test_reroll_tier2_pool_stays_within_families() -> void:
+func test_reroll_tier2_pool_stays_within_eligible() -> void:
 	var state := _make_state()
-	state["run_discoveries"] = ["arc", "static", "surge"]
+	state["run_discoveries"] = ["rust", "static", "surge"]
 	var eligible_ids: Dictionary = {}
-	for e: Dictionary in ShopSystem.eligible_for_tier(["arc", "static", "surge"], 2):
+	for e: Dictionary in ShopSystem.eligible_for_tier(["rust", "static", "surge"], 2):
 		eligible_ids[e["id"] as String] = true
 	var seen_t2: bool = false
 	for _i: int in 30:
@@ -426,15 +427,15 @@ func test_reroll_tier2_pool_stays_within_families() -> void:
 		for item: Variant in s["shop_items"]:
 			if item != null and (item as Dictionary)["tier"] == 2:
 				seen_t2 = true
-				assert_true(eligible_ids.has((item as Dictionary)["id"] as String), "T2 shop item outside the family pool")
-	assert_true(seen_t2, "expected at least one T2 in the family-filtered shop")
+				assert_true(eligible_ids.has((item as Dictionary)["id"] as String), "T2 shop item outside the eligible pool")
+	assert_true(seen_t2, "expected at least one T2 in the unlocked shop")
 
 
 # Regression: with a higher tier unlocked the T1/higher mix must VARY across rerolls,
 # not lock to the old "always 1×T1 + 4×higher". Every slot rolls T1 ~70% independently.
 func test_reroll_mix_varies_after_unlock() -> void:
 	var state := _make_state()
-	state["run_discoveries"] = ["arc", "static", "surge"]
+	state["run_discoveries"] = ["rust", "static", "surge"]
 	var seen_counts: Dictionary = {}
 	for _i: int in 60:
 		var s := ShopSystem.reroll_shop(state, true)

@@ -177,7 +177,8 @@ for e in elements:
         tags = ability_tags(ab)
         desc = ab.get("description","")
     dd = eid in damage_dealers
-    eff1 = e.get("damage",0) if dd else 0
+    TIER_MULT = {1:1.0, 2:1.5, 3:2.5, 4:3.5}  # TuningData.TIER_POTENCY_MULTIPLIER
+    eff1 = max(1, round(e.get("damage",0) * TIER_MULT[e["tier"]])) if dd else 0
     records.append({
         "id":eid,"name":e["name"],"emoji":e["emoji"],"tier":e["tier"],"price":e["price"],
         "cd":e["cooldown_deciseconds"],"cds":round(e["cooldown_deciseconds"]/10,1),
@@ -327,9 +328,9 @@ for r in sorted([x for x in records if x["dd"]], key=lambda r:(r["tier"], -r["ef
         f'<td class="mono" style="color:{TIER_COLOR[r["tier"]]}">{TIER_NAME[r["tier"]]}</td>'
         f'<td><span style="color:{FAMILY_COLOR[r["family"]]}">{esc(r["famName"])}</span></td>'
         f'<td class="mono text-center">{r["damage"]}</td>'
-        f'<td class="mono text-center">{r["damage"]}</td>'
-        f'<td class="mono text-center">{r["damage"]*2}</td>'
-        f'<td class="mono text-center">{r["damage"]*3}</td>'
+        f'<td class="mono text-center">{r["eff1"]}</td>'
+        f'<td class="mono text-center">{max(1, round(r["damage"]*2 * {1:1.0,2:1.5,3:2.5,4:3.5}[r["tier"]]))}</td>'
+        f'<td class="mono text-center">{max(1, round(r["damage"]*3 * {1:1.0,2:1.5,3:2.5,4:3.5}[r["tier"]]))}</td>'
         f'<td class="mono text-center">{r["cds"]}s</td>'
         f'<td class="text-slate-300 text-xs">{esc(r["trigger"])} — {esc(r["desc"]) if r["desc"] else "no ability (pure hit)"}</td></tr>')
 
@@ -463,7 +464,7 @@ html = """<!DOCTYPE html>
   <h2 class="text-2xl font-bold text-sky-300 border-b border-sky-900 pb-2 mb-4">① Overview</h2>
   <div class="grid md:grid-cols-3 gap-6">
     <div class="card p-5"><h3 class="text-base font-semibold text-white mb-2">Roster by tier</h3>__TIERBARS__
-      <p class="text-xs text-slate-500 mt-2">T2 carries 78 of 132 — the combinatorial bulge of the cross-product. T4 (10) is the apex.</p></div>
+      <p class="text-xs text-slate-500 mt-2">T2 carries __NT2__ of __NEL__ (consolidated 2026-06-12: T1 pairs overlap onto shared results). T4 (10) is the apex.</p></div>
     <div class="card p-5"><h3 class="text-base font-semibold text-white mb-2">Elements per family</h3>__FAMBARS__</div>
     <div class="card p-5"><h3 class="text-base font-semibold text-white mb-2">Status usage (how many elements apply each)</h3>__STATBARS__
       <p class="text-xs text-slate-500 mt-2">⚙ = also modifies the status's rule. The most-applied statuses are the de-facto win conditions.</p></div>
@@ -550,7 +551,7 @@ html = """<!DOCTYPE html>
 <section id="dd" class="mb-12">
   <h2 class="text-2xl font-bold text-amber-300 border-b border-amber-900 pb-2 mb-4">⑤ Damage-dealers (the only direct-hit elements)</h2>
   <div class="card p-5">
-    <p class="text-slate-400 mb-3 text-sm">__NDD__ of __NEL__. <span class="mono">effective_damage = base × level</span> (multiplier vestigial). Everyone else returns 0 — their status carries the damage. Lv1/2/3 columns show how the hit scales with merges.</p>
+    <p class="text-slate-400 mb-3 text-sm">__NDD__ of __NEL__. <span class="mono">effective_damage = base × level × tier multiplier (1/1.5/2.5/3.5)</span>. Everyone else returns 0 — their status carries the damage. Lv1/2/3 columns show how the hit scales with merges.</p>
     <table class="k text-sm"><tr><th>Element</th><th>Tier</th><th>Family</th><th>Base</th><th>Lv1</th><th>Lv2</th><th>Lv3</th><th>CD</th><th>Ability</th></tr>__DDROWS__</table>
   </div>
 </section>
@@ -653,6 +654,7 @@ filterRoster();
 repl = {
  "__NEL__":str(len(elements)), "__NRE__":str(len(recipes)),
  "__NAB__":str(len([a for a in abilities.values() if a.get('trigger')])), "__NDD__":str(len(damage_dealers)),
+ "__NT2__":str(sum(1 for e in elements if e["tier"]==2)),
  "__TIERBARS__": bar_rows(Counter({f'{TIER_NAME[t]} ({TIER_NAME[t]})':c for t,c in tier_counts.items()}), "#6366f1", fmt=lambda k:k),
  "__FAMBARS__": bar_rows(fam_counts, "#a78bfa"),
  "__STATBARS__": bar_rows(status_usage, "#f472b6", fmt=lambda k:f'{STATUS_EMOJI.get(k,"")} {k}'),

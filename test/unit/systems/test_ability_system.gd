@@ -8,8 +8,10 @@ func _state() -> Dictionary:
 func _with_ability(side: String, slot: int, ability: Dictionary) -> Dictionary:
 	var st: Dictionary = _state()
 	var grid_key: String = "battle_grid" if side == "player" else "opponent_grid"
+	# tier 1 → potency 1, so atom assertions read the raw effect amounts
+	# (tier-scaled potency has its own tests below).
 	st[grid_key][slot] = {
-		"element_id": "test", "cooldown_deciseconds": 30, "damage": 1, "tier": 2,
+		"element_id": "test", "cooldown_deciseconds": 30, "damage": 1, "tier": 1,
 		"ability": ability,
 	}
 	return st
@@ -433,3 +435,28 @@ func test_adjacent_damage_bonus_sums_multiple_auras() -> void:
 	grid[1] = _aura_element(1)
 	grid[2] = _aura_element(2)
 	assert_eq(AbilitySystem.adjacent_damage_bonus(grid, 0), 3)
+
+
+# ── tier-scaled potency (TIER_POTENCY_MULTIPLIER) ─────────────────────────────
+
+func test_scaled_potency_by_tier_at_level_one() -> void:
+	assert_eq(ElementData.scaled_potency(1, 1), 1)
+	assert_eq(ElementData.scaled_potency(2, 1), 2)  # 1.5 rounds up
+	assert_eq(ElementData.scaled_potency(3, 1), 3)  # 2.5 rounds up
+	assert_eq(ElementData.scaled_potency(4, 1), 4)  # 3.5 rounds up
+
+
+func test_scaled_potency_scales_with_level() -> void:
+	assert_eq(ElementData.scaled_potency(2, 2), 3)
+	assert_eq(ElementData.scaled_potency(3, 2), 5)
+	assert_eq(ElementData.scaled_potency(4, 2), 7)
+
+
+func test_tier2_element_applies_tier_scaled_stacks() -> void:
+	var ability: Dictionary = { "trigger": "combat_start",
+		"effects": [{ "kind": "apply_status", "status": "burn", "amount": 1, "target": "opponent" }] }
+	var st: Dictionary = _with_ability("player", 0, ability)
+	(st["battle_grid"][0] as Dictionary)["tier"] = 2
+	var s: Dictionary = AbilitySystem.resolve_combat_start(st)
+	assert_eq(((s["opponent_statuses"] as Dictionary)["burn"] as Dictionary)["stacks"] as int, 2,
+		"a T2 element applies potency-2 stacks per application at Lv1")

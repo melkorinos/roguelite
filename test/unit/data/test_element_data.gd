@@ -80,8 +80,9 @@ func test_effective_damage_fire_is_pure_effect() -> void:
 
 func test_effective_damage_dealer_is_base_times_level() -> void:
 	# Lava is a damage-dealer (base 3); no tier chip → base × level.
-	assert_eq(ElementData.effective_damage(ElementData.instantiate("lava", 1)), 3)
-	assert_eq(ElementData.effective_damage(ElementData.instantiate("lava", 2)), 6)
+	# base 3 × level × T2 tier multiplier 1.5 (TIER_POTENCY_MULTIPLIER)
+	assert_eq(ElementData.effective_damage(ElementData.instantiate("lava", 1)), 5)
+	assert_eq(ElementData.effective_damage(ElementData.instantiate("lava", 2)), 9)
 
 
 # Archetype integrity: every damage-dealer is a real T2+ element with base damage.

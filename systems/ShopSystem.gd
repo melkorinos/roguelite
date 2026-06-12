@@ -1,11 +1,11 @@
 class_name ShopSystem
 
-# ── Discovery-gated, family-filtered shop pool (ADR 0007) ────────────────────
+# ── Discovery-gated shop pool (ADR 0007, family filter removed 2026-06-12) ───
 # T1 is always offered (the exploration + forge-fuel layer). A higher tier unlocks
 # only after the player has FORGED enough distinct elements of that tier this run;
-# once unlocked, it shows only elements from the "families" the player forged with
-# (the ingredient types one tier down). Tuning values move to a consolidated tuning
-# file later (see handoff-run-loop.md).
+# once unlocked, the FULL tier pool is offered. The family restriction was dropped
+# with the T2 consolidation (78→51): the pool is small enough not to skew the shop,
+# and the rule read as unintuitive in playtests.
 
 # Tiers currently purchasable given this run's forge discoveries. T1 is always in.
 # Unlock thresholds live in TuningData.TIER_UNLOCK_THRESHOLDS.
@@ -22,37 +22,14 @@ static func unlocked_tiers(run_discoveries: Array) -> Array[int]:
 	return unlocked
 
 
-# The "families" the player has engaged at a tier = the union of ingredient ids
-# (one tier down) across every element of that tier they've forged this run.
-static func _families_for_tier(run_discoveries: Array, tier: int) -> Dictionary:
-	var families: Dictionary = {}
-	for id: Variant in run_discoveries:
-		var elem_id: String = id as String
-		if (ElementData.find(elem_id).get("tier", 0) as int) != tier:
-			continue
-		for ingredient: String in RecipeData.ingredients_of(elem_id):
-			families[ingredient] = true
-	return families
-
-
-# Eligible elements of a tier for this run's shop. T1 = the full pool. Higher tiers
-# = elements that share at least one ingredient (one tier down) with the player's
-# forged elements of that tier — i.e. the families they are building into.
-static func eligible_for_tier(run_discoveries: Array, tier: int) -> Array[Dictionary]:
+# Eligible elements of a tier for this run's shop: the full tier pool. The
+# run_discoveries parameter is kept for signature stability (tier gating already
+# happened in unlocked_tiers); the per-family restriction was removed 2026-06-12.
+static func eligible_for_tier(_run_discoveries: Array, tier: int) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
-	if tier == 1:
-		for elem: Dictionary in ElementData.all_elements():
-			if (elem["tier"] as int) == 1:
-				result.append(elem)
-		return result
-	var families: Dictionary = _families_for_tier(run_discoveries, tier)
 	for elem: Dictionary in ElementData.all_elements():
-		if (elem["tier"] as int) != tier:
-			continue
-		for ingredient: String in RecipeData.ingredients_of(elem["id"] as String):
-			if families.has(ingredient):
-				result.append(elem)
-				break
+		if (elem["tier"] as int) == tier:
+			result.append(elem)
 	return result
 
 
@@ -344,7 +321,7 @@ static func reroll_shop(state: Dictionary, is_free: bool = false) -> Dictionary:
 	var unlocked: Array[int] = unlocked_tiers(run_discoveries)
 	var tier1_pool: Array[Dictionary] = eligible_for_tier(run_discoveries, 1)
 
-	# Unlocked higher tiers, each filtered to the player's families.
+	# Unlocked higher tiers, full pool each (family filter removed 2026-06-12).
 	var higher_pool: Array[Dictionary] = []
 	for tier: int in unlocked:
 		if tier >= 2:

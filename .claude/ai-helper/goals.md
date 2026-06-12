@@ -1,13 +1,17 @@
 # Goals
 
-## Current focus (2026-06-11) — live tracker is the handoff
-Phases 1–3 below are the historical foundation. **Active work is the run loop** — see
-`.claude/ai-helper/handoff-run-loop.md` (the single merged tracker) for live status, priorities,
-and backlog. The north-star loop (start-pick → forge-gated shop → Event every N → win/loss) is
-**structurally complete**; combat content, Sandstorm (0012), damage archetypes (0013), Grid Growth
-(0014), and the arch passes (data indexing, Round-resolution, ForgePanel extraction, EffectRegistry)
-have all landed.
-**Next:** G4 balance pass · F5 eyeball backlog · small arch cleanups · PlatformLayer (Steam seam).
+## Current focus (2026-06-12) — elements/balance track
+Phases 1–3 below are the historical foundation. The north-star loop (start-pick → discovery-gated
+shop → Event every N → win/loss) is **structurally complete**. The 2026-06-12 content pass landed:
+ability overhaul (trigger mix + new atoms), forge out-degree floor, all T4 abilities, T2
+consolidation 78→51 + shop family-filter removal (ADR 0015), and the Monte Carlo balance harness.
+**Next:** step ⑥ status-mechanics review (haste strength · ramping CD modifiers · Sandstorm
+element-vs-storm name collision) · balance levers (poison dominance; T1→T2 step now addressed by
+TIER_POTENCY_MULTIPLIER — verify with a harness rerun; Blood T1 leech heals 0 — pure-effect bug) ·
+UI for primers/auras/max-HP (invisible in combat) · 15 Group-G placeholder T2 names ·
+F5 eyeball backlog · PlatformLayer (Steam seam).
+(Handoff files were retired 2026-06-12 — state lives in memory.md, backlog here, regen workflow in
+`diagrams/README.md`.)
 
 ## Phase 1 — Godot setup (COMPLETE — 2026-06-01)
 - [x] Migrate from Phaser 3 / TypeScript to Godot 4 / GDScript

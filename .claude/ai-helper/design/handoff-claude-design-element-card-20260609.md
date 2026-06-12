@@ -1,5 +1,5 @@
 # Element Card — Design Handoff
-**2026-06-09 · Status: Ready for design**
+**2026-06-09 · Status: Ready for design · DATA REFRESHED 2026-06-12** (roster 132→105 after the T2 consolidation, ability overhaul landed: example tables below updated to live data; spec itself unchanged)
 
 ## What
 Core UI tile. 1 card = 1 combat piece. Lives in 3 contexts (shop for-sale row, inventory, Battlegrid) — **layout identical everywhere**; context only adds/removes price badge + charge bar. Always fully visible, no hover needed (strategic layer lives on the face).
@@ -19,7 +19,7 @@ Clean, minimal, weird, surreal. Not cute, not grimdark. Uncanny objects, polishe
 - **Pure-effect** — fires status on CD, no direct dmg. Stats row = **CD only**, centered.
 - **Damage-dealer** — direct dmg on CD (may also apply status). Stats row = **CD + DMG**.
 
-All 12 T1 = pure-effect. 22 elements T2/T3/T4 = damage-dealers (whitelist in code). Most T2+ also pure-effect.
+All 12 T1 = pure-effect. 20 elements T2/T3/T4 = damage-dealers (whitelist in code). Most T2+ also pure-effect.
 
 ## Layout — portrait 130×195 fixed
 ```
@@ -52,8 +52,8 @@ All 12 T1 = pure-effect. 22 elements T2/T3/T4 = damage-dealers (whitelist in cod
 | 6 | Tier badge | "T1".."T4" top-right. Dark semi-transparent pill, 10px bold. |
 | 7 | Cooldown | Value bold 11px + "CD" 9px dimmed below. **Always left stat**, paired w/ [9]. |
 | 8 | ~~Base Dmg~~ | **Excluded.** |
-| 9 | Right stat | **Dealer:** Eff.Dmg (`base×mult×level`) bold 11px + "DMG" 9px. **Pure:** effect count/cast (1@L1, 2@L2…) + keyword label below (BURN/SHOCK). Reactive/passive pure w/ no status application: **TBD — deferred to design review.** |
-| 10 | Trigger label | 10px bold UPPERCASE, `#8fd3ff`. "ON FIRE"(on_activate) / "EVERY 5s"(periodic) / "COMBAT START" / "REACTIVE"(on_*) / "PASSIVE". |
+| 9 | Right stat | **Dealer:** Eff.Dmg (`base×level×tier-mult`) bold 11px + "DMG" 9px. **Pure:** effect count/cast (1@L1, 2@L2…) + keyword label below (BURN/SHOCK). Reactive/passive pure w/ no status application: **TBD — deferred to design review.** |
+| 10 | Trigger label | 10px bold UPPERCASE, `#8fd3ff`. "ON FIRE"(on_activate) / "EVERY 2 ACT."(on_activate every_n) / "EVERY 5s"(periodic — only 3 elements still use it) / "COMBAT START" / "REACTIVE"(on_*) / "PASSIVE". `AbilityData.trigger_label()` is the source. |
 | 11 | Ability text | 10px reg, max 2 lines, ellipsis. `#c8caf2`. Keywords `#8fd3ff` no underline. Potency reflects current level. Godot: `RichTextLabel` `[url=burn]` → TooltipCard. |
 | 12 | Price badge | Bottom-right. Gold `#ebcf73`, dark pill, 11px bold. **Shop only.** |
 | 13 | Charge bar | 6px top strip, fills L→R toward fire. Blue `#4da6ff` 0–84% → white `#ffffff` ≥85%. **Battle only.** |
@@ -129,28 +129,30 @@ W 130px (`--card-w`, parameterized) · H 195px fixed · radius 4px · border 2px
 | Metal | ⚙️ | 5.0s | 1 | PLATING | ON FIRE | Apply 1 [plating] to your side. |
 | Frost | 🌨️ | 3.0s | 1 | WEAKEN | ON FIRE | Apply 1 [weaken] to opponent. |
 
-**T2 — mixed**
+**T2 — mixed** (refreshed 2026-06-12)
 | Elem | Emoji | Type | CD | Dmg | Trigger | Text |
 |---|---|---|---|---|---|---|
 | Steam | ♨️ | pure | 3.5s | — | REACTIVE | When [burn] applied, deal 1 bonus dmg. |
-| Rain | 🌧️ | pure | 3.0s | — | EVERY 8s | Apply 2 [cleanse] to your side. |
+| Rain | 🌧️ | pure | 3.0s | — | ON FIRE | Each activation washes your side: apply 1 [cleanse]. |
 | Lava | 🟠 | dealer | 5.0s | 5 | EVERY 6s | Apply 2 [burn] to opponent. |
-| Shrapnel | 💥 | dealer | 2.5s | 4 | ON FIRE | Every 3rd activation, apply 1 [shock]. |
-| Flint | ⛏️ | dealer | 6.0s | 6 | PASSIVE | 15% chance apply 1 [weaken] on hit. |
+| Boulder | ⛰️ | dealer | 6.0s | 6 | COMBAT START | Apply 4 [armor] to your side. |
+| Molten | 🔶 | dealer | 5.0s | 5 | EVERY 2 ACT. | Prime next [burn] tick +2, gain 1 [plating]. |
 
-**T3 — mixed**
+**T3 — mixed** (refreshed 2026-06-12)
 | Elem | Emoji | Type | CD | Dmg | Trigger | Text |
 |---|---|---|---|---|---|---|
-| Inferno | 🌋 | pure | 4.5s | — | EVERY 6s | Apply 3 [burn] + 1 [curse] to opponent. |
-| Mountain | 🏔️ | dealer | 5.0s | 8 | COMBAT START | Armor floor: absorb ≥1 dmg per hit. |
-| Glacier | 🧊 | dealer | 5.0s | 7 | COMBAT START | Freeze 1 random opponent slot 2s. |
+| Inferno | 🪔 | pure | 2.5s | — | REACTIVE | [burn] ticks: 50% chance to reignite, +1 [burn]. |
+| Mountain | ⛰ | dealer | 7.0s | 13 | PASSIVE | Your [armor] cannot drop below 2 stacks. |
+| Glacier | 🗻 | dealer | 7.0s | 10 | COMBAT START | [freeze] two opponent elements for 5s. |
 
-**T4 — mixed (8 dealers, 2 pure)**
+**T4 — mixed (8 dealers, 2 pure; abilities designed 2026-06-12)**
 | Elem | Emoji | Type | CD | Dmg | Trigger | Text |
 |---|---|---|---|---|---|---|
-| Maelstrom | 🌪️ | dealer | 5.0s | 12 | COMBAT START | — pending — |
-| Supernova | 💫 | dealer | 5.0s | 14 | COMBAT START | — pending — |
-| Pandemic | 🦠 | pure | 4.0s | — | EVERY 5s | Apply 3 [poison] to opponent. |
+| Maelstrom | 🌀 | dealer | 3.0s | 18 | ON FIRE ×3 | Strikes 3× per cooldown: 1 [shock] + 1 [weaken] each pass. |
+| Supernova | ⭐ | dealer | 5.0s | 25 | EVERY 3 ACT. | Detonate: 10 dmg + 3 [burn] + 2 [blind]. |
+| Pandemic | 🧬 | pure | 4.0s | — | REACTIVE | Every [poison] tick spreads: +1 [poison]. |
+
+> New ability vocabulary since 2026-06-12 — 🎯 primers (next-tick/next-hit), ⚔️ adjacency auras, ❤️ max-HP — falls under the same "right stat TBD for non-applying abilities" review as item 9.
 
 ## Mockup sections to produce
 1. **Four tiers, L1, inventory** — Fire T1, Steam T2, Inferno T3, Maelstrom T4 (pure). No price/charge. Shows [6][7][9][10][11].
@@ -164,7 +166,7 @@ W 130px (`--card-w`, parameterized) · H 195px fixed · radius 4px · border 2px
 - Per-element accent colors — tier-based only.
 - Show DMG on pure-effect (absent, never "0").
 - Add items 14 (effect icon) / 15 (made-from) — deferred.
-- Old eff.dmg formula `base×level+tier` — dropped in ADR 0013.
+- Old eff.dmg formulas `base×level+tier` / plain `base×level` — current: `base × level × tier multiplier` (TuningData.TIER_POTENCY_MULTIPLIER, 2026-06-12).
 - Radius >4px.
 - Layout not expressible as vertical stack.
 - Hover animations — static mockup.

@@ -255,7 +255,7 @@ static func _fire_element_once(s: Dictionary, ctx: Dictionary, side: String, ele
 			var entry: Dictionary = chance_entry as Dictionary
 			if combat_rng.randf() * 100.0 < float(entry["chance"] as int):
 				var statuses_key: String = own_statuses_key if (entry.get("target", "opponent") as String) == "own" else opp_statuses_key
-				var res: Dictionary = StatusSystem.apply_effect(s[statuses_key] as Dictionary, entry["status"] as String, entry.get("level", 1) as int)
+				var res: Dictionary = StatusSystem.apply_effect(s[statuses_key] as Dictionary, entry["status"] as String, entry.get("potency", 1) as int)
 				s[statuses_key] = res["statuses"] as Dictionary
 				_tally_effect(slot_stats, entry["status"] as String)
 

@@ -184,11 +184,11 @@ The currency spent in the shop phase to buy elements and reroll the shop. Not us
 _Avoid_: coins, money
 
 **Run Discovery**:
-An element the player has **Forged** during the current Run, recorded in `run_discoveries`. The set of Run Discoveries gates which tiers the Shop offers (forge 3 distinct T2 / 2 distinct T3 / 1 T4 to unlock that tier) and filters them to the player's Families. Distinct from the persistent cross-run discovery record (`discovered_recipes`). See `docs/adr/0007`.
+An element the player has **Forged** during the current Run, recorded in `run_discoveries`. The set of Run Discoveries gates which tiers the Shop offers (forge 3 distinct T2 / 2 distinct T3 / 1 T4 to unlock that tier); once unlocked, the full tier pool is offered. Distinct from the persistent cross-run discovery record (`discovered_recipes`). See `docs/adr/0007` + `docs/adr/0015`.
 _Avoid_: unlock, recipe (a recipe is the A+B→C rule; a discovery is the forged result)
 
 **Family**:
-All elements sharing a Tier-1 ingredient — a build archetype (e.g. the Lightning family). Once a tier unlocks, the Shop offers that tier's elements only from Families the player has Forged with. T1 stays the full pool (exploration + forge fuel).
+All elements sharing a Tier-1 ingredient — a build archetype (e.g. the Lightning family). A flavour/analysis lens (Compendium colouring, opponent-board coherence, shop-slot variety); it no longer restricts the Shop pool (the family filter was removed with the T2 consolidation, `docs/adr/0015`).
 _Avoid_: tribe, type — and **not** Faction (the separate, future threshold-synergy concept)
 
 **Starting Pick**:

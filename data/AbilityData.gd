@@ -101,14 +101,8 @@ const ABILITIES: Dictionary = {
 		"effects": [{ "kind": "apply_status", "status": "shock", "amount": 1, "target": "opponent" },
 			{ "kind": "deal_damage", "amount": 2, "target": "opponent",
 				"when": [{ "kind": "target_has_status", "target": "opponent", "status": "shock", "at_least": 3 }] }] },
-	"arc": { "trigger": "on_burn_applied", "description": "When [burn] is applied, also apply 1 [shock] to the opponent.",
-		"effects": [{ "kind": "apply_status", "status": "shock", "amount": 1, "target": "opponent" }] },
 	"static": { "trigger": "passive_on_hit", "description": "20% chance to apply 1 [shock] on any damage hit.",
 		"effects": [{ "status": "shock", "chance": 20, "target": "opponent" }] },
-	"lodestone": { "trigger": "combat_start", "description": "Apply 2 [armor] to your side and reduce your cooldowns by 0.5s.",
-		"effects": [{ "kind": "apply_status", "status": "armor", "amount": 2, "target": "own" },
-			{ "kind": "modify_cooldown", "deciseconds": -5, "target": "own" }] },
-
 	# ── T2 — Self ────────────────────────────────────────────────────────────
 	"sea": { "trigger": "on_activate", "every_n": 2, "description": "Every 2nd activation, apply 2 [cleanse] to your side.",
 		"effects": [{ "kind": "apply_status", "status": "cleanse", "amount": 2, "target": "own" }] },
@@ -133,9 +127,6 @@ const ABILITIES: Dictionary = {
 		"effects": [{ "kind": "set_status_field", "status": "leech", "field": "double", "value": true, "target": "own" }] },
 
 	# ── T2 — Nature family ───────────────────────────────────────────────────
-	"bloom": { "trigger": "on_activate", "every_n": 2, "description": "Every 2nd activation, [heal] your side for 1 and apply 1 [cleanse].",
-		"effects": [{ "kind": "apply_status", "status": "heal", "amount": 1, "target": "own" },
-			{ "kind": "apply_status", "status": "cleanse", "amount": 1, "target": "own" }] },
 	"ember": { "trigger": "on_heal_applied", "adjacency_upgrade": true, "description": "When [heal] fires on your side, apply 1 [burn] to the opponent.",
 		"effects": [{ "kind": "apply_status", "status": "burn", "amount": 1, "target": "opponent" }] },
 	"pollen": { "trigger": "passive_on_hit", "description": "15% chance to apply 1 [poison] on any damage hit.",
@@ -146,35 +137,24 @@ const ABILITIES: Dictionary = {
 		"effects": [{ "kind": "modify_cooldown", "deciseconds": -2, "target": "own" }] },
 
 	# ── T2 — Light family ────────────────────────────────────────────────────
-	"prism": { "trigger": "on_activate", "multicast": 1, "description": "Splits its light: fires twice per cooldown, each activation applying 1 [blind].",
-		"effects": [{ "kind": "apply_status", "status": "blind", "amount": 1, "target": "opponent" }] },
 	"solar": { "trigger": "on_activate", "description": "Each activation applies 1 [burn] + 1 [blind] to the opponent.",
 		"effects": [{ "kind": "apply_status", "status": "burn", "amount": 1, "target": "opponent" },
 			{ "kind": "apply_status", "status": "blind", "amount": 1, "target": "opponent" }] },
 	"crystal": { "trigger": "on_activate", "every_n": 2, "description": "Every 2nd activation, focus the light: your side's next hit deals +2 damage.",
 		"effects": [{ "kind": "prime_next_hit", "amount": 2, "target": "own" }] },
-	"beacon": { "trigger": "on_activate", "every_n": 2, "description": "Every 2nd activation, the beacon guides your side: gain 1 [haste].",
+	"lucent": { "trigger": "on_activate", "every_n": 2, "description": "Every 2nd activation, the guiding glow grants 1 [haste] to your side.",
 		"effects": [{ "kind": "apply_status", "status": "haste", "amount": 1, "target": "own" }] },
-	"lucent": { "trigger": "on_status_applied", "status": "blind", "description": "When [blind] is applied, also apply 1 [poison] to the opponent.",
-		"effects": [{ "kind": "apply_status", "status": "poison", "amount": 1, "target": "opponent" }] },
 
 	# ── T2 — Dark family ─────────────────────────────────────────────────────
-	"abyss": { "trigger": "on_damage_dealt", "chance": 25, "description": "When your side deals damage, 25% chance the abyss answers: 1 [curse].",
-		"effects": [{ "kind": "apply_status", "status": "curse", "amount": 1, "target": "opponent" }] },
 	"blight": { "trigger": "on_status_applied", "status": "poison", "description": "Each new [poison] primes the opponent's next [poison] tick for +1 damage.",
 		"effects": [{ "kind": "prime_dot", "status": "poison", "amount": 1, "target": "opponent" }] },
 	"shade": { "trigger": "passive", "description": "Your [curse] deals +1 extra damage per consumed charge.",
 		"effects": [{ "kind": "set_status_field", "status": "curse", "field": "damage_amplifier", "value": 1, "target": "opponent" }] },
 
 	# ── T2 — Metal family ────────────────────────────────────────────────────
-	"shrapnel": { "trigger": "on_activate", "every_n": 3, "description": "Every 3rd activation, apply 1 [shock] to the opponent.",
-		"effects": [{ "kind": "apply_status", "status": "shock", "amount": 1, "target": "opponent" }] },
 	"molten": { "trigger": "on_activate", "every_n": 2, "description": "Every 2nd activation, superheat: prime the next [burn] tick for +2 damage and gain 1 [plating].",
 		"effects": [{ "kind": "prime_dot", "status": "burn", "amount": 2, "target": "opponent" },
 			{ "kind": "apply_status", "status": "plating", "amount": 1, "target": "own" }] },
-	"flint": { "trigger": "passive_on_hit", "description": "25% chance to apply 1 [shock] on any damage hit.",
-		"effects": [{ "status": "shock", "chance": 25, "target": "opponent" }] },
-
 	# ── T2 — Fungus family ───────────────────────────────────────────────────
 	"rootrot": { "trigger": "on_activate", "description": "On activation, apply 1 [poison] + 1 [weaken] to the opponent.",
 		"effects": [{ "kind": "apply_status", "status": "poison", "amount": 1, "target": "opponent" },
@@ -183,8 +163,6 @@ const ABILITIES: Dictionary = {
 		"effects": [{ "kind": "apply_status", "status": "poison", "amount": 1, "target": "opponent" },
 			{ "kind": "apply_status", "status": "poison", "amount": 1, "target": "opponent",
 				"when": [{ "kind": "target_has_status", "target": "opponent", "status": "weaken", "at_least": 1 }] }] },
-	"fireshroom": { "trigger": "on_burn_applied", "description": "When [burn] is applied, also apply 1 [poison] to the opponent.",
-		"effects": [{ "kind": "apply_status", "status": "poison", "amount": 1, "target": "opponent" }] },
 	"haze": { "trigger": "passive_on_hit", "description": "15% chance to apply 1 [blind] on any damage hit.",
 		"effects": [{ "status": "blind", "chance": 15, "target": "opponent" }] },
 
@@ -193,23 +171,8 @@ const ABILITIES: Dictionary = {
 		"effects": [{ "kind": "apply_status", "status": "weaken", "amount": 1, "target": "opponent" }] },
 	"fever": { "trigger": "on_burn_applied", "description": "When [burn] is applied, the fever feeds: trigger [leech] once.",
 		"effects": [{ "kind": "apply_status", "status": "leech", "amount": 1, "target": "own" }] },
-	"hemowind": { "trigger": "on_leech", "description": "Each [leech] trigger reduces your cooldowns by 0.2s.",
-		"effects": [{ "kind": "modify_cooldown", "deciseconds": -2, "target": "own" }] },
-	"ironblood": { "trigger": "on_leech", "description": "Each [leech] trigger hardens your side: gain 1 [plating].",
-		"effects": [{ "kind": "apply_status", "status": "plating", "amount": 1, "target": "own" }] },
-	"sparkblood": { "trigger": "on_leech", "description": "Each [leech] trigger also applies 1 [shock] to the opponent.",
-		"effects": [{ "kind": "apply_status", "status": "shock", "amount": 1, "target": "opponent" }] },
-	"lifebloom": { "trigger": "on_heal_applied", "description": "When [heal] fires, also trigger [leech] once.",
-		"effects": [{ "kind": "apply_status", "status": "leech", "amount": 1, "target": "own" }] },
-	"hemogoblin": { "trigger": "on_leech", "description": "Each [leech] trigger also applies 1 [curse] to the opponent.",
-		"effects": [{ "kind": "apply_status", "status": "curse", "amount": 1, "target": "opponent" }] },
 	"nightveil": { "trigger": "on_leech", "description": "Each [leech] trigger dims their sight: apply 1 [blind].",
 		"effects": [{ "kind": "apply_status", "status": "blind", "amount": 1, "target": "opponent" }] },
-	"hemospore": { "trigger": "on_leech", "description": "Each [leech] trigger also applies 1 [poison] to the opponent.",
-		"effects": [{ "kind": "apply_status", "status": "poison", "amount": 1, "target": "opponent" }] },
-	"frostbite": { "trigger": "on_status_applied", "status": "weaken", "description": "When [weaken] is applied, feed on the frailty: trigger [leech] once.",
-		"effects": [{ "kind": "apply_status", "status": "leech", "amount": 1, "target": "own" }] },
-
 	# ── T2 — Frost cross ─────────────────────────────────────────────────────
 	"frostburn": { "trigger": "on_burn_applied", "description": "When [burn] is applied, also apply 1 [weaken] to the opponent.",
 		"effects": [{ "kind": "apply_status", "status": "weaken", "amount": 1, "target": "opponent" }] },
@@ -217,8 +180,6 @@ const ABILITIES: Dictionary = {
 		"effects": [{ "kind": "freeze", "deciseconds": 50, "count": 1, "target": "opponent" }] },
 	"hail": { "trigger": "on_activate", "multicast": 1, "description": "Pelts twice per cooldown, each volley applying 1 [weaken].",
 		"effects": [{ "kind": "apply_status", "status": "weaken", "amount": 1, "target": "opponent" }] },
-	"chill": { "trigger": "on_activate", "every_n": 3, "description": "Every 3rd activation, the creeping cold adds +0.2s to all opponent cooldowns.",
-		"effects": [{ "kind": "modify_cooldown", "deciseconds": 2, "target": "opponent" }] },
 	"whiteout": { "trigger": "on_status_applied", "status": "blind", "description": "When [blind] is applied, also apply 1 [weaken] — can't see, can't swing.",
 		"effects": [{ "kind": "apply_status", "status": "weaken", "amount": 1, "target": "opponent" }] },
 	"wither": { "trigger": "on_activate", "every_n": 2, "description": "Every 2nd activation, apply 2 [weaken] to the opponent and 1 [cleanse] to your side.",
@@ -227,11 +188,6 @@ const ABILITIES: Dictionary = {
 	"tempered": { "trigger": "combat_start", "description": "Apply 1 [plating] and 2 [armor] to your side.",
 		"effects": [{ "kind": "apply_status", "status": "plating", "amount": 1, "target": "own" },
 			{ "kind": "apply_status", "status": "armor", "amount": 2, "target": "own" }] },
-	"cryptbloom": { "trigger": "on_activate", "description": "Each activation: if the opponent has [poison] AND [weaken], deal 3 bonus damage.",
-		"effects": [{ "kind": "deal_damage", "amount": 3, "target": "opponent", "when": [
-				{ "kind": "target_has_status", "target": "opponent", "status": "poison", "at_least": 1 },
-				{ "kind": "target_has_status", "target": "opponent", "status": "weaken", "at_least": 1 }] }] },
-
 	# ── T2 — Extended-to-extended ────────────────────────────────────────────
 	"rot": { "trigger": "on_activate", "description": "On activation, apply 1 [poison] + 1 [shock] to the opponent.",
 		"effects": [{ "kind": "apply_status", "status": "poison", "amount": 1, "target": "opponent" },
@@ -239,22 +195,12 @@ const ABILITIES: Dictionary = {
 	"moldsteel": { "trigger": "on_activate", "description": "On activation, gain 1 [plating] and apply 1 [poison] to the opponent.",
 		"effects": [{ "kind": "apply_status", "status": "plating", "amount": 1, "target": "own" },
 			{ "kind": "apply_status", "status": "poison", "amount": 1, "target": "opponent" }] },
-	"murk": { "trigger": "on_status_applied", "status": "poison", "description": "When [poison] is applied, also apply 1 [blind] to the opponent.",
-		"effects": [{ "kind": "apply_status", "status": "blind", "amount": 1, "target": "opponent" }] },
 	"voltspore": { "trigger": "on_activate", "multicast": 1, "description": "Fires twice per cooldown, each activation applying 1 [shock].",
 		"effects": [{ "kind": "apply_status", "status": "shock", "amount": 1, "target": "opponent" }] },
 	"ironwood": { "trigger": "combat_start", "description": "Ironwood bulk: your side gains +6 max HP for the fight.",
 		"effects": [{ "kind": "add_max_hp", "amount": 6, "target": "own" }] },
 	"hexcore": { "trigger": "on_armor_stripped", "description": "When the opponent's [armor] is stripped, the hex erupts: apply 2 [curse].",
 		"effects": [{ "kind": "apply_status", "status": "curse", "amount": 2, "target": "opponent" }] },
-	"bloomspark": { "trigger": "on_heal_applied", "description": "When [heal] fires, also apply 1 [shock] to the opponent.",
-		"effects": [{ "kind": "apply_status", "status": "shock", "amount": 1, "target": "opponent" }] },
-	"arcbeam": { "trigger": "on_status_applied", "status": "blind", "description": "When [blind] is applied, the beam arcs to the dazzled target: +1 [shock].",
-		"effects": [{ "kind": "apply_status", "status": "shock", "amount": 1, "target": "opponent" }] },
-	"voidspark": { "trigger": "on_status_applied", "status": "shock", "description": "When [shock] is applied, also apply 1 [curse] to the opponent.",
-		"effects": [{ "kind": "apply_status", "status": "curse", "amount": 1, "target": "opponent" }] },
-	"wildrot": { "trigger": "on_poison_tick", "chance": 25, "description": "[poison] ticks have a 25% chance to spread: +1 [poison].",
-		"effects": [{ "kind": "apply_status", "status": "poison", "amount": 1, "target": "opponent" }] },
 	"umbra": { "trigger": "on_status_applied", "status": "curse", "description": "When [curse] is applied, also apply 1 [blind] to the opponent.",
 		"effects": [{ "kind": "apply_status", "status": "blind", "amount": 1, "target": "opponent" }] },
 
@@ -352,23 +298,14 @@ const ABILITIES: Dictionary = {
 		"effects": [{ "kind": "set_status_field", "status": "armor", "field": "floor", "value": 2, "target": "own" }] },
 	"blackice": { "trigger": "passive", "description": "[weaken] on the opponent lasts 2 extra ticks before expiring.",
 		"effects": [{ "kind": "set_status_field", "status": "weaken", "field": "duration_bonus", "value": 2, "target": "opponent" }] },
-	"magnet": { "trigger": "on_status_applied", "status": "shock", "description": "When [shock] is applied, gain 1 [plating].",
-		"effects": [{ "kind": "apply_status", "status": "plating", "amount": 1, "target": "own" }] },
 	"tempest": { "trigger": "passive", "description": "[shock] on the opponent cannot be cleansed away.",
 		"effects": [{ "kind": "set_status_field", "status": "shock", "field": "cleanse_immune", "value": true, "target": "opponent" }] },
 	"acid": { "trigger": "passive", "description": "Opponent [armor] stripped during this combat does not regenerate.",
 		"effects": [{ "kind": "set_status_field", "status": "armor", "field": "regen_blocked", "value": true, "target": "opponent" }] },
 
 	# ── Tick / armor / haste event reactives ──────────────────────────────────
-	"miasma": { "trigger": "on_poison_tick", "chance": 25, "description": "[poison] ticks have a 25% chance to also apply 1 [blind].",
-		"effects": [{ "kind": "apply_status", "status": "blind", "amount": 1, "target": "opponent" }] },
 	"rust": { "trigger": "on_armor_stripped", "description": "When the opponent's [armor] is stripped, deal 1 bonus damage.",
 		"effects": [{ "kind": "deal_damage", "amount": 1, "target": "opponent" }] },
-	"aurora": { "trigger": "on_haste_applied", "description": "Each [haste] application also applies 1 [blind] to the opponent.",
-		"effects": [{ "kind": "apply_status", "status": "blind", "amount": 1, "target": "opponent" }] },
-	"razorwind": { "trigger": "on_status_applied", "status": "weaken", "description": "When [weaken] is applied, also apply 1 [shock] to the opponent.",
-		"effects": [{ "kind": "apply_status", "status": "shock", "amount": 1, "target": "opponent" }] },
-
 	# ── T4 — Phenomena (designed 2026-06-12; the payoff tier) ─────────────────
 	"iceage": { "trigger": "combat_start", "description": "[freeze] two opponent elements for 8s and apply 3 [weaken].",
 		"effects": [{ "kind": "freeze", "deciseconds": 80, "count": 2, "target": "opponent" },

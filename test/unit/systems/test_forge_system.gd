@@ -554,7 +554,7 @@ func test_no_non_apex_forward_dead_ends() -> void:
 # stable, since Compendium and tier iteration depend on all_elements() ordering.
 func test_element_roster_count_and_order_stable() -> void:
 	var all: Array[Dictionary] = ElementData.all_elements()
-	assert_eq(all.size(), 132, "element roster size")
+	assert_eq(all.size(), 105, "element roster size (post T2 consolidation 2026-06-12)")
 	assert_eq((all[0] as Dictionary)["id"] as String, "water", "first element")
 	assert_eq((all[all.size() - 1] as Dictionary)["id"] as String, "aether", "last element")
 
