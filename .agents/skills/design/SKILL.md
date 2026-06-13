@@ -27,9 +27,9 @@ Produce HTML mockups the user opens in a browser to react to. This is a brainsto
    sed -n '/<script>/,/<\/script>/p' FILE.html | sed '1d;$d' > /tmp/check.js && node --check /tmp/check.js
    grep -oE "^const [A-Za-z_]+" FILE.html | sort | uniq -d   # must be empty
    ```
-   (The classic blank-page bug was a duplicate `const` — art fn and data object sharing a name. Prefix art fns `ART_*`.) Only `start ""  FILE.html` after both pass.
+   (The classic blank-page bug was a duplicate `const` — art fn and data object sharing a name. Prefix art fns `ART_*`.) Only open after both pass. **Windows:** `start "" FILE.html` can fail on a relative path — use `Invoke-Item "<absolute-path>.html"` from PowerShell.
 
-6. **Iterate like a designer.** Lead with 3+ distinct proposals when a direction is open; once one is chosen, deepen it (tiers, states, levels, context sizes). Batch grilling questions (5+ at a time) with a recommendation each. Keep cards true to their real footprint and check the **HD 1280×720** floor for any in-game layout.
+6. **Iterate like a designer.** Lead with 3+ distinct proposals when a direction is open; once one is chosen, deepen it (tiers, states, levels, context sizes). Batch grilling questions (5+ at a time) with a recommendation each. Keep cards true to their real footprint. **Canvas:** the game's native viewport is **1920×1080** (`project.godot` — `canvas_items` / `expand`); design full-screen layouts to that, and treat **1280×720** as the graceful-degradation *floor*, not the target.
 
 7. **Hand off via docs, not the HTML.** When decisions crystallise, record them where they live: `CONTEXT.md` (glossary terms), `docs/adr/` (hard-to-reverse visual-architecture calls), and a spec/handoff for implementation. The HTML is the visual; the docs are the source of truth.
 

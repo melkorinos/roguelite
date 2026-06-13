@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Shop Layout Exploration — 1920×1080 · 2026-06-14</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{background:#070912;color:#e8eaf4;font-family:'Space Grotesk',system-ui,sans-serif;padding:30px 26px 120px}
+  h1{font-size:23px;font-weight:600;margin-bottom:4px}
+  h2{font-size:17px;font-weight:600;margin:8px 0 2px;color:#dfe3f0}
+  .tag{display:inline-block;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#070912;background:#7fd0a0;padding:1px 6px;border-radius:3px;font-weight:700;margin-left:8px;vertical-align:2px}
+  .lead{font-size:12.5px;color:#9a9cb8;max-width:1100px;line-height:1.6;margin-bottom:6px}
+  .lead b{color:#c8caf2;font-weight:600}
+  .note{font-size:11px;color:#7a7c98;max-width:1100px;line-height:1.55;margin:4px 0}
+  .rec{color:#7fd0a0;font-weight:600}.warn{color:#e0b070}
+  .mono{font-family:'JetBrains Mono',monospace;font-size:10px;color:#9fd0ff}
+  section{margin:40px 0 0}
+  .desc{font-size:12px;color:#aeb0c8;max-width:1180px;line-height:1.6;margin:6px 0 12px}
+  .desc b{color:#dfe3f0}
+  .sw{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin:0 3px;border:1px solid rgba(255,255,255,.15)}
+
+  /* ----- 1920×1080 stage, scaled to page width ----- */
+  .frame{width:1152px;height:648px;overflow:hidden;border:1px solid #1c2030;border-radius:8px;box-shadow:0 10px 40px rgba(0,0,0,.6)}
+  .stage{width:1920px;height:1080px;transform:scale(.6);transform-origin:top left;background:radial-gradient(ellipse at 50% 0%,#0d1020 0%,#070912 70%);position:relative;font-size:0}
+  .stage *{font-size:initial}
+  .pad{position:absolute;inset:26px;display:flex;flex-direction:column;gap:14px}
+
+  /* topbar */
+  .top{display:flex;align-items:center;gap:24px;height:46px;flex:0 0 auto}
+  .top .rl{font-size:26px;font-weight:600;color:#cdd6ff}
+  .top .gold{font-size:26px;font-weight:600;color:#ebcf73}
+  .top .hp{font-size:24px;color:#ff8a8a;margin-left:auto}
+  .top .lives{font-size:20px;color:#9aa0c0}
+  .top .undo{font-size:16px;color:#8a8ca6;border:1px solid #2a2e44;border-radius:6px;padding:5px 12px}
+
+  /* area frame — echoes the card: dark interior, metal-ish border, family/accent glow */
+  .area{position:relative;border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;min-height:0}
+  .area > .hd{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex:0 0 auto}
+  .area > .hd .t{font-family:'Fredoka One';letter-spacing:1px;font-size:18px}
+  .area > .hd .sub{font-size:12px;color:#828aa0}
+  .area > .hd .act{margin-left:auto;font-size:14px;color:#aab0cc;border:1px solid rgba(255,255,255,.14);border-radius:6px;padding:4px 12px}
+  .body{flex:1 1 auto;min-height:0;display:flex;gap:14px}
+
+  /* the FIGHT call-to-action */
+  .fight{font-family:'Fredoka One';letter-spacing:2px;color:#0c0705;background:linear-gradient(180deg,#ffd98a,#e8a13a);border:2px solid #ffe6a8;border-radius:12px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 26px rgba(232,161,58,.45),0 8px 22px rgba(0,0,0,.6);font-size:30px}
+
+  /* ----- card ----- */
+  .card{position:relative;border-radius:6px;overflow:hidden;display:flex;flex-direction:column;background:#0a0808;flex:0 0 auto}
+  .card .inner{position:absolute;inset:3px;border-radius:4px;background:#0d0a09;display:flex;flex-direction:column;padding:7px 8px}
+  .card .port{border-radius:4px;position:relative;overflow:hidden;flex:0 0 auto;display:flex;align-items:center;justify-content:center}
+  .card .emoji{line-height:1;filter:saturate(1.25)}
+  .card .lin{position:absolute;left:8px;right:8px;height:3px;border-radius:2px;z-index:6;box-shadow:0 1px 4px rgba(0,0,0,.7)}
+  .card .nm{margin-top:6px;text-align:center;font-family:'Fredoka One';letter-spacing:.5px}
+  .card .pods{margin-top:6px;display:grid;gap:5px}
+  .card .pod{background:rgba(0,0,0,.42);border-radius:14px;padding:4px 0;display:flex;flex-direction:column;align-items:center}
+  .card .pod .v{font-family:'Fredoka One';line-height:1.05;color:#eef0f6}
+  .card .pod .l{letter-spacing:1px;text-transform:uppercase;color:#9a9cb8}
+  .card .pod.hl .v{color:var(--hl)}
+  .card .pod.hl .l{color:var(--hl)}
+  .card .sep{margin-top:7px;height:1px;background:rgba(255,255,255,.07)}
+  .card .ab{margin-top:6px;flex:1;line-height:1.5}
+  .card .trig{font-weight:600;letter-spacing:.4px}
+  .card .coin{position:absolute;bottom:6px;right:8px;background:rgba(0,0,0,.6);border:1px solid rgba(235,207,115,.5);border-radius:10px;padding:1px 8px;font-family:'Fredoka One';color:#ebcf73;z-index:9}
+  .slotghost{border:2px dashed rgba(255,255,255,.13);border-radius:8px;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.18);font-size:34px}
+</style>
+</head>
+<body>
+  <h1>Shop Layout Exploration <span class="tag">1920×1080</span></h1>
+  <p class="lead">Reclaiming the wasted screen. Native canvas is <b>1920×1080</b> (project.godot <span class="mono">canvas_items · expand</span>) — the old layout was a single tall left column that overflowed once cards became <span class="mono">w×1.45</span>, hiding the FIGHT button. Goal: <b>4 areas on one screen, no scroll, cards as big as the layout allows</b>. Each frame restyled to echo the card aesthetic (dark interior · metal-ish border · area-accent glow). Below, each mock is a true 1920×1080 stage shown at 0.6 scale.</p>
+  <p class="note"><b>Area accents</b> (real <span class="mono">ThemeData</span>):
+    <span class="sw" style="background:#dcb653"></span>Shop = gold/amber merchant ·
+    <span class="sw" style="background:#5a9bd8"></span>Inventory = cool blue (<span class="mono">SHOP_INVENTORY</span>) ·
+    <span class="sw" style="background:#d8643c"></span>Battle board = warm red (<span class="mono">SHOP_BATTLEGRID</span>) ·
+    <span class="sw" style="background:#a64fe0"></span>Forge = alchemical purple (<span class="mono">FORGE_PANEL</span>).
+    Cards use real elements (the Fire chain + Steam) and real <span class="mono">stat_pods</span> output.</p>
+  <p class="note"><span class="rec">Card text fix folded in:</span> font hierarchy is now <b>Name (largest) › trigger condition (slightly above body) › body</b>. The bold-blue trigger prefix is <span class="warn">shrunk</span> from its current too-heavy size but keeps the style; body + name are bumped up. Bigger cards make all of it readable.</p>
+
+  <div id="root"></div>
+
+<script>
+// ── family palette (ThemeData.FAMILY_COLOR) ──
+const FAM={fire:[240,112,32],water:[47,159,216],earth:[156,122,70],air:[188,208,224],
+  lightning:[244,210,60],nature:[92,194,74],light:[255,224,138],dark:[122,91,176],
+  metal:[154,164,180],fungus:[176,97,224],blood:[200,48,58],frost:[127,208,232]};
+const RGB=(a,al)=>`rgba(${a[0]},${a[1]},${a[2]},${al===undefined?1:al})`;
+const BRIGHT=(a,f)=>`rgb(${Math.min(255,Math.round(a[0]*f))},${Math.min(255,Math.round(a[1]*f))},${Math.min(255,Math.round(a[2]*f))})`;
+
+const METAL={1:"#a8703c",2:"#b4bac6",3:"#dcb653"};
+const PRISMATIC="conic-gradient(from 210deg,#ff5a3c,#ffd23c,#5ad24c,#3cc8ff,#9b5ade,#ff5a3c)";
+const LVL={1:{b:1.24,g:8},2:{b:1.46,g:16},3:{b:1.72,g:24}};
+const KW={burn:"#ff6c28",blind:"#9fb4d8",armor:"#c0c8d4",weaken:"#7fd0d0",shock:"#80c8ff",poison:"#88dd44",cleanse:"#42d898",haste:"#7fe0e0",curse:"#c252ff",heal:"#5fe08a",leech:"#e0607a",plating:"#9aa6b4"};
+function ART_kw(t){return t.replace(/\[([^\]]+)\]/g,(m,w)=>{const c=/^\d+$/.test(w)?"#ebcf73":(KW[w.toLowerCase()]||"#8fd3ff");return `<span style="color:${c};font-weight:600">${w}</span>`;});}
+
+// element render. o = {el, w, level, lineage, price}
+function ART_card(o){
+  const d=o.el, w=o.w, tier=d.tier, level=o.level||1, hue=FAM[d.fam];
+  const h=Math.round(w*1.45);
+  const hlc=BRIGHT(hue,1.5), L=LVL[level];
+  const s=w/210;                       // font scale relative to a 210px reference card
+  const port=Math.round(w*0.42);
+  // fonts (the corrected hierarchy)
+  const fName=Math.round(20*s), fTrig=Math.round(13*s), fBody=Math.round(12*s);
+  const pods=d.pods, n=pods.length;
+  const fPodV=Math.round((n>=3?15:n===1?20:18)*s), fPodL=Math.round((n>=3?8:9)*s);
+  const grid=n===1?"60%":(n===2?"1fr 1fr":"1fr 1fr 1fr");
+  const just=n===1?"center":"stretch";
+  const frame = tier>=4
+    ? `background:${PRISMATIC};box-shadow:0 0 26px ${RGB(hue,.35)},0 8px 26px rgba(0,0,0,.85)`
+    : `background:#0a0808;border:${Math.max(2,Math.round(3*s))}px solid ${METAL[tier]};box-shadow:inset 0 0 0 1px ${RGB(hue,.30)},0 0 ${L.g}px ${RGB(hue,tier===3?.30:.20)},0 7px 20px rgba(0,0,0,.8)`;
+  const lin = o.lineage
+    ? `<div class="lin" style="top:${port+5}px;background:linear-gradient(90deg,${RGB(FAM[o.lineage[0]])} 0 49%,${RGB(FAM[o.lineage[1]])} 51% 100%)"></div>` : "";
+  const podHtml = pods.map(p=>`<div class="pod${p.hl?' hl':''}"><div class="v" style="font-size:${fPodV}px">${p.v}</div><div class="l" style="font-size:${fPodL}px">${p.l}</div></div>`).join("");
+  const trig = d.trig ? `<span class="trig" style="font-size:${fTrig}px;color:#8fd3ff">${d.trig}</span> ` : "";
+  const showAb = w>=150;
+  return `<div class="card" style="width:${w}px;height:${h}px;${frame}">
+    <div class="inner">
+      <div class="port" style="height:${port}px;background:radial-gradient(ellipse at 50% 70%,${RGB(hue,.52)} 0%,${RGB(hue,.2)} 50%,#0c0705 82%);border:1px solid ${RGB(hue,.42)};box-shadow:inset 0 0 22px ${RGB(hue,.22)},0 0 ${L.g}px ${RGB(hue,.5)};filter:brightness(${L.b}) saturate(1.3)">
+        <span class="emoji" style="font-size:${Math.round(port*0.62)}px">${d.emoji}</span>
+      </div>${lin}
+      <div class="nm" style="font-size:${fName}px;color:${BRIGHT(hue,1.35)};text-shadow:0 0 14px ${RGB(hue,.5)}">${d.name}</div>
+      <div class="pods" style="grid-template-columns:${grid};justify-content:${just}">${podHtml}</div>
+      ${showAb?`<div class="sep"></div><div class="ab" style="font-size:${fBody}px;color:#c8caf2">${trig}${ART_kw(d.ab)}</div>`:""}
+      ${o.price!==undefined?`<div class="coin" style="font-size:${Math.round(13*s)}px">${o.price}g</div>`:""}
+    </div></div>`;
+}
+
+// titled area frame — accent = [r,g,b]. echoes card: dark fill, thin metal-tone border, accent glow.
+function ART_area(o){
+  const a=o.accent;
+  const border=`1px solid ${RGB(a,.5)}`;
+  const glow=`inset 0 0 0 1px ${RGB(a,.18)},inset 0 22px 60px ${RGB(a,.07)},0 0 22px ${RGB(a,.10)}`;
+  const bg=`linear-gradient(180deg,${RGB(a,.07)},rgba(8,9,16,.5))`;
+  const act=o.act?`<div class="act">${o.act}</div>`:"";
+  const sub=o.sub?`<span class="sub" style="color:${RGB(a,.85)}">${o.sub}</span>`:"";
+  return `<div class="area" style="${o.style||''};border:${border};box-shadow:${glow};background:${bg}">
+    <div class="hd"><span class="t" style="color:${BRIGHT(a,1.25)}">${o.title}</span>${sub}${act}</div>
+    <div class="body" style="${o.bodyStyle||''}">${o.inner}</div></div>`;
+}
+function ART_ghost(w){const h=Math.round(w*1.45);return `<div class="slotghost" style="width:${w}px;height:${h}px">+</div>`;}
+function ART_ghostSquare(s){return `<div class="slotghost" style="width:${s}px;height:${s}px">+</div>`;}
+
+// ── real elements (data/ElementData + AbilityData + effective_damage + stat_pods) ──
+const FIRE={name:"Fire",fam:"fire",emoji:"🔥",tier:1,trig:"",ab:"Apply 1 [burn] to the opponent.",pods:[{v:"2.5s",l:"CD"},{v:"1",l:"burn",hl:1}]};
+const STEAM={name:"Steam",fam:"water",emoji:"♨️",tier:2,trig:"ON [burn]",ab:"When [burn] is applied, deal 1 bonus damage.",pods:[{v:"3.5s",l:"CD"}]};
+const LAVA={name:"Lava",fam:"fire",emoji:"🟠",tier:2,trig:"EVERY 6s",ab:"Apply 2 [burn] to the opponent.",pods:[{v:"5.0s",l:"CD"},{v:"5",l:"DMG"}]};
+const VOLCANO={name:"Volcano",fam:"fire",emoji:"🌋",tier:3,trig:"EVERY 4s ×2",ab:"Apply 3 [burn]; fires twice per cooldown.",pods:[{v:"8.0s",l:"CD"},{v:"15",l:"DMG"}]};
+const SUPERNOVA={name:"Supernova",fam:"light",emoji:"⭐",tier:4,trig:"EVERY 3 ACT.",ab:"Deal 10, apply 3 [burn] + 2 [blind].",pods:[{v:"5.0s",l:"CD"},{v:"25",l:"DMG"}]};
+const SOLAR={name:"Solar",fam:"light",emoji:"🌞",tier:2,trig:"ON ACTIVATION",ab:"Apply 1 [burn] + 1 [blind].",pods:[{v:"2.5s",l:"CD"},{v:"2",l:"burn",hl:1}]};
+const FROST={name:"Frost",fam:"frost",emoji:"🌨️",tier:1,trig:"",ab:"Apply 1 [weaken] to the opponent.",pods:[{v:"3.0s",l:"CD"},{v:"1",l:"weaken",hl:1}]};
+
+const ACC={shop:[220,182,83],inv:[90,155,216],battle:[216,100,60],forge:[166,79,224]};
+
+// shop row of 5 for-sale cards at width w
+function shopCards(w){
+  const els=[{el:FIRE,price:5},{el:LAVA,price:8,lineage:["fire","earth"]},{el:STEAM,price:8,lineage:["water","fire"]},{el:SOLAR,price:8,lineage:["light","fire"]},{el:FROST,price:5}];
+  return els.map(e=>ART_card({el:e.el,w:w,price:e.price,lineage:e.lineage})).join("");
+}
+function invCards(w,n){
+  const owned=[{el:VOLCANO,lineage:["fire","earth"],level:2},{el:LAVA,lineage:["fire","earth"]},{el:FROST}];
+  let h="";for(let i=0;i<n;i++){h+= i<owned.length?ART_card({el:owned[i].el,w:w,lineage:owned[i].lineage,level:owned[i].level}):ART_ghost(w);}return h;
+}
+function boardCards(w){
+  const b=[{el:VOLCANO,lineage:["fire","earth"],level:2},{el:LAVA,lineage:["fire","earth"]},null,{el:SUPERNOVA,lineage:["fire","light"]}];
+  return b.map(x=>x?ART_card({el:x.el,w:w,lineage:x.lineage,level:x.level}):ART_ghost(w)).join("");
+}
+function forgeSlots(w){return `<div style="display:flex;gap:14px;align-items:center">${ART_ghost(w)}<div style="font-family:'Fredoka One';font-size:40px;color:#a64fe0">+</div>${ART_ghost(w)}</div>`;}
+
+const TOP=`<div class="top">
+  <span class="rl">Round 4</span><span class="gold">💰 64g</span>
+  <span class="hp">❤ 92/110</span><span class="lives">Life 3 · Wins 4/10</span>
+  <span class="undo">↩ Undo</span></div>`;
+
+let H="";
+
+/* ============== P1 — Horizontal Bands ============== */
+H+=`<section><h2>P1 · Horizontal Bands — shop on top, board centre, inventory floor</h2>
+<p class="desc">Reads top→bottom like the game flow: <b>buy → deploy → stash</b>. SHOP is the full-width top row (single line, 5 big cards). The <b>BATTLE BOARD is the hero</b> centre-left with FORGE docked beside it. INVENTORY is a full-width strip along the bottom. FIGHT is a large block bottom-right. Calm, conventional, very readable; board + shop both get big cards.</p>
+<div class="frame"><div class="stage"><div class="pad">
+  ${TOP}
+  ${ART_area({title:"FOR SALE",accent:ACC.shop,act:"Reroll 2g",sub:"Shop T1–T3",style:"flex:0 0 auto",bodyStyle:"justify-content:center",inner:shopCards(190)})}
+  <div style="flex:1 1 auto;display:flex;gap:14px;min-height:0">
+    ${ART_area({title:"BATTLE BOARD",accent:ACC.battle,sub:"2×2 · drag to deploy",style:"flex:1 1 auto",bodyStyle:"align-items:center;justify-content:center",inner:`<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">${boardCards(196)}</div>`})}
+    ${ART_area({title:"FORGE",accent:ACC.forge,sub:"F to quick-forge",style:"flex:0 0 360px",bodyStyle:"flex-direction:column;align-items:center;justify-content:center;gap:18px",inner:`${forgeSlots(120)}<div class="fight" style="width:220px;height:62px;font-size:24px">⚒ FORGE</div>`})}
+  </div>
+  <div style="flex:0 0 auto;display:flex;gap:14px;align-items:stretch">
+    ${ART_area({title:"INVENTORY",accent:ACC.inv,sub:"6 slots",style:"flex:1 1 auto",bodyStyle:"justify-content:flex-start;align-items:center",inner:invCards(150,6)})}
+    <div class="fight" style="flex:0 0 300px">► FIGHT</div>
+  </div>
+</div></div></div></section>`;
+
+/* ============== P2 — Merchant Rail ============== */
+H+=`<section><h2>P2 · Merchant Rail — shop as a vertical column on the right <span class="tag" style="background:#9fd0ff">bold</span></h2>
+<p class="desc">SHOP becomes a tall <b>right-hand rail</b> (single line = one column of 5) like a merchant's wares; reroll sits on top. The whole left is your <b>workspace</b>: BATTLE BOARD top-left (big), INVENTORY as a 2-row grid bottom-left, FORGE tucked bottom-centre. FIGHT is a wide bar under the board. Strong separation of "their stuff" (right) vs "your stuff" (left).</p>
+<div class="frame"><div class="stage"><div class="pad">
+  ${TOP}
+  <div style="flex:1 1 auto;display:flex;gap:14px;min-height:0">
+    <div style="flex:1 1 auto;display:flex;flex-direction:column;gap:14px;min-width:0">
+      ${ART_area({title:"BATTLE BOARD",accent:ACC.battle,sub:"2×2",style:"flex:1 1 auto",bodyStyle:"align-items:center;gap:18px",inner:`<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">${boardCards(190)}</div><div style="flex:1"></div><div class="fight" style="width:240px;height:70px;align-self:center">► FIGHT</div>`})}
+      <div style="flex:0 0 auto;display:flex;gap:14px">
+        ${ART_area({title:"INVENTORY",accent:ACC.inv,sub:"6 slots · 2×3",style:"flex:1 1 auto",bodyStyle:"",inner:`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">${invCards(140,6)}</div>`})}
+        ${ART_area({title:"FORGE",accent:ACC.forge,style:"flex:0 0 320px",bodyStyle:"flex-direction:column;align-items:center;justify-content:center;gap:14px",inner:`${forgeSlots(108)}<div class="fight" style="width:180px;height:50px;font-size:20px">⚒ FORGE</div>`})}
+      </div>
+    </div>
+    ${ART_area({title:"FOR SALE",accent:ACC.shop,act:"⟳ 2g",sub:"T1–T3",style:"flex:0 0 280px",bodyStyle:"flex-direction:column;align-items:center;gap:14px;overflow:hidden",inner:shopCards(196).replace(/flex:0 0 auto/g,'flex:0 0 auto')})}
+  </div>
+</div></div></div></section>`;
+
+/* ============== P3 — Centre Stage ============== */
+H+=`<section><h2>P3 · Centre Stage — the board is the altar, everything orbits</h2>
+<p class="desc">Most "weird/surreal" of the set. The <b>BATTLE BOARD floats dead-centre</b> as the largest element, on a glowing plinth, with FIGHT directly beneath it as the ritual button. SHOP arcs across the top, INVENTORY runs the bottom, FORGE sits in a side pod. Highest drama, biggest board cards; shop/inventory cards a touch smaller to give the centre room.</p>
+<div class="frame"><div class="stage"><div class="pad">
+  ${TOP}
+  ${ART_area({title:"FOR SALE",accent:ACC.shop,act:"Reroll 2g",style:"flex:0 0 auto",bodyStyle:"justify-content:center",inner:shopCards(176)})}
+  <div style="flex:1 1 auto;display:flex;gap:14px;min-height:0;align-items:stretch">
+    ${ART_area({title:"FORGE",accent:ACC.forge,sub:"F",style:"flex:0 0 300px",bodyStyle:"flex-direction:column;align-items:center;justify-content:center;gap:16px",inner:`${forgeSlots(116)}<div class="fight" style="width:170px;height:48px;font-size:19px">⚒ FORGE</div>`})}
+    ${ART_area({title:"BATTLE BOARD",accent:ACC.battle,sub:"deploy your fighters",style:"flex:1 1 auto;align-items:center",bodyStyle:"flex-direction:column;align-items:center;justify-content:center;gap:22px",inner:`<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">${boardCards(210)}</div><div class="fight" style="width:340px;height:78px">► FIGHT</div>`})}
+    ${ART_area({title:"NEXT FOE",accent:[120,120,150],sub:"ghost",style:"flex:0 0 220px;opacity:.85",bodyStyle:"flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#8890aa;font-size:14px",inner:`<div style="font-size:60px">👤</div><div>Round 5 ghost</div><div class="mono">~118 HP</div>`})}
+  </div>
+  ${ART_area({title:"INVENTORY",accent:ACC.inv,sub:"6 slots",style:"flex:0 0 auto",bodyStyle:"justify-content:center",inner:invCards(150,6)})}
+</div></div></div></section>`;
+
+/* ============== P4 — Split Workbench ============== */
+H+=`<section><h2>P4 · Split Workbench — manage left, deploy right <span class="tag">balanced</span></h2>
+<p class="desc">A clean vertical split. <b>Left = acquire/manage</b>: SHOP row on top, INVENTORY grid below. <b>Right = deploy/commit</b>: BATTLE BOARD large, FORGE under it, FIGHT as the closing button bottom-right. Each half is self-contained, so the eye never crosses the room mid-task. Generous, symmetric, scales cleanly if the board grows (ADR-0014).</p>
+<div class="frame"><div class="stage"><div class="pad">
+  ${TOP}
+  <div style="flex:1 1 auto;display:flex;gap:18px;min-height:0">
+    <div style="flex:1 1 50%;display:flex;flex-direction:column;gap:14px;min-width:0">
+      ${ART_area({title:"FOR SALE",accent:ACC.shop,act:"Reroll 2g",style:"flex:0 0 auto",bodyStyle:"justify-content:center;flex-wrap:wrap",inner:shopCards(160)})}
+      ${ART_area({title:"INVENTORY",accent:ACC.inv,sub:"6 slots · 2×3",style:"flex:1 1 auto",bodyStyle:"align-items:center",inner:`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;width:100%">${invCards(168,6)}</div>`})}
+    </div>
+    <div style="flex:1 1 50%;display:flex;flex-direction:column;gap:14px;min-width:0">
+      ${ART_area({title:"BATTLE BOARD",accent:ACC.battle,sub:"2×2 · drag to deploy",style:"flex:1 1 auto",bodyStyle:"align-items:center;justify-content:center",inner:`<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">${boardCards(206)}</div>`})}
+      <div style="flex:0 0 auto;display:flex;gap:14px">
+        ${ART_area({title:"FORGE",accent:ACC.forge,sub:"F to quick-forge",style:"flex:1 1 auto",bodyStyle:"align-items:center;gap:16px",inner:`${forgeSlots(112)}<div style="flex:1"></div><div class="fight" style="width:160px;height:54px;font-size:19px">⚒ FORGE</div>`})}
+        <div class="fight" style="flex:0 0 280px">► FIGHT</div>
+      </div>
+    </div>
+  </div>
+</div></div></div></section>`;
+
+/* ============== P5 — Inventory Sidebar + Forge dock ============== */
+H+=`<section><h2>P5 · Deck Sidebar — inventory as a tall 2-wide rack, forge as a bottom dock</h2>
+<p class="desc">Treats INVENTORY like a <b>collection rack</b>: a tall 2-column grid down the right so you always see your whole bench at full size. SHOP top row + BATTLE BOARD fill the left/centre. FORGE is a slim full-width <b>dock bar</b> along the bottom (a drop-target rail). FIGHT anchors the bottom-right corner. Best if inventory grows past 6.</p>
+<div class="frame"><div class="stage"><div class="pad">
+  ${TOP}
+  <div style="flex:1 1 auto;display:flex;gap:14px;min-height:0">
+    <div style="flex:1 1 auto;display:flex;flex-direction:column;gap:14px;min-width:0">
+      ${ART_area({title:"FOR SALE",accent:ACC.shop,act:"Reroll 2g",style:"flex:0 0 auto",bodyStyle:"justify-content:center",inner:shopCards(180)})}
+      ${ART_area({title:"BATTLE BOARD",accent:ACC.battle,sub:"2×2 · drag to deploy",style:"flex:1 1 auto",bodyStyle:"align-items:center;justify-content:center",inner:`<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">${boardCards(206)}</div>`})}
+    </div>
+    ${ART_area({title:"INVENTORY",accent:ACC.inv,sub:"6 · 2-wide",style:"flex:0 0 360px",bodyStyle:"",inner:`<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;width:100%">${invCards(158,6)}</div>`})}
+  </div>
+  <div style="flex:0 0 auto;display:flex;gap:14px;align-items:stretch">
+    ${ART_area({title:"FORGE",accent:ACC.forge,sub:"drop 2 · or press F",style:"flex:1 1 auto",bodyStyle:"align-items:center;gap:16px",inner:`${forgeSlots(104)}<div style="flex:1"></div><div class="fight" style="width:170px;height:52px;font-size:19px">⚒ FORGE</div>`})}
+    <div class="fight" style="flex:0 0 320px">► FIGHT</div>
+  </div>
+</div></div></div></section>`;
+
+document.getElementById("root").innerHTML=H;
+</script>
+</body>
+</html>

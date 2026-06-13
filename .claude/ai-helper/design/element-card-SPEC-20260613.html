@@ -217,6 +217,17 @@ H+=`<div class="divider"></div><h2>E · Implementation map (Godot)</h2>
 </table>
 <p class="note"><b>Touch list:</b> <code>data/ThemeData.gd</code> (tokens + family map) · <code>data/ElementData.gd</code> (canonical_family + family field on ~105 rows) · <code>data/UIScale.gd</code> (pod/name/ability font consts) · <code>scenes/shared/ElementCard.gd</code> (rebuild render) · <code>scenes/slots/InventorySlot.gd</code> (refactor to extend ElementCard) · <code>ShopItemTile</code>/<code>BattleSlot</code> (size param). No <code>systems/</code> changes.</p>`;
 
+H+=`<div class="divider"></div><h2>Build notes <span class="locked">2026-06-14</span></h2>
+<p class="note">Captured during the v1 build — corrections and realities the next iteration should assume (the canonical cards above are unchanged):</p>
+<table>
+<tr><th>Area</th><th>What shipped / learned</th></tr>
+<tr><td>Pod rule</td><td>Implemented as a tested pure helper <code>ElementData.stat_pods(item)</code> → <code>{value,label,highlight}</code> pods (kept out of the scene script so it is unit-testable). Landed STATUS amount confirmed = authored amount × <code>scaled_potency</code> at the <code>AbilitySystem.apply_effect</code> seam — the pod shows the multiplied combat value, not the authored 1.</td></tr>
+<tr><td>Font hierarchy</td><td><span class="warn">Correction:</span> Name (largest) › trigger condition (only <i>slightly</i> above body) › body. The bold-blue trigger prefix read <b>too heavy</b> in-engine — shrink it but keep the style; bump body + name up. Tiny fonts hurt readability more than the mock suggested.</td></tr>
+<tr><td>T4 prismatic</td><td>v1 ships a baked <b>linear</b> multi-stop <code>StyleBoxTexture</code> (the 6 spectrum stops), not a true conic ring. Conic + motion stays in the deferred <i>card animations</i> feature.</td></tr>
+<tr><td>Canvas / size</td><td>Native viewport is <b>1920×1080</b> (<code>canvas_items</code>/<code>expand</code>) — the 1280×720 in §D is the degradation <i>floor</i>, not the target. With height = width × 1.45 the card is tall: full-screen layouts must budget vertical space — the Shop was reworked (<code>shop-layout-20260614.html</code>) after the tall cards overflowed the old single-column left panel and hid the FIGHT button.</td></tr>
+<tr><td>Tests</td><td>Pod rule → <code>test/unit/data/test_element_data.gd</code>; runtime render (glow / metal+prismatic frame / pods / lineage) → <code>test/unit/scenes/test_element_card.gd</code>.</td></tr>
+</table>`;
+
 root.innerHTML=H;
 </script>
 </body>
