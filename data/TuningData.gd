@@ -13,7 +13,7 @@ class_name TuningData
 
 # ── Economy ──────────────────────────────────────────────────────────────────
 const STARTING_GOLD: int = 20
-const GOLD_PER_ROUND: int = 5
+const GOLD_PER_ROUND: int = 10
 const REROLL_BASE_COST: int = 2
 const REROLL_COST_STEP: int = 1          # added per paid reroll within a shop phase
 const SELL_REFUND_DIVISOR: int = 2       # refund = price / divisor

@@ -11,6 +11,11 @@ func _on_start_pressed() -> void:
 	get_tree().change_scene_to_file("res://scenes/screens/Shop.tscn")
 
 
+func _on_how_to_play_pressed() -> void:
+	AudioManager.play("click")
+	get_tree().change_scene_to_file("res://scenes/screens/HowToPlay.tscn")
+
+
 func _on_settings_pressed() -> void:
 	AudioManager.play("click")
 	get_tree().change_scene_to_file("res://scenes/screens/Settings.tscn")

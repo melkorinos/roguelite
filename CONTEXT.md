@@ -188,8 +188,12 @@ An element the player has **Forged** during the current Run, recorded in `run_di
 _Avoid_: unlock, recipe (a recipe is the A+B→C rule; a discovery is the forged result)
 
 **Family**:
-All elements sharing a Tier-1 ingredient — a build archetype (e.g. the Lightning family). A flavour/analysis lens (Compendium colouring, opponent-board coherence, shop-slot variety); it no longer restricts the Shop pool (the family filter was removed with the T2 consolidation, `docs/adr/0015`).
+All elements sharing a Tier-1 ingredient — a build archetype (e.g. the Lightning family). A flavour/analysis lens (Compendium colouring, opponent-board coherence, shop-slot variety); it no longer restricts the Shop pool (the family filter was removed with the T2 consolidation, `docs/adr/0015`). Membership is **multi-valued**: a forged element (e.g. Steam = Water + Fire) belongs to every family in its ancestry.
 _Avoid_: tribe, type — and **not** Faction (the separate, future threshold-synergy concept)
+
+**Canonical Family**:
+The single dominant **Family** chosen for each element to drive its **Element Card** hue — a designer-authored pick among its (possibly several) family memberships, by *result vibe* rather than recipe order (Steam → Water, Obsidian → Earth). Hue identity, not a gameplay tag. See `docs/adr/0017`.
+_Avoid_: primary family, main type
 
 **Starting Pick**:
 A once-per-Run choice at the start of round 1: the player is offered a small set of **Keystone** Augments and hard-commits to one, shaping the whole Run. (Replaces the old placeholder that granted a levelled Tier-1 element; player-facing name is provisional.)
@@ -226,7 +230,7 @@ _Avoid_: grade, quality — "tier" is acceptable shorthand
 ### UI overlays
 
 **Element Card**:
-The permanent UI tile that represents one element in a Board slot, inventory slot, or shop row. Always visible — no hover required. Portrait layout: icon area top-center; Tier badge top-right; three stats (Cooldown, Base Dmg, Eff. Dmg) in a row below the icon; Abilities Panel spanning the full width at the bottom; Price badge bottom-right. Level is conveyed through background color saturation rather than a numeric label. Identical layout in shop, inventory, and Battlegrid contexts.
+The permanent UI tile that represents one element in a Board slot, inventory slot, or shop row. Always visible — no hover required (the strategic layer lives on the face). Portrait orientation, identical layout in every context (only a Price badge or Charge Bar is added/removed per context). Its three visual axes are independent: **hue** = the element's **Canonical Family**, **Tier** = frame material (bronze → silver → gold → prismatic), **Level** = an animated glow/ember ramp. Forge **Lineage** (the two parents' hues) is shown as a small marker. See `docs/adr/0017`.
 _Avoid_: item card, slot tile, info card, hover card
 
 **Item Tooltip**:
