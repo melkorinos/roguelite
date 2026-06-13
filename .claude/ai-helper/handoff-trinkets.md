@@ -67,12 +67,46 @@ a trinket *work* — only to **acquire** it and to author its content.
 - `scenes/screens/Compendium.gd` — TabBar pattern (add a Trinkets tab).
 - `CONTEXT.md` — **Draft**, **Trinket**, **Augment** glossary terms.
 
+## Testing approach (NEW — adopted this session; apply it to Trinkets)
+
+Trinket combat/round effects MUST get **battle-interaction coverage**, not just a data-lock
+test. The project moved to a layered strategy:
+
+1. **Unit** — per-atom / per-status math + a roster data-lock (mirror `test_keystone_data.gd` +
+   `test_augment_system.gd`). Validates every trinket's atoms via `AugmentSystem.validate_atom`.
+2. **Targeted integration A/B** — the pattern in `test/unit/systems/test_combat_integration.gd`:
+   same board + same seed, run a REAL fight (`PhaseSystem.to_battle` → `BattleSystem.tick_battle`)
+   **with vs without** the modifier, assert the HP/outcome delta moves the right way. Every trinket
+   that touches combat needs one — it proves the effect actually changes the fight, not just that
+   it set a field. For `round_result` trinkets, A/B `PhaseSystem.advance_round` on a win and a loss.
+3. **(Planned) invariant / property simulation** — random boards through the deterministic
+   `BattleSystem.simulate_battle`, asserting combat invariants (HP conservation, charge-consumption
+   rules, side-isolation, determinism). The balance harness finds over/under-tuned; these find
+   correctness bugs. Reuse trinkets here once they exist.
+
+Rule of thumb: **if a trinket changes combat, there must be a test that runs combat and sees it.**
+
 ## Suggested skills for the Trinket session
 
 - **/grill-with-docs** — to settle the Draft UX + the open questions above before building; the
   acquisition model is genuinely undecided (a real fork), unlike the seam (already settled).
 - **/tdd** — once the design is locked; `test_keystone_data.gd` + `test_augment_system.gd` give a
   ready template for the data-lock + scope tests.
+
+## Sibling Augment follow-ups (carried over from the retired starting-pick handoff)
+
+Not trinket-specific, but the same Augment-content domain — the natural owner is whoever
+works the next Augment content pass:
+- **Expand the Keystone roster 10 → ~20–30.** The current `data/KeystoneData.gd` is a
+  functionality-first PROOF slice (each card a distinct mechanic). Widen it to cover all 12
+  Families + the status archetypes, hitting each dimension combo (flat/scaling · pure/pact ·
+  shop/amplify) multiple times. Magnitudes stay in `TuningData.KEYSTONE_*`; lock via
+  `test_keystone_data.gd`.
+- **Settle the player-facing Keystone name** (currently provisional — "Keystone" is the
+  internal term; CONTEXT.md flags it as provisional). The user wanted to crowdsource it.
+- **Every-N Event polish** — the user wants to brainstorm making the `EventSystem` choice node
+  (ADR 0011) more interesting. Events are now Augments too (Event Rewards), so this rides the
+  same seam. Separate design session; grill first.
 
 ## Do NOT
 
