@@ -29,7 +29,7 @@
 
   <header class="mb-8">
     <h1 class="text-3xl font-bold text-white">Auto-Battler — Mechanics Map</h1>
-    <p class="text-slate-400 mt-1">Built from the live code (<span class="mono">systems/</span>, <span class="mono">data/TuningData.gd</span>) as of 2026-06-11 — vocabulary from <span class="mono">CONTEXT.md</span>. Purpose: a shared picture before the balance pass and the damage-interaction bug hunt.</p>
+    <p class="text-slate-400 mt-1">Built from the live code (<span class="mono">systems/</span>, <span class="mono">data/TuningData.gd</span>) as of 2026-06-11 — observations updated 2026-06-13 to reflect: Keystones (Starting Pick rework), family-filter removal, TIER_POTENCY_MULTIPLIER. Vocabulary from <span class="mono">CONTEXT.md</span>.</p>
     <nav class="flex flex-wrap gap-2 mt-4 text-sm">
       <a class="pill bg-sky-900 text-sky-200" href="#shop">① Shop &amp; Economy</a>
       <a class="pill bg-amber-900 text-amber-200" href="#battle">② Battle &amp; Combat Loop</a>
@@ -52,7 +52,7 @@ flowchart TD
     EV -->|yes| EVO[EventOverlay: pick 1 of 3<br/>gold / grant element / run modifier]
     EV -->|no| SP
     EVO --> SP{Round 1?}
-    SP -->|yes| PICK[Starting Pick:<br/>1 of 3 T1 at Level 2]
+    SP -->|yes| PICK[Starting Pick: Keystones<br/>pick 1 of 4 Keystone cards<br/>granted as a run Augment]
     SP -->|no| LOOP
     PICK --> LOOP
 
@@ -94,9 +94,9 @@ flowchart TD
 flowchart TD
     R[reroll_shop] --> U[unlocked_tiers from run_discoveries]
     U --> S{For each of 5 slots}
-    S -->|30%% &amp; a higher tier unlocked| H[higher-tier pool<br/>family-filtered]
+    S -->|30%% &amp; a higher tier unlocked| H[higher-tier pool<br/>full tier pool — no family filter]
     S -->|else / nothing unlocked| T1[T1 full pool]
-    H --> SP2[_pick_spread:<br/>distinct families, dedupe]
+    H --> SP2[_pick_spread:<br/>ingredient variety, dedupe]
     T1 --> SP2
     SP2 --> BF[T1 backfills shortfall] --> SH[shuffle slots]
         </div>
@@ -127,7 +127,7 @@ flowchart TD
       <div class="grid md:grid-cols-2 gap-6">
         <div>
           <p class="font-semibold text-sky-200 mb-1">Tier unlock (ADR 0007)</p>
-          <p class="text-sm text-slate-300">Forging distinct results writes <code>run_discoveries</code>. Unlock thresholds: <span class="mono">T2 = 3 · T3 = 2 · T4 = 1</span> distinct forges. Once unlocked, that tier appears <em>only from families you forged with</em>. A <em>granted</em> element (Event reward) never writes <code>run_discoveries</code> — forging is the only unlock path.</p>
+          <p class="text-sm text-slate-300">Forging distinct results writes <code>run_discoveries</code>. Unlock thresholds: <span class="mono">T2 = 3 · T3 = 2 · T4 = 1</span> distinct forges. Once unlocked, the <strong>full pool</strong> for that tier is available (family-filter removed 2026-06-12, ADR 0015 — roster at 105 is small enough to not need it). Slot mix still skews toward ingredient variety via <code>_pick_spread</code>. A <em>granted</em> element (Event reward) never writes <code>run_discoveries</code> — forging is the only unlock path.</p>
         </div>
         <div>
           <p class="font-semibold text-emerald-200 mb-1">Grid Growth (ADR 0014)</p>
@@ -280,7 +280,7 @@ flowchart TD
         <tr><td>💧 Cleanse</td><td>remove 1 stack/application</td><td>Strips burn/poison/shock/slow/weaken/blind</td></tr>
         <tr><td>🩸 Leech</td><td>heal = damage dealt</td><td>Instant self on fire (+bonus / double via abilities)</td></tr>
       </table>
-      <p class="text-xs text-slate-500 mt-3">Status is a flat per-side pool (not per-element). All elements on a side share it. Potency = the applying element's <strong>Level</strong> → a Lv-N element applies N stacks/points. Most magnitudes are ×1 placeholders deliberately left flat for the balance pass.</p>
+      <p class="text-xs text-slate-500 mt-3">Status is a flat per-side pool (not per-element). All elements on a side share it. <strong>Potency = Level × TIER_POTENCY_MULTIPLIER[tier]</strong> — table: T1×1 / T2×1.5 / T3×2.5 / T4×3.5 → Lv1 effective potency = 1 / 2 / 3 / 4 by tier (via <code>ElementData.scaled_potency</code>). The "×1 dmg/stack" magnitudes in the table above are per-stack; the tier multiplier governs how many stacks land per fire. Magnitudes are otherwise ×1 placeholders.</p>
     </div>
   </section>
 
@@ -319,6 +319,7 @@ flowchart TD
           <tr><th>BATTLE_TIME_LIMIT</th><td>30s (storm start)</td></tr>
           <tr><th>SANDSTORM base/ramp</th><td>5 / +5 per sec</td></tr>
           <tr><th>SANDSTORM hard cap</th><td>60s</td></tr>
+          <tr><th>TIER_POTENCY_MULT</th><td>T1×1 · T2×1.5 · T3×2.5 · T4×3.5 (Lv1 potency: 1/2/3/4)</td></tr>
         </table>
       </div>
       <div class="card p-5">
@@ -355,7 +356,7 @@ flowchart TD
   </section>
 
   <footer class="text-xs text-slate-600 border-t border-slate-800 pt-4 mt-8">
-    Generated from live code 2026-06-11 · sources: BattleSystem.gd, StatusSystem.gd, ShopSystem.gd, ForgeSystem.gd, PhaseSystem.gd, ElementData.gd, TuningData.gd. Vocabulary per CONTEXT.md.
+    Generated from live code 2026-06-11 · observations updated 2026-06-13 (Keystones, family-filter removal, TIER_POTENCY_MULTIPLIER). Sources: BattleSystem.gd, StatusSystem.gd, ShopSystem.gd, ForgeSystem.gd, PhaseSystem.gd, ElementData.gd, TuningData.gd. Vocabulary per CONTEXT.md.
   </footer>
 </div>
 

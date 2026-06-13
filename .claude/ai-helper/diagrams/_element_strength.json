@@ -1,180 +1,193 @@
 {
   "board_slots": 6,
   "cross_tier_fights": 100,
-  "elapsed_seconds": 788.144,
+  "elapsed_seconds": 815.996,
   "elements": [
     {
       "contrib": {
-        "blocked": 0.95,
+        "blocked": 0.933333333333333,
         "burn": 0.0,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
       },
-      "delta": 0.0666666666666667,
-      "fires": 12.1666666666667,
+      "delta": 0.0833333333333333,
+      "fires": 14.7666666666667,
       "id": "water",
       "tier": 1,
-      "win_with": 0.575
+      "win_with": 0.6
     },
     {
       "contrib": {
         "blocked": 0.433333333333333,
-        "burn": 12.0333333333333,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": 0.0333333333333333,
-      "fires": 12.95,
-      "id": "fire",
-      "tier": 1,
-      "win_with": 0.55
-    },
-    {
-      "contrib": {
-        "blocked": 0.183333333333333,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": -0.108333333333333,
-      "fires": 18.1666666666667,
-      "id": "air",
-      "tier": 1,
-      "win_with": 0.408333333333333
-    },
-    {
-      "contrib": {
-        "blocked": 0.683333333333333,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": -0.1,
-      "fires": 8.13333333333333,
-      "id": "earth",
-      "tier": 1,
-      "win_with": 0.358333333333333
-    },
-    {
-      "contrib": {
-        "blocked": 0.116666666666667,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": -0.0333333333333333,
-      "fires": 19.5333333333333,
-      "id": "lightning",
-      "tier": 1,
-      "win_with": 0.475
-    },
-    {
-      "contrib": {
-        "blocked": 0.0,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 8.9,
-        "poison": 0.0
-      },
-      "delta": -0.0333333333333333,
-      "fires": 8.9,
-      "id": "nature",
-      "tier": 1,
-      "win_with": 0.416666666666667
-    },
-    {
-      "contrib": {
-        "blocked": 0.316666666666667,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 0.0
-      },
-      "delta": 0.0333333333333333,
-      "fires": 13.8166666666667,
-      "id": "light",
-      "tier": 1,
-      "win_with": 0.566666666666667
-    },
-    {
-      "contrib": {
-        "blocked": 0.566666666666667,
-        "burn": 0.0,
+        "burn": 13.9166666666667,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
       },
       "delta": 0.0166666666666667,
-      "fires": 10.4666666666667,
-      "id": "dark",
+      "fires": 14.9333333333333,
+      "id": "fire",
       "tier": 1,
-      "win_with": 0.533333333333333
+      "win_with": 0.525
     },
     {
       "contrib": {
-        "blocked": 0.316666666666667,
+        "blocked": 0.216666666666667,
         "burn": 0.0,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
       },
-      "delta": -0.0833333333333333,
-      "fires": 6.36666666666667,
-      "id": "metal",
-      "tier": 1,
-      "win_with": 0.4
-    },
-    {
-      "contrib": {
-        "blocked": 0.333333333333333,
-        "burn": 0.0,
-        "direct": 0.0,
-        "heal": 0.0,
-        "poison": 60.3666666666667
-      },
-      "delta": 0.208333333333333,
-      "fires": 6.05,
-      "id": "fungus",
-      "tier": 1,
-      "win_with": 0.725
-    },
-    {
-      "contrib": {
-        "blocked": 0.05,
-        "burn": 0.0,
-        "direct": 5.16666666666667,
-        "heal": 5.16666666666667,
-        "poison": 0.0
-      },
-      "delta": 0.025,
-      "fires": 13.1,
-      "id": "blood",
+      "delta": -0.0166666666666667,
+      "fires": 20.5833333333333,
+      "id": "air",
       "tier": 1,
       "win_with": 0.491666666666667
     },
     {
       "contrib": {
-        "blocked": 0.05,
+        "blocked": 0.683333333333333,
         "burn": 0.0,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
       },
-      "delta": -0.075,
-      "fires": 11.1833333333333,
-      "id": "frost",
+      "delta": -0.125,
+      "fires": 9.18333333333333,
+      "id": "earth",
       "tier": 1,
-      "win_with": 0.416666666666667
+      "win_with": 0.283333333333333
+    },
+    {
+      "contrib": {
+        "blocked": 0.0333333333333333,
+        "burn": 0.0,
+        "curse": 0.0,
+        "direct": 0.0,
+        "heal": 0.0,
+        "poison": 0.0
+      },
+      "delta": -0.00833333333333333,
+      "fires": 20.45,
+      "id": "lightning",
+      "tier": 1,
+      "win_with": 0.458333333333333
     },
     {
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
+        "curse": 0.0,
+        "direct": 0.0,
+        "heal": 10.0666666666667,
+        "poison": 0.0
+      },
+      "delta": -0.0583333333333333,
+      "fires": 10.0666666666667,
+      "id": "nature",
+      "tier": 1,
+      "win_with": 0.441666666666667
+    },
+    {
+      "contrib": {
+        "blocked": 0.366666666666667,
+        "burn": 0.0,
+        "curse": 0.0,
+        "direct": 0.0,
+        "heal": 0.0,
+        "poison": 0.0
+      },
+      "delta": 0.075,
+      "fires": 15.1,
+      "id": "light",
+      "tier": 1,
+      "win_with": 0.583333333333333
+    },
+    {
+      "contrib": {
+        "blocked": 0.466666666666667,
+        "burn": 0.0,
+        "curse": 7.41666666666667,
+        "direct": 0.0,
+        "heal": 0.0,
+        "poison": 0.0
+      },
+      "delta": 0.0166666666666667,
+      "fires": 12.6,
+      "id": "dark",
+      "tier": 1,
+      "win_with": 0.516666666666667
+    },
+    {
+      "contrib": {
+        "blocked": 0.35,
+        "burn": 0.0,
+        "curse": 0.0,
+        "direct": 0.0,
+        "heal": 0.0,
+        "poison": 0.0
+      },
+      "delta": -0.133333333333333,
+      "fires": 7.43333333333333,
+      "id": "metal",
+      "tier": 1,
+      "win_with": 0.35
+    },
+    {
+      "contrib": {
+        "blocked": 0.483333333333333,
+        "burn": 0.0,
+        "curse": 0.0,
+        "direct": 0.0,
+        "heal": 0.0,
+        "poison": 64.7666666666667
+      },
+      "delta": 0.191666666666667,
+      "fires": 6.98333333333333,
+      "id": "fungus",
+      "tier": 1,
+      "win_with": 0.683333333333333
+    },
+    {
+      "contrib": {
+        "blocked": 0.0333333333333333,
+        "burn": 0.0,
+        "curse": 0.0,
+        "direct": 4.95,
+        "heal": 5.7,
+        "poison": 0.0
+      },
+      "delta": -0.0416666666666667,
+      "fires": 15.1,
+      "id": "blood",
+      "tier": 1,
+      "win_with": 0.416666666666667
+    },
+    {
+      "contrib": {
+        "blocked": 0.1,
+        "burn": 0.0,
+        "curse": 0.0,
+        "direct": 0.0,
+        "heal": 0.0,
+        "poison": 0.0
+      },
+      "delta": -0.0666666666666667,
+      "fires": 12.5833333333333,
+      "id": "frost",
+      "tier": 1,
+      "win_with": 0.408333333333333
+    },
+    {
+      "contrib": {
+        "blocked": 0.0,
+        "burn": 0.0,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
@@ -189,6 +202,7 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
@@ -203,6 +217,7 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
@@ -217,6 +232,7 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
+        "curse": 1.56666666666667,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
@@ -231,7 +247,8 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 28.2,
-        "direct": 12.5666666666667,
+        "curse": 0.0,
+        "direct": 12.1833333333333,
         "heal": 0.0,
         "poison": 0.0
       },
@@ -245,6 +262,7 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
@@ -259,7 +277,8 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
-        "direct": 0.0,
+        "curse": 0.0,
+        "direct": 16.7,
         "heal": 0.0,
         "poison": 0.0
       },
@@ -273,6 +292,7 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
@@ -287,6 +307,7 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
@@ -301,9 +322,10 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 0.0,
-        "poison": 0.0
+        "poison": 79.2166666666667
       },
       "delta": 0.25,
       "fires": 7.21666666666667,
@@ -315,6 +337,7 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
@@ -329,6 +352,7 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 36.7,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
@@ -343,6 +367,7 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
@@ -357,6 +382,7 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
@@ -371,6 +397,7 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
@@ -385,7 +412,8 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
-        "direct": 0.0,
+        "curse": 0.0,
+        "direct": 0.15,
         "heal": 0.0,
         "poison": 0.0
       },
@@ -399,7 +427,8 @@
       "contrib": {
         "blocked": 11.75,
         "burn": 0.0,
-        "direct": 13.9166666666667,
+        "curse": 0.0,
+        "direct": 13.7,
         "heal": 0.0,
         "poison": 0.0
       },
@@ -413,9 +442,10 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 0.0,
-        "poison": 93.2666666666667
+        "poison": 91.4833333333333
       },
       "delta": 0.35,
       "fires": 5.11666666666667,
@@ -427,6 +457,7 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
@@ -441,9 +472,10 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 0.0,
-        "poison": 66.3166666666667
+        "poison": 60.3
       },
       "delta": 0.233333333333333,
       "fires": 3.93333333333333,
@@ -455,7 +487,8 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
-        "direct": 13.6333333333333,
+        "curse": 0.0,
+        "direct": 13.0,
         "heal": 0.0,
         "poison": 0.0
       },
@@ -469,7 +502,8 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
-        "direct": 15.6833333333333,
+        "curse": 0.0,
+        "direct": 15.3666666666667,
         "heal": 0.0,
         "poison": 0.0
       },
@@ -483,7 +517,8 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
-        "direct": 13.4666666666667,
+        "curse": 0.0,
+        "direct": 13.0,
         "heal": 0.0,
         "poison": 0.0
       },
@@ -497,7 +532,8 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
-        "direct": 12.9666666666667,
+        "curse": 0.0,
+        "direct": 12.35,
         "heal": 13.9833333333333,
         "poison": 0.0
       },
@@ -511,6 +547,7 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
@@ -525,6 +562,7 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
@@ -539,6 +577,7 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
@@ -553,6 +592,7 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
@@ -567,6 +607,7 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
@@ -581,6 +622,7 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
@@ -595,6 +637,7 @@
       "contrib": {
         "blocked": 19.8833333333333,
         "burn": 0.0,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
@@ -609,6 +652,7 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
@@ -623,6 +667,7 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
@@ -637,6 +682,7 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 12.0,
         "poison": 0.0
@@ -651,6 +697,7 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
@@ -665,6 +712,7 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
+        "curse": 0.2,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
@@ -679,9 +727,10 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 0.0,
-        "poison": 82.1166666666667
+        "poison": 80.7833333333333
       },
       "delta": 0.266666666666667,
       "fires": 5.56666666666667,
@@ -693,6 +742,7 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
@@ -707,9 +757,10 @@
       "contrib": {
         "blocked": 18.3333333333333,
         "burn": 0.0,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 0.0,
-        "poison": 82.5333333333333
+        "poison": 82.2833333333333
       },
       "delta": 0.308333333333333,
       "fires": 5.78333333333333,
@@ -721,6 +772,7 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
@@ -735,6 +787,7 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
@@ -749,6 +802,7 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
@@ -763,7 +817,8 @@
       "contrib": {
         "blocked": 5.1,
         "burn": 0.0,
-        "direct": 13.9666666666667,
+        "curse": 0.0,
+        "direct": 13.7333333333333,
         "heal": 0.0,
         "poison": 0.0
       },
@@ -777,6 +832,7 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
@@ -791,6 +847,7 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 9.2,
         "poison": 0.0
@@ -805,6 +862,7 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
@@ -819,6 +877,7 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
+        "curse": 9.88333333333333,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
@@ -833,7 +892,8 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
-        "direct": 17.2,
+        "curse": 0.0,
+        "direct": 16.6333333333333,
         "heal": 0.0,
         "poison": 0.0
       },
@@ -847,6 +907,7 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
@@ -861,6 +922,7 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
@@ -875,7 +937,8 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
-        "direct": 24.75,
+        "curse": 0.0,
+        "direct": 23.9333333333333,
         "heal": 0.0,
         "poison": 0.0
       },
@@ -889,110 +952,118 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
       },
-      "delta": -0.0666666666666667,
-      "fires": 6.08333333333333,
+      "delta": -0.0583333333333333,
+      "fires": 6.36666666666667,
       "id": "cloud",
       "tier": 3,
-      "win_with": 0.35
+      "win_with": 0.366666666666667
     },
     {
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
-        "direct": 0.0,
+        "curse": 0.0,
+        "direct": 3.83333333333333,
         "heal": 0.0,
         "poison": 0.0
       },
-      "delta": -0.133333333333333,
-      "fires": 3.26666666666667,
+      "delta": -0.116666666666667,
+      "fires": 3.43333333333333,
       "id": "geyser",
       "tier": 3,
-      "win_with": 0.316666666666667
+      "win_with": 0.333333333333333
     },
     {
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
+        "curse": 2.11666666666667,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
       },
       "delta": -0.108333333333333,
-      "fires": 5.85,
+      "fires": 5.96666666666667,
       "id": "fog",
       "tier": 3,
       "win_with": 0.391666666666667
     },
     {
       "contrib": {
-        "blocked": 6.1,
+        "blocked": 5.63333333333333,
         "burn": 0.0,
+        "curse": 0.0,
         "direct": 0.0,
-        "heal": 37.05,
+        "heal": 36.45,
         "poison": 0.0
       },
-      "delta": 0.1,
-      "fires": 5.08333333333333,
+      "delta": 0.125,
+      "fires": 5.83333333333333,
       "id": "rainbow",
       "tier": 3,
-      "win_with": 0.575
+      "win_with": 0.6
     },
     {
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
       },
-      "delta": -0.0583333333333333,
-      "fires": 6.98333333333333,
+      "delta": -0.05,
+      "fires": 7.15,
       "id": "storm",
       "tier": 3,
-      "win_with": 0.466666666666667
+      "win_with": 0.475
     },
     {
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
+        "curse": 0.0,
         "direct": 0.0,
-        "heal": 13.9,
+        "heal": 14.6,
         "poison": 0.0
       },
-      "delta": 0.0666666666666667,
-      "fires": 5.25,
+      "delta": 0.0833333333333333,
+      "fires": 5.41666666666667,
       "id": "plant",
       "tier": 3,
-      "win_with": 0.533333333333333
+      "win_with": 0.558333333333333
     },
     {
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
       },
-      "delta": -0.0416666666666667,
-      "fires": 3.75,
+      "delta": -0.0333333333333333,
+      "fires": 3.8,
       "id": "swamp",
       "tier": 3,
       "win_with": 0.533333333333333
     },
     {
       "contrib": {
-        "blocked": 28.9666666666667,
+        "blocked": 29.1333333333333,
         "burn": 0.0,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
       },
-      "delta": 0.0166666666666667,
-      "fires": 3.23333333333333,
+      "delta": 0.025,
+      "fires": 3.33333333333333,
       "id": "brick",
       "tier": 3,
       "win_with": 0.416666666666667
@@ -1001,12 +1072,13 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
       },
       "delta": -0.00833333333333333,
-      "fires": 8.11666666666667,
+      "fires": 8.33333333333333,
       "id": "ash",
       "tier": 3,
       "win_with": 0.591666666666667
@@ -1015,12 +1087,13 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
       },
       "delta": -0.125,
-      "fires": 6.5,
+      "fires": 6.55,
       "id": "acid",
       "tier": 3,
       "win_with": 0.458333333333333
@@ -1029,26 +1102,28 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
-        "direct": 12.7833333333333,
+        "curse": 0.0,
+        "direct": 12.4166666666667,
         "heal": 0.0,
         "poison": 0.0
       },
       "delta": -0.0583333333333333,
-      "fires": 2.65,
+      "fires": 2.76666666666667,
       "id": "obsidian",
       "tier": 3,
-      "win_with": 0.375
+      "win_with": 0.383333333333333
     },
     {
       "contrib": {
         "blocked": 0.0,
-        "burn": 86.7,
-        "direct": 17.65,
+        "burn": 86.0166666666667,
+        "curse": 0.0,
+        "direct": 17.6333333333333,
         "heal": 0.0,
         "poison": 0.0
       },
       "delta": 0.35,
-      "fires": 2.16666666666667,
+      "fires": 2.2,
       "id": "volcano",
       "tier": 3,
       "win_with": 0.841666666666667
@@ -1057,12 +1132,13 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
       },
       "delta": -0.0583333333333333,
-      "fires": 5.1,
+      "fires": 5.13333333333333,
       "id": "sand",
       "tier": 3,
       "win_with": 0.475
@@ -1071,26 +1147,28 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
       },
       "delta": 0.05,
-      "fires": 6.66666666666667,
+      "fires": 6.71666666666667,
       "id": "sandstorm",
       "tier": 3,
       "win_with": 0.541666666666667
     },
     {
       "contrib": {
-        "blocked": 2.9,
+        "blocked": 2.83333333333333,
         "burn": 0.0,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
       },
-      "delta": -0.0583333333333333,
-      "fires": 4.91666666666667,
+      "delta": -0.05,
+      "fires": 4.93333333333333,
       "id": "clay",
       "tier": 3,
       "win_with": 0.483333333333333
@@ -1099,12 +1177,13 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
-        "direct": 12.3833333333333,
+        "curse": 0.0,
+        "direct": 10.7333333333333,
         "heal": 0.0,
         "poison": 0.0
       },
       "delta": -0.0166666666666667,
-      "fires": 2.56666666666667,
+      "fires": 2.6,
       "id": "glacier",
       "tier": 3,
       "win_with": 0.466666666666667
@@ -1113,12 +1192,13 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
       },
       "delta": 0.075,
-      "fires": 12.5333333333333,
+      "fires": 12.9,
       "id": "blizzard",
       "tier": 3,
       "win_with": 0.608333333333333
@@ -1127,96 +1207,103 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
       },
-      "delta": -0.133333333333333,
-      "fires": 3.95,
+      "delta": -0.116666666666667,
+      "fires": 4.08333333333333,
       "id": "tundra",
       "tier": 3,
-      "win_with": 0.433333333333333
+      "win_with": 0.441666666666667
     },
     {
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
       },
-      "delta": -0.158333333333333,
-      "fires": 3.66666666666667,
+      "delta": -0.15,
+      "fires": 3.78333333333333,
       "id": "rainforest",
       "tier": 3,
-      "win_with": 0.383333333333333
+      "win_with": 0.4
     },
     {
       "contrib": {
         "blocked": 4.76666666666667,
         "burn": 0.0,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 30.0,
         "poison": 0.0
       },
-      "delta": 0.0666666666666667,
-      "fires": 3.13333333333333,
+      "delta": 0.0416666666666667,
+      "fires": 3.15,
       "id": "ancientgrove",
       "tier": 3,
-      "win_with": 0.608333333333333
+      "win_with": 0.6
     },
     {
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
       },
-      "delta": -0.0416666666666667,
-      "fires": 7.85,
+      "delta": -0.0333333333333333,
+      "fires": 8.08333333333333,
       "id": "hurricane",
       "tier": 3,
-      "win_with": 0.433333333333333
+      "win_with": 0.441666666666667
     },
     {
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
       },
       "delta": -0.125,
-      "fires": 9.26666666666667,
+      "fires": 9.4,
       "id": "tempest",
       "tier": 3,
-      "win_with": 0.358333333333333
+      "win_with": 0.35
     },
     {
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
-        "direct": 19.7166666666667,
+        "curse": 0.0,
+        "direct": 19.6166666666667,
         "heal": 0.0,
         "poison": 0.0
       },
-      "delta": 0.0,
-      "fires": 2.58333333333333,
+      "delta": 0.00833333333333333,
+      "fires": 2.66666666666667,
       "id": "mountain",
       "tier": 3,
-      "win_with": 0.491666666666667
+      "win_with": 0.483333333333333
     },
     {
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
-        "direct": 19.2,
+        "curse": 0.0,
+        "direct": 20.5333333333333,
         "heal": 0.0,
         "poison": 0.0
       },
       "delta": -0.00833333333333333,
-      "fires": 2.55,
+      "fires": 2.51666666666667,
       "id": "tsunami",
       "tier": 3,
       "win_with": 0.408333333333333
@@ -1225,12 +1312,13 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
+        "curse": 10.1,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
       },
-      "delta": 0.025,
-      "fires": 4.41666666666667,
+      "delta": 0.0333333333333333,
+      "fires": 4.48333333333333,
       "id": "eclipse",
       "tier": 3,
       "win_with": 0.483333333333333
@@ -1239,12 +1327,13 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
+        "curse": 4.76666666666667,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
       },
-      "delta": 0.0166666666666667,
-      "fires": 4.31666666666667,
+      "delta": 0.0333333333333333,
+      "fires": 4.33333333333333,
       "id": "voidrift",
       "tier": 3,
       "win_with": 0.466666666666667
@@ -1253,12 +1342,13 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 0.0,
-        "poison": 107.683333333333
+        "poison": 108.233333333333
       },
-      "delta": 0.366666666666667,
-      "fires": 4.03333333333333,
+      "delta": 0.375,
+      "fires": 4.13333333333333,
       "id": "plague",
       "tier": 3,
       "win_with": 0.791666666666667
@@ -1267,12 +1357,13 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
       },
       "delta": -0.0333333333333333,
-      "fires": 3.1,
+      "fires": 3.08333333333333,
       "id": "underrot",
       "tier": 3,
       "win_with": 0.5
@@ -1280,13 +1371,14 @@
     {
       "contrib": {
         "blocked": 0.0,
-        "burn": 5.68333333333333,
+        "burn": 5.36666666666667,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
       },
       "delta": -0.133333333333333,
-      "fires": 6.11666666666667,
+      "fires": 6.23333333333333,
       "id": "inferno",
       "tier": 3,
       "win_with": 0.433333333333333
@@ -1295,12 +1387,13 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
-        "direct": 20.7,
+        "curse": 0.0,
+        "direct": 18.75,
         "heal": 0.0,
         "poison": 0.0
       },
-      "delta": -0.05,
-      "fires": 5.05,
+      "delta": -0.0416666666666667,
+      "fires": 5.18333333333333,
       "id": "hemorrhage",
       "tier": 3,
       "win_with": 0.491666666666667
@@ -1309,35 +1402,38 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
-        "direct": 32.85,
+        "curse": 0.0,
+        "direct": 31.95,
         "heal": 0.0,
         "poison": 0.0
       },
-      "delta": 0.0,
-      "fires": 9.6,
+      "delta": -0.0166666666666667,
+      "fires": 9.56666666666667,
       "id": "carnage",
       "tier": 3,
-      "win_with": 0.516666666666667
+      "win_with": 0.5
     },
     {
       "contrib": {
-        "blocked": 13.1,
+        "blocked": 13.6333333333333,
         "burn": 0.0,
-        "direct": 25.2166666666667,
+        "curse": 0.0,
+        "direct": 28.1833333333333,
         "heal": 0.0,
         "poison": 0.0
       },
-      "delta": 0.108333333333333,
+      "delta": 0.1,
       "fires": 3.58333333333333,
       "id": "meteorite",
       "tier": 3,
-      "win_with": 0.583333333333333
+      "win_with": 0.566666666666667
     },
     {
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
-        "direct": 10.5833333333333,
+        "curse": 0.0,
+        "direct": 10.4666666666667,
         "heal": 0.0,
         "poison": 0.0
       },
@@ -1351,7 +1447,8 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
-        "direct": 63.0166666666667,
+        "curse": 0.0,
+        "direct": 62.7,
         "heal": 0.0,
         "poison": 0.0
       },
@@ -1365,7 +1462,8 @@
       "contrib": {
         "blocked": 2.53333333333333,
         "burn": 0.0,
-        "direct": 8.35,
+        "curse": 0.0,
+        "direct": 9.48333333333333,
         "heal": 0.0,
         "poison": 0.0
       },
@@ -1379,7 +1477,8 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 1.58333333333333,
-        "direct": 17.5,
+        "curse": 0.0,
+        "direct": 18.0666666666667,
         "heal": 0.0,
         "poison": 0.0
       },
@@ -1393,7 +1492,8 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
-        "direct": 10.7833333333333,
+        "curse": 0.966666666666667,
+        "direct": 10.65,
         "heal": 0.0,
         "poison": 0.0
       },
@@ -1407,6 +1507,7 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 13.8666666666667,
         "poison": 0.0
@@ -1421,6 +1522,7 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
+        "curse": 0.0,
         "direct": 0.0,
         "heal": 0.0,
         "poison": 0.0
@@ -1435,7 +1537,8 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
-        "direct": 23.0333333333333,
+        "curse": 0.0,
+        "direct": 24.3166666666667,
         "heal": 0.0,
         "poison": 0.0
       },
@@ -1449,7 +1552,8 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
-        "direct": 12.2,
+        "curse": 0.0,
+        "direct": 12.0166666666667,
         "heal": 0.0,
         "poison": 0.0
       },
@@ -1463,7 +1567,8 @@
       "contrib": {
         "blocked": 0.0,
         "burn": 0.0,
-        "direct": 20.7833333333333,
+        "curse": 0.0,
+        "direct": 20.6,
         "heal": 0.0,
         "poison": 0.0
       },
@@ -1478,21 +1583,21 @@
   "samples_per_element": 60,
   "tier_matrix": {
     "1": {
-      "1": 0.49,
-      "2": 0.24,
-      "3": 0.16,
+      "1": 0.5,
+      "2": 0.245,
+      "3": 0.185,
       "4": 0.0
     },
     "2": {
-      "1": 0.8,
+      "1": 0.76,
       "2": 0.47,
-      "3": 0.23,
+      "3": 0.22,
       "4": 0.065
     },
     "3": {
-      "1": 0.865,
-      "2": 0.705,
-      "3": 0.495,
+      "1": 0.82,
+      "2": 0.71,
+      "3": 0.5,
       "4": 0.27
     },
     "4": {
