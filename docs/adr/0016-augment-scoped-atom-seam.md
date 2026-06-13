@@ -26,6 +26,13 @@ truth; run_state atoms are materialized into the discrete cache fields (`hp_bonu
   shop weighting, post-round gold, combat tick-rate). The additive-only seam expresses
   roughly one of four and would force a rewrite.
 
+## Status (2026-06-13)
+
+**Keystones (Phase B) landed.** `data/KeystoneData.gd` = 10-card v1 roster; `StartSystem`
+offers 4 with Family+Status spread; `StartingPickOverlay` shows 4 heterogeneous cards;
+Compendium Keystones tab added. Magnitudes in `TuningData.KEYSTONE_*`. `round_result` scope
+wired but no consumer yet — Trinkets are the next source type.
+
 ## Consequences
 
 - A new shared combat atom kind, `suppress` (`heal`/`cleanse`), backs pact Keystones; its

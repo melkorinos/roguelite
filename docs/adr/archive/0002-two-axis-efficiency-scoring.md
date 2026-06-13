@@ -1,13 +1,14 @@
 ---
-status: superseded — never implemented; see note below (2026-06-09)
+status: archived — never implemented; superseded by Monte Carlo balance harness
+superseded-by: tools/balance_harness.gd (built 2026-06-12)
+archived: 2026-06-13
 ---
 
-> **Status note (2026-06-09):** This was a *plan* for a balance tool that was never built.
-> There is no `BalanceSystem.gd`, no Effect/Action Score table, and no Compendium dev panel
-> in the codebase — only the inert `FeatureFlags.efficiency_scoring` flag remains. The G4
-> balance pass tunes **empirically via `BattleSystem.simulate_battle()`** (combat is now
-> real and deterministic — simulation is ground truth) rather than a subjective score table.
-> If an analytical scorer is ever wanted, this two-axis design is a reasonable starting point.
+> **Why archived:** The BalanceSystem and Effect/Action Score table described here were
+> never built. Only the inert `FeatureFlags.efficiency_scoring` flag remains. Balance is
+> done empirically via the Monte Carlo replacement-value harness (`tools/balance_harness.gd`,
+> built 2026-06-12) — simulation is ground truth. The two-axis schema is preserved here
+> as a reference starting point if an analytical scorer is ever wanted.
 
 # Two-axis Efficiency Score (DPS + Effect Score)
 

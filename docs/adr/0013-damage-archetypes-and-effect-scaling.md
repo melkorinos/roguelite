@@ -15,7 +15,14 @@ shouldn't also chip the hit. `multiplier` is retained but vestigial (nothing set
 Pick no longer does). Pure-effect → 0 (no tier chip). `BattleSystem._fire_element_once` skips
 the entire damage block when raw damage is 0 (no mitigation, no armour-strip, no curse-consume).
 
-## Level scales effect quantity
+## Level scales effect quantity (+ tier multiplier, added 2026-06-12)
+A status applied by a Level-N element applies **N × `TuningData.TIER_POTENCY_MULTIPLIER[tier]`**
+stacks/points/heal — the tier multiplier table is `{T1:1, T2:1.5, T3:2.5, T4:3.5}`, giving Lv1
+effective potency 1/2/3/4 by tier. Resolved at the single `AbilitySystem._source_potency` seam
+and on on-hit passives via the `potency` key. Also wired into `effective_damage` (× tier-mult).
+`ElementData.scaled_potency(tier, level)` is the helper. (The original design below described
+level-only scaling — the tier multiplier is the addition.)
+
 A status applied by a Level-N element applies **N** stacks/points/heal (`StatusSystem.apply_effect`
 gained a `potency` param; `AbilitySystem._apply_effects` derives it from the source element's
 level; on-hit passives carry their element's level). The only model a *shared per-side* status

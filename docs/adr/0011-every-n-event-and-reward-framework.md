@@ -34,6 +34,14 @@ list is over-engineering; discrete fields reuse seams that already exist (`hp_bo
 as a reward hook) and keep each consuming system reading one named value. Revisit if the modifier
 count grows past a handful.
 
+## Update (2026-06-13 — ADR 0016)
+
+The **Persistent Run Modifier** rewards (`bonus_hp`, `reroll_discount`) were migrated to the
+Augment system (ADR 0016): `apply_reward` now calls `AugmentSystem.add_augment` with a
+`run_state`-scoped atom instead of writing the discrete fields directly. The materialized cache
+fields (`hp_bonus`, `reroll_discount`) remain and are still how consuming systems read the values
+— Augment just becomes the authoritative write path. `EventSystem` itself is unchanged.
+
 ## Deliberate no-s
 
 - A granted Element does **not** write `run_discoveries` — Forging stays the sole Shop-tier

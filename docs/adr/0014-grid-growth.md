@@ -54,4 +54,5 @@ reverse once combat code assumes per-side counts.
   edit, not a code change.
 
 Supersedes the never-built `BalanceSystem`/Compendium-dev-column plan (ADR 0002) as the active balance
-direction for board size; live tracker is `.claude/ai-helper/handoff-run-loop.md`.
+direction for board size. (The handoff file referenced here was retired 2026-06-12; state lives in
+`.claude/ai-helper/memory.md` and `.claude/ai-helper/goals.md`.)
