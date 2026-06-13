@@ -231,3 +231,35 @@ static func canonical_family(element_id: String) -> String:
 	if (def.get("tier", 0) as int) == 1:
 		return element_id
 	return ""
+
+
+# The 1–3 Element Card stat pods for an item (SPEC §B pod rule, ADR-0017). Always
+# leads with the Cooldown pod; a damage-dealer adds a DMG pod (effective_damage).
+# Each pod is { "value": String, "label": String, "highlight": bool }. Pure view
+# logic kept out of the scene script so it is unit-testable.
+static func stat_pods(item: Dictionary) -> Array[Dictionary]:
+	var cd_value: String = "%.1fs" % (float(item.get("cooldown_deciseconds", 0) as int) / 10.0)
+	var cd_pod: Dictionary = { "value": cd_value, "label": "CD", "highlight": false }
+	var id: String = item.get("element_id", item.get("id", "")) as String
+	var tier: int = item.get("tier", 1) as int
+	var level: int = item.get("level", 1) as int
+	# Dealer → CD + DMG (takes precedence; a T1 dealer like Blood shows DMG, not its status).
+	if DAMAGE_DEALERS.has(id):
+		var dmg: int = effective_damage(item)
+		if dmg > 0:
+			return [cd_pod, { "value": str(dmg), "label": "DMG", "highlight": false }] as Array[Dictionary]
+	# T1 applier → CD + STATUS, from the element's `effect` keyword (base amount 1).
+	if tier == 1 and item.has("effect"):
+		var amount: int = scaled_potency(1, level)  # base 1 × tier-scaled potency
+		return [cd_pod, { "value": str(amount), "label": item["effect"] as String, "highlight": true }] as Array[Dictionary]
+	# T2+ on-activate applier → CD + STATUS from the ability's first apply_status effect.
+	# Landed amount = authored amount × scaled_potency (the combat seam, AbilitySystem).
+	var ability: Dictionary = AbilityData.get_ability(id)
+	if (ability.get("trigger", "") as String) == "on_activate":
+		var effects: Array = ability.get("effects", []) as Array
+		if not effects.is_empty() and ((effects[0] as Dictionary).get("kind", "") as String) == "apply_status":
+			var first: Dictionary = effects[0] as Dictionary
+			var amount: int = (first.get("amount", 1) as int) * scaled_potency(tier, level)
+			return [cd_pod, { "value": str(amount), "label": first["status"] as String, "highlight": true }] as Array[Dictionary]
+	# else → CD only (reactive / passive / combat-start: output is conditional).
+	return [cd_pod] as Array[Dictionary]

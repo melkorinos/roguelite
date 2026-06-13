@@ -218,11 +218,11 @@ func test_advance_round_sets_shop_phase_on_surviving_loss() -> void:
 
 # ── advance_round: gold income ────────────────────────────────────────────────
 
-func test_advance_round_adds_5_gold() -> void:
+func test_advance_round_adds_gold_per_round() -> void:
 	var state := _make_state()
-	state["gold"] = 3
+	var gold_before: int = state["gold"] as int
 	var s := PhaseSystem.advance_round(state)
-	assert_eq(s["gold"], 8)
+	assert_eq(s["gold"] as int, gold_before + TuningData.GOLD_PER_ROUND)
 
 
 # ── to_battle: opponent_starting_hp + player_hp reset ────────────────────────

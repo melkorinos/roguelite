@@ -7,7 +7,7 @@ extends ElementCard
 
 signal buy_pressed(element_id: String, shop_slot: int)
 
-const SIZE := Vector2(143, 143)
+const SIZE := Vector2(143, 207)  # width × 1.45 (ElementCard aspect)
 
 var shop_slot_index: int = -1
 
@@ -16,15 +16,11 @@ var _drag_started: bool = false
 
 
 func _ready() -> void:
+	card_width = int(SIZE.x)
 	show_price = true
-	center_content = true
-	emoji_size = UIScale.SHOP_EMOJI
-	name_size = UIScale.SHOP_LABEL
-	price_size = UIScale.SHOP_LABEL
 	empty_bg = ThemeData.SLOT_BG_EMPTY
 	empty_border = ThemeData.SLOT_BORDER_EMPTY
 	super._ready()
-	custom_minimum_size = SIZE
 	mouse_filter = Control.MOUSE_FILTER_STOP
 
 

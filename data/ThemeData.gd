@@ -54,6 +54,28 @@ const FAMILY_COLOR: Dictionary = {
 }
 const FAMILY_COLOR_FALLBACK := Color(0.60, 0.60, 0.66)  # untagged element → neutral
 
+# ── Tier frame metals (ADR-0017) ──────────────────────────────────────────────
+# Tier = the Element Card's frame MATERIAL, never a background fill. Bronze → silver
+# → gold → prismatic. T4 has no flat metal: its border is FRAME_PRISMATIC_STOPS baked
+# into a conic gradient (StyleBoxTexture). Independent of Hue (Family) and Level (glow).
+const FRAME_METAL_T1 := Color(0.659, 0.439, 0.235)  # #a8703c bronze
+const FRAME_METAL_T2 := Color(0.706, 0.729, 0.776)  # #b4bac6 silver
+const FRAME_METAL_T3 := Color(0.863, 0.714, 0.325)  # #dcb653 gold
+const FRAME_PRISMATIC_STOPS: Array[Color] = [
+	Color(1.000, 0.353, 0.235),  # #ff5a3c
+	Color(1.000, 0.824, 0.235),  # #ffd23c
+	Color(0.353, 0.824, 0.298),  # #5ad24c
+	Color(0.235, 0.784, 1.000),  # #3cc8ff
+	Color(0.608, 0.353, 0.871),  # #9b5ade
+	Color(1.000, 0.353, 0.235),  # #ff5a3c (loop close)
+]
+
+# ── Level glow ramp (ADR-0017, static v1) ─────────────────────────────────────
+# Level = portrait glow intensity, never a number on the frame. Glow radius (px) +
+# brightness multiplier per level; clamped 1–3 (animations deferred — "card animations").
+const LEVEL_GLOW_PX: Dictionary = { 1: 3, 2: 13, 3: 24 }
+const LEVEL_BRIGHT: Dictionary = { 1: 1.24, 2: 1.46, 3: 1.72 }
+
 # ── Slot / tile empty state ───────────────────────────────────────────────────
 const SLOT_BG_EMPTY     := Color(0.10, 0.10, 0.14, 0.85)
 const SLOT_BORDER_EMPTY := Color(0.28, 0.28, 0.36, 0.65)
@@ -200,3 +222,23 @@ static func comp_tier_color(tier: int) -> Color:
 # fall back to a neutral so a card never crashes on a missing tag.
 static func family_color(family: String) -> Color:
 	return FAMILY_COLOR.get(family, FAMILY_COLOR_FALLBACK) as Color
+
+
+# Frame metal for a tier (ADR-0017). T4 has no flat metal — it uses the prismatic
+# gradient; gold is returned as a safe fallback for any non-prismatic T4 usage.
+static func frame_metal(tier: int) -> Color:
+	match tier:
+		1: return FRAME_METAL_T1
+		2: return FRAME_METAL_T2
+		3: return FRAME_METAL_T3
+		_: return FRAME_METAL_T3
+
+
+# Level glow radius (px) and brightness multiplier (ADR-0017). Levels above 3 clamp
+# to the L3 ramp (static v1; per-level animation is the deferred "card animations").
+static func level_glow_px(level: int) -> int:
+	return LEVEL_GLOW_PX.get(clampi(level, 1, 3), 3) as int
+
+
+static func level_bright(level: int) -> float:
+	return LEVEL_BRIGHT.get(clampi(level, 1, 3), 1.24) as float

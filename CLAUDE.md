@@ -47,7 +47,7 @@ F5 in Godot editor. CLI: `godot --path . scenes/screens/Boot.tscn` (scene) · `g
 
 ## Round lifecycle (key functions)
 
-`Shop.gd`/`ShopSystem` → fight → `PhaseSystem.to_battle` (resets timers/statuses, seeds `combat_rng_state`, builds opponent grid from Ghost snapshot, fires combat_start abilities) → `BattleSystem.tick_battle` per frame (status tick → `_tick_side` per side → `resolve_reactive` → `resolve_periodic` → `_drain_commands`; flips `phase="result"` on KO or Sandstorm) → `PhaseSystem.resolve_round` (canonical win/loss/draw) → `PhaseSystem.advance_round` (+1 round, +5g). Deterministic: same board + seed = same result. Win rule + Sandstorm details in memory.md.
+`Shop.gd`/`ShopSystem` → fight → `PhaseSystem.to_battle` (resets timers/statuses, seeds `combat_rng_state`, builds opponent grid from Ghost snapshot, fires combat_start abilities) → `BattleSystem.tick_battle` per frame (status tick → `_tick_side` per side → `resolve_reactive` → `resolve_periodic` → `_drain_commands`; flips `phase="result"` on KO or Sandstorm) → `PhaseSystem.resolve_round` (canonical win/loss/draw) → `PhaseSystem.advance_round` (+1 round, +`GOLD_PER_ROUND`=10g). Deterministic: same board + seed = same result. Win rule + Sandstorm details in memory.md.
 
 ## Code standards
 
@@ -67,9 +67,9 @@ godot --headless --quit     # boot check — exit 0 means scripts load and autol
 Requires `godot` on PATH. On Windows: add the Godot editor directory to system PATH.
 CI runs the same two commands on every push (see [.github/workflows/ci.yml](.github/workflows/ci.yml)).
 
-**Run GUT tests** (19 suites across `test/unit/data/`, `test/unit/systems/`, `test/unit/autoloads/`):
+**Run GUT tests** (20 suites across `test/unit/data/`, `test/unit/systems/`, `test/unit/autoloads/`, `test/unit/scenes/`):
 ```powershell
-godot --headless -s addons/gut/gut_cmdln.gd -gdir=res://test/unit/data/ -gdir=res://test/unit/systems/ -gdir=res://test/unit/autoloads/ -gprefix=test_ -gexit
+godot --headless -s addons/gut/gut_cmdln.gd -gdir=res://test/unit/data/ -gdir=res://test/unit/systems/ -gdir=res://test/unit/autoloads/ -gdir=res://test/unit/scenes/ -gprefix=test_ -gexit
 ```
 Note: `-gsuffix` is not supported by this GUT version — omit it. `-gdir` must use `res://` prefix. **Do not pass a single parent dir** (`res://test/unit/`) — this GUT version does not recurse and will silently run nothing. Pass all three leaf dirs explicitly with separate `-gdir` flags.
 

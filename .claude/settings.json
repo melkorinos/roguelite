@@ -1,11 +1,13 @@
 {
   "permissions": {
+    "deny": [
+      "Bash(godot *)"
+    ],
     "allow": [
       "Bash(pnpm:*)",
       "Bash(git status)",
       "Bash(git diff*)",
       "Bash(git log*)",
-      "Bash(godot --headless *)",
       "PowerShell(godot --headless *)",
       "PowerShell(godot *)",
       "PowerShell(Get-Content*)",

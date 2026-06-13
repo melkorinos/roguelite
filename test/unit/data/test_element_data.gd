@@ -136,3 +136,58 @@ func test_every_canonical_family_is_a_known_base_family_or_empty() -> void:
 		var fam: String = ElementData.canonical_family(elem["id"] as String)
 		if fam != "":
 			assert_true(_BASE_FAMILIES.has(fam), elem["id"] + " has unknown family '" + fam + "'")
+
+
+# ── stat_pods (Element Card §B pod rule, ADR-0017) ─────────────────────────────
+
+func test_stat_pods_dealer_shows_cooldown_and_damage() -> void:
+	# Lava is a damage-dealer → [CD, DMG]. CD = 50ds / 10 = 5.0s; DMG = effective_damage L1 = 5.
+	var pods: Array[Dictionary] = ElementData.stat_pods(ElementData.instantiate("lava", 1))
+	assert_eq(pods.size(), 2)
+	assert_eq(pods[0]["value"], "5.0s")
+	assert_eq(pods[0]["label"], "CD")
+	assert_eq(pods[1]["value"], "5")
+	assert_eq(pods[1]["label"], "DMG")
+
+
+func test_stat_pods_tier1_applier_shows_status_pod() -> void:
+	# Fire (T1, pure-effect) applies its `effect` keyword each activation → [CD, STATUS].
+	# Base amount 1 × scaled_potency(1, 1) = 1; the status pod is highlighted.
+	var pods: Array[Dictionary] = ElementData.stat_pods(ElementData.instantiate("fire", 1))
+	assert_eq(pods.size(), 2)
+	assert_eq(pods[0]["label"], "CD")
+	assert_eq(pods[1]["value"], "1")
+	assert_eq(pods[1]["label"], "burn")
+	assert_true(pods[1]["highlight"] as bool)
+
+
+func test_stat_pods_tier2_on_activate_applier_scales_status_by_potency() -> void:
+	# Solar (T2, on_activate) applies 1 [burn] from AbilityData.effects[0]. The card
+	# shows the LANDED amount = base 1 × scaled_potency(2, 1) = 2.
+	var pods: Array[Dictionary] = ElementData.stat_pods(ElementData.instantiate("solar", 1))
+	assert_eq(pods.size(), 2)
+	assert_eq(pods[1]["value"], "2")
+	assert_eq(pods[1]["label"], "burn")
+	assert_true(pods[1]["highlight"] as bool)
+
+
+func test_stat_pods_reactive_pure_effect_is_cooldown_only() -> void:
+	# Steam (T2, on_burn_applied) output is conditional — a static number would lie,
+	# so the card shows CD only and the ability text carries the trigger.
+	var pods: Array[Dictionary] = ElementData.stat_pods(ElementData.instantiate("steam", 1))
+	assert_eq(pods.size(), 1)
+	assert_eq(pods[0]["label"], "CD")
+
+
+func test_stat_pods_combat_start_is_cooldown_only() -> void:
+	# Smoke (T2, combat_start) fires once at setup → CD only.
+	var pods: Array[Dictionary] = ElementData.stat_pods(ElementData.instantiate("smoke", 1))
+	assert_eq(pods.size(), 1)
+	assert_eq(pods[0]["label"], "CD")
+
+
+func test_stat_pods_tier1_dealer_prefers_damage_over_status() -> void:
+	# Blood is the lone T1 damage-dealer AND carries effect "leech"; the DMG pod wins.
+	var pods: Array[Dictionary] = ElementData.stat_pods(ElementData.instantiate("blood", 1))
+	assert_eq(pods.size(), 2)
+	assert_eq(pods[1]["label"], "DMG")

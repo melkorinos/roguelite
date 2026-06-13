@@ -28,18 +28,18 @@ Do these **in order**. Step 0 is done; **START AT STEP 1.** (Step 4, pass-2 tagg
   - `ElementData.canonical_family(id)` (T1 = self · forged = `"family"` tag · untagged → `""`) + demo chain tagged (steam→water, lava→fire, volcano→fire, supernova→light).
   - Tests: `test/unit/data/test_theme_data.gd` (new) + `canonical_family` cases in `test_element_data.gd`. **Written but not executed** (no Godot on the authoring box) — first action below is to run them.
 
-- [ ] **1 · Confirm pass 1 is green.** `godot --headless --import` then the GUT data suite (see CLAUDE.md). Fix any red before continuing.
+- [x] **1 · Confirm pass 1 is green.** ✅ (2026-06-13) import + GUT data suite green.
 
-- [ ] **2 · Finish the data-layer tokens** (blocks the card — must precede step 3):
-  - `ThemeData.gd` — add `FRAME_METAL_T1/T2/T3`, `FRAME_PRISMATIC_STOPS`, `LEVEL_GLOW_PX`/`LEVEL_BRIGHT`; retire `TIER_*_BG/BORDER` as card fills (grep usages: ElementCard, InventorySlot, TooltipCard).
-  - `UIScale.gd` — pod value/label, name, ability font consts.
-  - Values to use: SPEC §E "New tokens" table.
+- [x] **2 · Finish the data-layer tokens** ✅ (2026-06-13):
+  - `ThemeData.gd` — `FRAME_METAL_T1/T2/T3`, `FRAME_PRISMATIC_STOPS`, `LEVEL_GLOW_PX`/`LEVEL_BRIGHT` + accessors `frame_metal/level_glow_px/level_bright`. `TIER_*_BG/BORDER` kept (ForgeSlot + Compendium still use them); card path no longer uses them. TooltipCard never used them.
+  - `UIScale.gd` — `CARD_*` font consts + `apply_scaled`/`apply_rich_scaled` (one scalable component).
+  - **Plus TDD:** `ElementData.stat_pods(item)` (pure §B pod rule) + tests; ThemeData frame/glow-clamp tests.
 
-- [ ] **3 · Rebuild `scenes/shared/ElementCard.gd`** `render()` to the SPEC node tree: portrait radial glow via `GradientTexture2D` modulated by `family_color`; metal `StyleBoxFlat` (T4 = `StyleBoxTexture` prismatic); 1–3 stat pods (pod rule = SPEC §B); lineage underbar; ability `RichTextLabel` reusing TooltipCard's `[url]` keyword logic; static level glow. One scalable size param (height = width × 1.45), graceful degradation per SPEC §D.
+- [x] **3 · Rebuilt `scenes/shared/ElementCard.gd`** ✅ (2026-06-13). Frame panel + inner dark panel; portrait `GradientTexture2D` radial glow (level-brightened); metal `StyleBoxFlat` (T4 = prismatic `StyleBoxTexture`); pods from `stat_pods`; lineage underbar; ability `RichTextLabel` with keyword `[url]` links + trigger prefix; `card_width` param (height = width × 1.45) with §D width-band degradation (ability hides <140px, secondary pods <110px). Runtime-verified by `test/unit/scenes/test_element_card.gd`.
 
-- [ ] **4 · Refactor the slots onto the one card.** `scenes/slots/InventorySlot.gd` → **extend `ElementCard`** (currently a bespoke `Button`); layer click/drag/F-forge on top — this deletes its duplicate `apply_item_style`. Add the width/scale param to `ShopItemTile`/`BattleSlot`.
+- [x] **4 · Refactored the slots onto the one card** ✅ (2026-06-13). `InventorySlot` now extends `ElementCard` (drag/F-forge layered on; bespoke Button styling deleted); `ShopItemTile`/`BattleSlot` set `card_width`; `Shop.gd` inventory rebuild uses `render()`/`clear()`.
 
-- [ ] **5 · Validate end-to-end.** `godot --headless --import` → `--quit`; full GUT suites; eyeball the card in shop/inventory/battle at HD.
+- [~] **5 · Validate end-to-end.** import ✅ · `--quit` boot ✅ · **GUT 715/715 green** ✅. (Also fixed a pre-existing unrelated drift: `test_advance_round_adds_5_gold` hardcoded 8 while `TuningData.GOLD_PER_ROUND=10` → now asserts `3 + GOLD_PER_ROUND`, renamed `..._adds_gold_per_round`.) **PENDING: visual eyeball at HD 1280×720** (needs a display — confirm the 1.45 aspect doesn't overflow the shop board's 720p budget, SPEC §D note).
 
 - [ ] **(parallel, non-blocking) · Pass-2 roster tagging.** Tag the remaining ~89 forged elements with a `"family"` by result-vibe — a reviewable data sweep. Until done, untagged elements render the neutral fallback hue (no crash). Can run anytime relative to steps 2–5.
 

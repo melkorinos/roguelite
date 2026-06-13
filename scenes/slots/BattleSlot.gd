@@ -10,23 +10,21 @@ signal drag_started(element_id: String, grid_slot: int, sell_price: int)
 signal drag_ended()
 signal forge_quick_slot_grid(grid_slot: int)
 
-const SIZE := Vector2(156, 156)
+const CARD_WIDTH := 156
 
 var slot_index: int = -1
 var draggable: bool = true
 
 
 func _ready() -> void:
+	card_width = CARD_WIDTH
 	show_charge = true
 	name_with_level = true
-	emoji_size = UIScale.SLOT_EMOJI
-	name_size = UIScale.SLOT_NAME
 	empty_glyph = "+"
 	empty_bg = ThemeData.BATTLE_SLOT_BG_EMPTY
 	empty_border = ThemeData.BATTLE_SLOT_BORDER_EMPTY
 	super._ready()
-	custom_minimum_size = SIZE
-	pivot_offset = SIZE / 2.0
+	pivot_offset = custom_minimum_size / 2.0
 
 
 func set_element(item: Variant) -> void:

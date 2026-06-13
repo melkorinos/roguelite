@@ -217,23 +217,11 @@ func _rebuild_inventory(s: Dictionary) -> void:
 		var item: Variant = inv[i]
 		var slot: InventorySlot = InventorySlot.new()
 		slot.slot_index = i
-		slot.custom_minimum_size = Vector2(143, 143)
-		UIScale.apply(slot, UIScale.INV_SLOT)
-		if item != null:
-			var elem: Dictionary = item as Dictionary
-			slot.has_item = true
-			slot.element_id = elem["element_id"]
-			slot.element_level = elem["level"] as int
-			slot.element_price = elem["price"] as int
-			slot.item_dict = elem.duplicate()
-			var eff_dmg: int = ElementData.effective_damage(elem)
-			slot.text = "%s\n%s\nLv%d  %ddmg" % [elem["emoji"], elem["name"], elem["level"], eff_dmg]
-			slot.apply_item_style(elem["tier"] as int)
-		else:
-			slot.has_item = false
-			slot.text = "[ ]"
-			slot.disabled = false
 		row.add_child(slot)
+		if item != null:
+			slot.render(item as Dictionary)
+		else:
+			slot.clear()
 		# Connect signals after add_child so _ready() has run.
 		slot.slot_dropped.connect(_on_inv_slot_received_drop)
 		slot.shop_buy_upgrade_requested.connect(_on_shop_buy_upgrade_requested)
