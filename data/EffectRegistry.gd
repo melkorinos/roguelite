@@ -27,7 +27,7 @@ const EFFECTS: Dictionary = {
 	"slow":    { "status_shape": { "n": 0 },                                           "count_field": "n",         "triggers": [], "emoji": "🐌", "valence": "debuff" },
 	"haste":   { "status_shape": { "reduction": 0, "reduction_bonus_deciseconds": 0 }, "count_field": "reduction", "triggers": ["on_haste_applied"], "emoji": "💨", "valence": "buff", "float": { "label": "HASTE", "nudge": -4.0 } },
 	"weaken":  { "status_shape": { "stacks": 0, "ticks": 0, "duration_bonus": 0 },     "count_field": "stacks",    "triggers": ["on_status_applied:weaken"], "emoji": "📉", "valence": "debuff", "float": { "label": "WEAKEN", "nudge": -4.0 } },
-	"curse":   { "status_shape": { "stacks": 0, "damage_amplifier": 0 },               "count_field": "stacks",    "triggers": ["on_status_applied:curse"], "emoji": "🌑", "valence": "debuff", "float": { "label": "CURSE", "nudge": -4.0 } },
+	"curse":   { "status_shape": { "stacks": 0, "damage_amplifier": 0, "by_source": {} }, "count_field": "stacks",    "triggers": ["on_status_applied:curse"], "emoji": "🌑", "valence": "debuff", "float": { "label": "CURSE", "nudge": -4.0 } },
 	"leech":   { "status_shape": { "bonus": 0, "double": false },                      "count_field": "",          "triggers": ["on_leech"], "emoji": "🩸", "valence": "buff" },
 	"heal":    { "status_shape": {},                                                   "count_field": "",          "triggers": ["on_heal_applied"], "emoji": "💚", "valence": "buff" },
 	"cleanse": { "status_shape": {},                                                   "count_field": "",          "triggers": [], "emoji": "🫧", "valence": "buff", "float": { "label": "CLEANSE", "nudge": -4.0 } },
@@ -42,6 +42,15 @@ const SIDE_WIDE_FIELDS: Dictionary = {
 	"cooldown_modifier_deciseconds": 0,
 	# One-shot bonus consumed by this side's NEXT damaging direct hit (prime_next_hit).
 	"next_hit_bonus": 0,
+	# Pact suppression (the suppress atom, ADR 0016): when true, this side's own heal /
+	# cleanse applications are blocked for the fight. Set by an Augment's combat-scope
+	# atom (e.g. the Plague Pact Keystone); read in StatusSystem.apply_effect.
+	"suppress_heal": false,
+	"suppress_cleanse": false,
+	# Flat shift on this side's outgoing direct-hit damage (the set_side_field atom,
+	# ADR 0016). Negative = a pact penalty (e.g. Bulwark Oath); applied after the next-hit
+	# primer in BattleSystem, floored at 0. Flat (no percentages — integer combat model).
+	"outgoing_damage_flat": 0,
 }
 
 

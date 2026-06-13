@@ -33,6 +33,26 @@ static func eligible_for_tier(_run_discoveries: Array, tier: int) -> Array[Dicti
 	return result
 
 
+# Soft shop-pool bias from the player's Augments (ADR 0016): for each {family: copies}
+# weight, appends `copies` extra copies of every pool element whose Family matches
+# (its own id for a T1, or any of its T1 ingredients). _pick_spread dedupes by id, so
+# extra copies only raise an element's odds of being drawn — they never duplicate a
+# shop slot, unlock a tier, or add an ineligible element. Empty weights → pool returned
+# unchanged (the hot path: no Augment shapes the shop).
+static func _apply_shop_weights(pool: Array[Dictionary], weights: Dictionary) -> Array[Dictionary]:
+	if weights.is_empty():
+		return pool
+	var biased: Array[Dictionary] = pool.duplicate()
+	for elem: Dictionary in pool:
+		var elem_id: String = elem["id"] as String
+		var extra: int = weights.get(elem_id, 0) as int
+		for ingredient: String in RecipeData.ingredients_of(elem_id):
+			extra += weights.get(ingredient, 0) as int
+		for _i: int in extra:
+			biased.append(elem)
+	return biased
+
+
 # Picks up to `count` elements from `source`, preferring distinct families (no shared
 # ingredient) and avoiding duplicate elements; relaxes both when the pool is small.
 static func _pick_spread(source: Array, count: int) -> Array[Dictionary]:
@@ -326,6 +346,12 @@ static func reroll_shop(state: Dictionary, is_free: bool = false) -> Dictionary:
 	for tier: int in unlocked:
 		if tier >= 2:
 			higher_pool.append_array(eligible_for_tier(run_discoveries, tier))
+
+	# Augment shop-gen bias (ADR 0016): a soft weight toward chosen Families, applied
+	# within each already-eligible pool. {} when no Augment shapes the shop → unchanged.
+	var weights: Dictionary = AugmentSystem.shop_weights(s)
+	tier1_pool = _apply_shop_weights(tier1_pool, weights)
+	higher_pool = _apply_shop_weights(higher_pool, weights)
 
 	var slot_count: int = TuningData.SHOP_SLOT_COUNT
 	# Every slot independently rolls T1 vs a higher (unlocked) tier

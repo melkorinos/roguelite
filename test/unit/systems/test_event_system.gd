@@ -151,18 +151,23 @@ func test_apply_grant_element_full_inventory_falls_back_to_gold() -> void:
 
 # ── apply_reward: persistent Run Modifiers ────────────────────────────────────
 
-func test_apply_bonus_hp_increments_hp_bonus() -> void:
-	var s := _state()
-	s["hp_bonus"] = 10
-	var out := EventSystem.apply_reward(s, {"kind": "bonus_hp", "amount": 30})
-	assert_eq(out["hp_bonus"] as int, 40)
+func test_apply_bonus_hp_materializes_via_augment() -> void:
+	# Persistent rewards are now Augments (ADR 0016): hp_bonus is the materialized sum of
+	# every bonus_hp run_state atom, not a directly-incremented field.
+	var out := EventSystem.apply_reward(_state(), {"kind": "bonus_hp", "amount": 30})
+	assert_eq(out["hp_bonus"] as int, 30)
+	assert_eq((out["augments"] as Array).size(), 1)
+	assert_eq((out["augments"] as Array)[0]["source_type"] as String, "event_reward")
+	# A second grant accumulates through a new Augment.
+	var out2 := EventSystem.apply_reward(out, {"kind": "bonus_hp", "amount": 10})
+	assert_eq(out2["hp_bonus"] as int, 40)
 
 
-func test_apply_reroll_discount_increments_field() -> void:
-	var s := _state()
-	s["reroll_discount"] = 1
-	var out := EventSystem.apply_reward(s, {"kind": "reroll_discount", "amount": 1})
-	assert_eq(out["reroll_discount"] as int, 2)
+func test_apply_reroll_discount_materializes_via_augment() -> void:
+	var out := EventSystem.apply_reward(_state(), {"kind": "reroll_discount", "amount": 1})
+	assert_eq(out["reroll_discount"] as int, 1)
+	var out2 := EventSystem.apply_reward(out, {"kind": "reroll_discount", "amount": 1})
+	assert_eq(out2["reroll_discount"] as int, 2)
 
 
 # ── apply_reward: bookkeeping ─────────────────────────────────────────────────

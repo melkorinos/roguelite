@@ -75,13 +75,28 @@ static func apply_reward(state: Dictionary, reward: Dictionary) -> Dictionary:
 		"gold":
 			s["gold"] = (s["gold"] as int) + (reward["amount"] as int)
 		"bonus_hp":
-			s["hp_bonus"] = (s.get("hp_bonus", 0) as int) + (reward["amount"] as int)
+			# Persistent Run Modifiers are now Augments (ADR 0016): each grant appends an
+			# event_reward Augment carrying a run_state atom; AugmentSystem materializes the
+			# discrete hp_bonus/reroll_discount cache the hot readers still use.
+			s = AugmentSystem.add_augment(s, _run_modifier_augment("bonus_hp", reward["amount"] as int))
 		"reroll_discount":
-			s["reroll_discount"] = (s.get("reroll_discount", 0) as int) + (reward["amount"] as int)
+			s = AugmentSystem.add_augment(s, _run_modifier_augment("reroll_discount", reward["amount"] as int))
 		"grant_element":
 			_grant_element(s, reward["element_id"] as String)
 	s["last_event_round"] = s["round"] as int
 	return s
+
+
+# Builds the event_reward Augment that carries a single run_state atom (bonus_hp /
+# reroll_discount). The discrete cache field is recomputed from these by
+# AugmentSystem.materialize_run_state — Events no longer write the field directly.
+static func _run_modifier_augment(atom_kind: String, amount: int) -> Dictionary:
+	return {
+		"id": "event_%s" % atom_kind,
+		"name": atom_kind,
+		"source_type": "event_reward",
+		"effects": [ { "kind": atom_kind, "scope": "run_state", "amount": amount } ],
+	}
 
 
 # ── helpers ───────────────────────────────────────────────────────────────────

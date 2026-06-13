@@ -636,3 +636,42 @@ func test_next_hit_primer_consumed_by_first_hit_only() -> void:
 	var first_hit: int = (st["opponent_hp"] as int) - (s["opponent_hp"] as int)
 	assert_eq(first_hit, ElementData.effective_damage(ElementData.instantiate(DEALER, 1)) + 3, "primed hit lands harder")
 	assert_eq((s["player_statuses"] as Dictionary)["next_hit_bonus"] as int, 0, "primer is spent")
+
+
+# ── curse attribution through combat tick ─────────────────────────────────────
+
+func test_tick_battle_credits_curse_amplification_to_curse_applier() -> void:
+	# Player slot 0: Dark (pure-effect, cd 3s) applies curse to opponent.
+	# Player slot 1: Boulder (damage-dealer, cd 6s) hits the cursed opponent.
+	# Both fire in a single 6s tick (Dark first — slot order). The curse
+	# amplification on Boulder's hit is credited to Dark's contrib.curse.
+	var empty_opp: Dictionary = { "grid": [null, null, null, null], "round": 1 }
+	var st := _make_state()
+	var dark_elem: Dictionary = ElementData.find("dark").duplicate()
+	dark_elem["element_id"] = "dark"
+	dark_elem["level"] = 1
+	(st["battle_grid"] as Array)[0] = dark_elem
+	var boulder_elem: Dictionary = ElementData.find(DEALER).duplicate()
+	boulder_elem["element_id"] = DEALER
+	boulder_elem["level"] = 1
+	(st["battle_grid"] as Array)[1] = boulder_elem
+	st = PhaseSystem.to_battle(st, empty_opp)
+	var s := BattleSystem.tick_battle(st, _dealer_cooldown())  # 6s: Dark fires at 3s then Boulder at 6s
+	var row: Dictionary = ((s["battle_stats"] as Dictionary)["player"] as Array)[0] as Dictionary
+	assert_gt((row["contrib"] as Dictionary)["curse"] as int, 0,
+		"curse amplification credited to Dark's contrib.curse")
+
+
+# ── summary_rows damage includes DOT contributions ────────────────────────────
+
+func test_summary_rows_includes_poison_in_damage_field() -> void:
+	# Fungus (pure-effect, no direct hit) poisons the opponent. After ticks the
+	# poison deals HP damage — this should appear in the Summary Dmg column.
+	var empty_opp: Dictionary = { "grid": [null, null, null, null], "round": 1 }
+	var st := PhaseSystem.to_battle(_state_with_player_element("fungus"), empty_opp)
+	st = BattleSystem.tick_battle(st, 4.5)   # fungus fires, applies poison
+	st = BattleSystem.tick_battle(st, 1.0)   # status tick → poison damage
+	st = BattleSystem.tick_battle(st, 1.0)   # second tick
+	var row: Dictionary = BattleSystem.summary_rows(st, "player")[0]
+	assert_gt(row["damage"] as int, 0, "poison-dealing element shows damage > 0 in Summary")
+	assert_gt(row["dps"] as float, 0.0, "poison-dealing element shows DPS > 0 in Summary")

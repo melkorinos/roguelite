@@ -192,8 +192,12 @@ All elements sharing a Tier-1 ingredient — a build archetype (e.g. the Lightni
 _Avoid_: tribe, type — and **not** Faction (the separate, future threshold-synergy concept)
 
 **Starting Pick**:
-A once-per-Run choice at the start of round 1: three Tier-1 elements are offered and the chosen one is granted to the player with doubled base damage.
+A once-per-Run choice at the start of round 1: the player is offered a small set of **Keystone** Augments and hard-commits to one, shaping the whole Run. (Replaces the old placeholder that granted a levelled Tier-1 element; player-facing name is provisional.)
 _Avoid_: draft (Draft is the separate free Item/Trinket selection)
+
+**Keystone**:
+The single run-defining **Augment** chosen at the **Starting Pick**, pushing the whole Run toward a build — a **Family** or a Status archetype — through shop-shaping and/or owned-piece amplification, often with a pact (a real trade-off). Player-facing name is provisional.
+_Avoid_: talent, trait, perk
 
 **Event**:
 A non-combat choice node that interrupts the Run every `EVENT_EVERY_N_ROUNDS` rounds (before the shop): the player is offered three distinct **Event Rewards** and must take exactly one. Distinct from a **PvE Round** — an Event is never a fight. Presented as a blocking overlay in the Shop, mirroring the Starting Pick. The offer is seeded per round so it reproduces under Replay. See `docs/adr/0011`.
@@ -204,8 +208,12 @@ One of the three options an Event offers. Either **one-shot** (Gold, or a grante
 _Avoid_: prize, loot, boon, drop
 
 **Run Modifier**:
-A persistent, accumulating buff granted by an Event Reward, stored as a discrete field on the Run state and read each round by another system: `hp_bonus` (extra Player HP, read in `PhaseSystem`) and `reroll_discount` (subtracts from the Shop reroll cost, floored at 0). Stacks across the Run as more Events grant it.
+A persistent, accumulating buff stored as a discrete field on the Run state and read each round by another system: `hp_bonus` / `hp_bonus_percent` (extra Player HP, read in `PhaseSystem`) and `reroll_discount` (subtracts from the Shop reroll cost, floored at 0). These fields are the **materialized run_state output of the player's Augments** (`AugmentSystem`, `docs/adr/0016`): an Event grants one by adding an Augment, not by writing the field directly.
 _Avoid_: relic, perk, upgrade, buff (too generic)
+
+**Augment**:
+An acquired source of effects the player picks up during a Run — a **Keystone** (from the Starting Pick), an **Event Reward**, or a future **Trinket**. Carries a list of scope-tagged effect atoms (run-state / shop / combat / round-result), each applied at its own site (`AugmentSystem`, `docs/adr/0016`). Shares the atom unit with an **Ability**, but unlike an Ability it is not bound to an Element and is not combat-only.
+_Avoid_: boon, relic, modifier (a Run Modifier is just its additive run_state subset)
 
 **Draft**:
 The free selection of Items and Trinkets offered each round. Separate from the gold shop.

@@ -40,7 +40,7 @@ static func empty_slots(count: int = SLOT_COUNT) -> Array:
 static func empty_stat_row() -> Dictionary:
 	return {
 		"fires": 0, "damage": 0, "effects": 0, "effects_by_status": {},
-		"contrib": { "direct": 0, "poison": 0, "burn": 0, "heal": 0, "blocked": 0 },
+		"contrib": { "direct": 0, "poison": 0, "burn": 0, "heal": 0, "blocked": 0, "curse": 0 },
 	}
 
 

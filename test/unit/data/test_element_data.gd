@@ -86,11 +86,14 @@ func test_effective_damage_dealer_is_base_times_level() -> void:
 
 
 # Archetype integrity: every damage-dealer is a real T2+ element with base damage.
+# Blood (T1) is an intentional exception — its leech mechanic requires a direct hit.
+const _DAMAGE_DEALER_T1_EXCEPTIONS: Dictionary = { "blood": true }
 func test_damage_dealers_are_tier2_plus_with_base_damage() -> void:
 	for id: Variant in ElementData.DAMAGE_DEALERS:
 		var def: Dictionary = ElementData.find(id as String)
 		assert_false(def.is_empty(), "unknown damage-dealer id: " + (id as String))
-		assert_gte(def["tier"] as int, 2, (id as String) + " should be T2+")
+		if not _DAMAGE_DEALER_T1_EXCEPTIONS.has(id as String):
+			assert_gte(def["tier"] as int, 2, (id as String) + " should be T2+")
 		assert_gt(def["damage"] as int, 0, (id as String) + " needs base damage")
 
 

@@ -191,14 +191,18 @@ static func apply_effect(statuses: Dictionary, effect: String, potency: int = 1,
 			d["ticks"] = TuningData.WEAKEN_DURATION_TICKS + (d["duration_bonus"] as int)
 		"curse":
 			var d: Dictionary = s["curse"] as Dictionary
-			d["stacks"] = mini((d["stacks"] as int) + p, MAX_STACKS)
+			var before: int = d["stacks"] as int
+			d["stacks"] = mini(before + p, MAX_STACKS)
+			_credit_source(d, source_slot, (d["stacks"] as int) - before)
 			# Plain curse carries a base per-event amplifier; abilities may raise it.
 			if (d["damage_amplifier"] as int) <= 0:
 				d["damage_amplifier"] = TuningData.CURSE_DOT_AMPLIFIER
 		"heal":
-			hp_delta = TuningData.HEAL_PER_APPLICATION * p
+			# Pact suppression (ADR 0016): a suppress_heal side blocks its own heals.
+			hp_delta = 0 if (s.get("suppress_heal", false) as bool) else TuningData.HEAL_PER_APPLICATION * p
 		"cleanse":
-			var remove: int = TuningData.CLEANSE_REMOVE_PER_APPLICATION * p
+			# suppress_cleanse → remove 0, so every draw-down below is a no-op.
+			var remove: int = 0 if (s.get("suppress_cleanse", false) as bool) else TuningData.CLEANSE_REMOVE_PER_APPLICATION * p
 			var burn_d: Dictionary = s["burn"] as Dictionary
 			burn_d["stacks"] = maxi(0, (burn_d["stacks"] as int) - remove)
 			_decrement_source(burn_d["by_source"] as Dictionary, remove)
@@ -297,8 +301,12 @@ static func tick(statuses: Dictionary) -> Dictionary:
 
 	# Curse v2: a DOT tick is a damaging event — amplify the tick by damage_amplifier and
 	# consume one curse stack. When stacks reach 0, the curse is spent.
+	var curse_amplified_by_source: Dictionary = {}
 	if hp_damage > 0 and (curse["stacks"] as int) > 0:
-		hp_damage += curse["damage_amplifier"] as int
+		var amp: int = curse["damage_amplifier"] as int
+		curse_amplified_by_source = _split_proportional(curse["by_source"] as Dictionary, amp)
+		_decrement_source(curse["by_source"] as Dictionary, 1)
+		hp_damage += amp
 		curse["stacks"] = (curse["stacks"] as int) - 1
 
 	# Weaken: decrement ticks, stacks stay
@@ -307,7 +315,7 @@ static func tick(statuses: Dictionary) -> Dictionary:
 	if weaken_ticks > 0:
 		weaken["ticks"] = weaken_ticks - 1
 
-	return { "statuses": s, "damage": hp_damage, "events": events, "attribution": attribution, "blocked_by_source": blocked_by_source }
+	return { "statuses": s, "damage": hp_damage, "events": events, "attribution": attribution, "blocked_by_source": blocked_by_source, "curse_amplified_by_source": curse_amplified_by_source }
 
 
 # Adds a { slot: amount } split into an accumulator dict (used to merge armor- and
@@ -416,8 +424,12 @@ static func compute_incoming_damage(raw: int, attacker_statuses: Dictionary, def
 	# Curse v2: a damaging hit consumes one curse stack and adds damage_amplifier. A hit
 	# mitigated to 0 neither amplifies nor consumes.
 	var curse: Dictionary = def_s["curse"] as Dictionary
+	var curse_amplified_by_source: Dictionary = {}
 	if dmg > 0 and (curse["stacks"] as int) > 0:
-		dmg += curse["damage_amplifier"] as int
+		var amp: int = curse["damage_amplifier"] as int
+		curse_amplified_by_source = _split_proportional(curse["by_source"] as Dictionary, amp)
+		_decrement_source(curse["by_source"] as Dictionary, 1)
+		dmg += amp
 		curse["stacks"] = (curse["stacks"] as int) - 1
 
-	return { "damage": dmg, "defender_statuses": def_s, "blocked_by_source": blocked_by_source }
+	return { "damage": dmg, "defender_statuses": def_s, "blocked_by_source": blocked_by_source, "curse_amplified_by_source": curse_amplified_by_source }

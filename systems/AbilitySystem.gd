@@ -20,6 +20,8 @@ class_name AbilitySystem
 #   { "kind": "add_max_hp",       "amount": int, "target": "own" }            — raises HP + the bar max, for the fight
 #   { "kind": "prime_dot",        "status": "burn"|"poison", "amount": int }  — one-shot bonus on the target's next DOT tick
 #   { "kind": "prime_next_hit",   "amount": int, "target": "own" }            — one-shot bonus on this side's next direct hit
+#   { "kind": "suppress",         "status": "heal"|"cleanse", "target": "own" } — blocks that side's heal/cleanse for the fight
+#   { "kind": "set_side_field",   "field": String, "amount": int, "target": "own" } — adjusts a numeric side-wide field (cooldown/outgoing-damage)
 #
 # A "passive"-trigger ability may also carry an "aura" dict:
 #   { "adjacent_damage_bonus": int }  — adjacent damage-dealers hit harder (level-scaled),
@@ -116,6 +118,13 @@ const ATOM_SCHEMAS: Dictionary = {
 	"add_max_hp":       { "required": ["amount"],                   "default_target": "own",      "potency_aware": true },
 	"prime_dot":        { "required": ["status", "amount"],         "default_target": "opponent", "potency_aware": true },
 	"prime_next_hit":   { "required": ["amount"],                   "default_target": "own",      "potency_aware": true },
+	# Augment combat atom (ADR 0016): blocks the target side's heal/cleanse for the fight.
+	# Shared with the ability vocabulary so abilities could use it too; no element does yet.
+	"suppress":         { "required": ["status"],                   "default_target": "own",      "potency_aware": false },
+	# Augment combat atom (ADR 0016): adjusts a numeric side-wide field by a flat amount
+	# (cooldown_modifier_deciseconds, next_hit_bonus, outgoing_damage_flat). Field-name
+	# validity is checked by AugmentSystem.validate_atom against EffectRegistry.
+	"set_side_field":   { "required": ["field", "amount"],          "default_target": "own",      "potency_aware": false },
 }
 
 
@@ -225,6 +234,20 @@ static func _apply_atom(state: Dictionary, effect: Dictionary, source_side: Stri
 			var statuses: Dictionary = state[keys["statuses"]] as Dictionary
 			statuses["next_hit_bonus"] = (statuses["next_hit_bonus"] as int) + (effect["amount"] as int) * potency
 			return {}
+		"suppress":
+			# Pact suppression (ADR 0016): flag the target side so its own heal/cleanse
+			# applications are blocked for the rest of the fight. status ∈ {heal, cleanse}.
+			var statuses: Dictionary = state[keys["statuses"]] as Dictionary
+			statuses["suppress_%s" % (effect["status"] as String)] = true
+			return {}
+		"set_side_field":
+			# Adjusts a numeric side-wide field by a flat amount (ADR 0016). Guarded so a
+			# typo'd or non-numeric field is a no-op rather than a crash.
+			var statuses: Dictionary = state[keys["statuses"]] as Dictionary
+			var field: String = effect["field"] as String
+			if statuses.has(field) and typeof(statuses[field]) == TYPE_INT:
+				statuses[field] = (statuses[field] as int) + (effect["amount"] as int)
+			return {}
 	return {}
 
 
@@ -248,6 +271,15 @@ static func adjacent_damage_bonus(grid: Array, slot: int) -> int:
 		var bonus: int = aura.get("adjacent_damage_bonus", 0) as int
 		total += bonus * maxi(1, neighbor_element.get("level", 1) as int)
 	return total
+
+
+# Public seam for non-board effect sources (Augments, ADR 0016): applies a list of
+# atoms from a virtual source — no board slot (potency 1, no Summary attribution) — on
+# `side`. Lets AugmentSystem reuse the combat atom vocabulary without reaching into the
+# private _apply_effects. Mutates and returns `state`.
+static func apply_external_effects(state: Dictionary, effects: Array, side: String) -> Dictionary:
+	_apply_effects(state, effects, side, -1)
+	return state
 
 
 # source_slot >= 0 attributes the applied statuses to that element's Summary row.

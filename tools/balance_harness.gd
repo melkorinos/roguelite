@@ -74,7 +74,7 @@ func _tier_pools() -> Dictionary:
 func _evaluate_element(element_id: String, tier: int, pool: Array) -> Dictionary:
 	var delta_sum: float = 0.0
 	var win_with_sum: float = 0.0
-	var contrib_sum: Dictionary = { "direct": 0, "poison": 0, "burn": 0, "heal": 0, "blocked": 0 }
+	var contrib_sum: Dictionary = { "direct": 0, "poison": 0, "burn": 0, "heal": 0, "blocked": 0, "curse": 0 }
 	var fires_sum: int = 0
 	for i: int in SAMPLES_PER_ELEMENT:
 		var rng: RandomNumberGenerator = _rng("ctx:%s:%d" % [element_id, i])

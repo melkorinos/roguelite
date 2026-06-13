@@ -50,6 +50,8 @@ static func tick_battle(state: Dictionary, delta: float) -> Dictionary:
 			_credit_dot_contrib(battle_stats["player"] as Array, opp_tick["attribution"] as Dictionary)
 			# DOT blocked by the opponent's own armor/plating → credit the opponent's defence.
 			_credit_dot_contrib(battle_stats["opponent"] as Array, { "blocked": opp_tick["blocked_by_source"] as Dictionary })
+			# Curse amplification on the opponent's DOT tick → credited to the player's curse elements.
+			_credit_dot_contrib(battle_stats["player"] as Array, { "curse": opp_tick["curse_amplified_by_source"] as Dictionary })
 			# A DOT ticking on the opponent is the player's event to react to.
 			for tick_trigger: Variant in opp_tick["events"] as Array:
 				events.append(AbilitySystem.trigger_event(tick_trigger as String, "player"))
@@ -60,6 +62,8 @@ static func tick_battle(state: Dictionary, delta: float) -> Dictionary:
 			_credit_dot_contrib(battle_stats["opponent"] as Array, pl_tick["attribution"] as Dictionary)
 			# DOT blocked by the player's own armor/plating → credit the player's defence.
 			_credit_dot_contrib(battle_stats["player"] as Array, { "blocked": pl_tick["blocked_by_source"] as Dictionary })
+			# Curse amplification on the player's DOT tick → credited to the opponent's curse elements.
+			_credit_dot_contrib(battle_stats["opponent"] as Array, { "curse": pl_tick["curse_amplified_by_source"] as Dictionary })
 			for tick_trigger: Variant in pl_tick["events"] as Array:
 				events.append(AbilitySystem.trigger_event(tick_trigger as String, "opponent"))
 		s["status_tick_timer"] = tick_acc
@@ -219,6 +223,8 @@ static func _fire_element_once(s: Dictionary, ctx: Dictionary, side: String, ele
 		if next_hit_bonus > 0:
 			raw += next_hit_bonus
 			own_statuses["next_hit_bonus"] = 0
+		# Flat outgoing-damage shift from a pact Augment (ADR 0016), floored at 0.
+		raw = maxi(0, raw + (own_statuses.get("outgoing_damage_flat", 0) as int))
 		dmg = raw
 		var armor_before: int = ((s[opp_statuses_key] as Dictionary)["armor"] as Dictionary)["value"] as int
 		var hit: Dictionary = StatusSystem.compute_incoming_damage(raw, s[own_statuses_key] as Dictionary, s[opp_statuses_key] as Dictionary)
@@ -227,6 +233,9 @@ static func _fire_element_once(s: Dictionary, ctx: Dictionary, side: String, ele
 		# Armor that soaked this hit is the defender's Contribution → credit its slots.
 		_credit_dot_contrib((s["battle_stats"] as Dictionary)[opp_k["stats"] as String] as Array,
 			{ "blocked": hit["blocked_by_source"] as Dictionary })
+		# Curse amplification credited to the attacker's curse-applying elements (Dark etc.).
+		_credit_dot_contrib((s["battle_stats"] as Dictionary)[k["stats"] as String] as Array,
+			{ "curse": hit["curse_amplified_by_source"] as Dictionary })
 		var armor_after: int = ((s[opp_statuses_key] as Dictionary)["armor"] as Dictionary)["value"] as int
 		if armor_before > 0 and armor_after == 0:
 			events.append(AbilitySystem.trigger_event("on_armor_stripped", side, slot_index))
@@ -292,7 +301,8 @@ static func summary_rows(state: Dictionary, side: String) -> Array[Dictionary]:
 			continue
 		var elem: Dictionary = grid[i] as Dictionary
 		var st: Dictionary = stats[i] as Dictionary
-		var damage: int = st["damage"] as int
+		var contrib: Dictionary = st["contrib"] as Dictionary
+		var damage: int = (contrib["direct"] as int) + (contrib["poison"] as int) + (contrib["burn"] as int) + (contrib.get("curse", 0) as int)
 		rows.append({
 			"slot": i,
 			"name": "%s %s L%d" % [elem["emoji"], elem["name"], elem["level"] as int],

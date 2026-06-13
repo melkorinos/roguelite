@@ -51,8 +51,23 @@ const TIER_UNLOCK_THRESHOLDS: Dictionary = { 2: 3, 3: 2, 4: 1 }  # distinct forg
 const FORGE_MIN_INPUT_LEVEL: int = 2
 const FORGE_RESULT_LEVEL_PENALTY: int = 1
 const FORGE_GOLD_COST: int = 0
-const STARTING_OPTION_COUNT: int = 3
-const STARTING_PICK_LEVEL: int = 2        # chosen starting element begins at this Level (a head start; was a ×damage buff, dead now that T1 are pure-effect)
+# Starting Pick / Keystones (ADR 0016): the round-1 choice offers KEYSTONE_OFFER_COUNT
+# Keystone Augments and the player hard-commits to one for the whole Run. Per-unit
+# magnitudes for the roster (data/KeystoneData.gd) are below — all FLAT integers; scaling
+# Keystones multiply these by a board count via scale_by (no percentages — integer combat
+# model). Retune freely.
+const KEYSTONE_OFFER_COUNT: int = 4
+const KEYSTONE_BURN_TICK_BONUS: int = 1
+const KEYSTONE_POISON_TICK_BONUS: int = 1
+const KEYSTONE_SHOCK_STACK_BONUS: int = 1
+const KEYSTONE_ARMOR_FLOOR: int = 2
+const KEYSTONE_ARMOR_FLOOR_PER_LEVEL: int = 1            # scaling: per Earth level on board
+const KEYSTONE_WEAKEN_DURATION_PER_LEVEL: int = 1        # scaling: per Frost level on board
+const KEYSTONE_SHOP_WEIGHT_COPIES: int = 2
+const KEYSTONE_BONUS_HP: int = 25
+const KEYSTONE_REROLL_DISCOUNT: int = 1
+const KEYSTONE_OUTGOING_DAMAGE_PENALTY: int = -2         # Bulwark pact: flat shift per direct hit
+const KEYSTONE_COOLDOWN_PENALTY_DECISECONDS: int = 3     # Deepfreeze pact: +0.3s on your own fires
 # Shop slot 0 is always a T1 (forge fuel). Each of the other four slots independently
 # rolls this percent chance to be a higher (unlocked) tier instead of another T1, so
 # the mix varies round to round instead of always being 1×T1 + 4×higher.

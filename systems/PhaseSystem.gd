@@ -9,10 +9,13 @@ static func _lives_lost(ratio: float) -> int:
 	return int(round(clampf(ratio, 0.0, 1.0) * float(TuningData.MAX_LIFE_LOSS)))
 
 
-# Player HP for a combat: a round-scaled base plus any reward bonus (hp_bonus).
+# Player HP for a combat: a round-scaled base plus the materialized Augment run_state
+# bonuses (ADR 0016) — flat hp_bonus added, then hp_bonus_percent scales the total.
 static func _scaled_player_hp(state: Dictionary) -> int:
 	var round_num: int = state["round"] as int
-	return TuningData.BASE_PLAYER_HP + (round_num - 1) * TuningData.HP_PER_ROUND + (state.get("hp_bonus", 0) as int)
+	var flat: int = TuningData.BASE_PLAYER_HP + (round_num - 1) * TuningData.HP_PER_ROUND + (state.get("hp_bonus", 0) as int)
+	var percent: int = state.get("hp_bonus_percent", 0) as int
+	return int(round(float(flat) * (1.0 + float(percent) / 100.0)))
 
 
 # The single combat-setup path. Sizes both sides' per-combat fields from their own
@@ -40,7 +43,10 @@ static func begin_combat(state: Dictionary, opponent_grid: Array, config: Dictio
 	var combat_rng := RandomNumberGenerator.new()
 	combat_rng.seed = config["combat_seed"] as int
 	state["combat_rng_state"] = combat_rng.state
-	return AbilitySystem.resolve_combat_start(state)
+	state = AbilitySystem.resolve_combat_start(state)
+	# Player's run-defining Augments (ADR 0016) apply their combat-scope atoms on top of
+	# the board's combat_start setup. No-op when the run carries no combat Augments.
+	return AugmentSystem.apply_combat_start(state)
 
 
 static func to_battle(state: Dictionary, opponent_snapshot: Dictionary) -> Dictionary:
@@ -122,7 +128,9 @@ static func advance_round(state: Dictionary) -> Dictionary:
 	s["wins"] = outcome["wins_after"] as int
 	s["lives"] = outcome["lives_after"] as int
 	s["phase"] = outcome["next_phase"] as String
-	return s
+	# round_result Augments (ADR 0016) pay out against this round's outcome (e.g. a future
+	# "+gold on win" Trinket). No-op when the run carries no round_result Augment.
+	return AugmentSystem.apply_round_result(s, outcome)
 
 
 # Render-facing view of the Round outcome — the result screen reads these keys.

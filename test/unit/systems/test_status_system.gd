@@ -555,6 +555,33 @@ func test_cooldown_modifier_reduction_respects_floor() -> void:
 	assert_eq(StatusSystem.effective_cooldown_deciseconds(25, s), TuningData.EFFECTIVE_CD_FLOOR_DECISECONDS)
 
 
+# ── pact suppression (ADR 0016: suppress_heal / suppress_cleanse side flags) ───
+
+func test_suppress_heal_blocks_self_heal() -> void:
+	var s: Dictionary = _s()
+	s["suppress_heal"] = true
+	assert_eq(StatusSystem.apply_effect(s, "heal")["hp_delta"] as int, 0)
+
+
+func test_heal_applies_when_not_suppressed() -> void:
+	assert_eq(StatusSystem.apply_effect(_s(), "heal")["hp_delta"] as int, TuningData.HEAL_PER_APPLICATION)
+
+
+func test_suppress_cleanse_blocks_debuff_removal() -> void:
+	var s: Dictionary = _s()
+	(s["burn"] as Dictionary)["stacks"] = 3
+	s["suppress_cleanse"] = true
+	var out: Dictionary = StatusSystem.apply_effect(s, "cleanse")
+	assert_eq(((out["statuses"] as Dictionary)["burn"] as Dictionary)["stacks"] as int, 3)
+
+
+func test_cleanse_removes_when_not_suppressed() -> void:
+	var s: Dictionary = _s()
+	(s["burn"] as Dictionary)["stacks"] = 3
+	var out: Dictionary = StatusSystem.apply_effect(s, "cleanse")
+	assert_eq(((out["statuses"] as Dictionary)["burn"] as Dictionary)["stacks"] as int, 3 - TuningData.CLEANSE_REMOVE_PER_APPLICATION)
+
+
 # ── passive modifiers (steel / mountain / blackice patterns) ──────────────────
 
 func test_weaken_duration_bonus_extends_ticks() -> void:
@@ -817,3 +844,55 @@ func test_shock_cleansed_normally_without_immunity() -> void:
 	(s["shock"] as Dictionary)["n"] = 3
 	var out: Dictionary = _apply(s, "cleanse")
 	assert_eq((out["shock"] as Dictionary)["n"] as int, 2)
+
+
+# ── curse attribution ─────────────────────────────────────────────────────────
+
+func test_apply_curse_records_source_slot() -> void:
+	var s: Dictionary = _s()
+	var result: Dictionary = StatusSystem.apply_effect(s, "curse", 1, 2)
+	var by_source: Dictionary = ((result["statuses"] as Dictionary)["curse"] as Dictionary)["by_source"] as Dictionary
+	assert_eq(by_source[2] as int, 1, "slot 2 credited 1 curse stack")
+
+
+func test_apply_curse_no_source_leaves_by_source_empty() -> void:
+	var s: Dictionary = _s()
+	var result: Dictionary = StatusSystem.apply_effect(s, "curse")
+	var by_source: Dictionary = ((result["statuses"] as Dictionary)["curse"] as Dictionary)["by_source"] as Dictionary
+	assert_true(by_source.is_empty(), "unattributed curse has no by_source entry")
+
+
+func test_compute_incoming_damage_returns_curse_amplified_by_source() -> void:
+	var attacker: Dictionary = _s()
+	var defender: Dictionary = _s()
+	var curse: Dictionary = defender["curse"] as Dictionary
+	curse["stacks"] = 1
+	curse["damage_amplifier"] = 3
+	curse["by_source"] = { 1: 1 }
+	var result: Dictionary = StatusSystem.compute_incoming_damage(5, attacker, defender)
+	var credit: Dictionary = result["curse_amplified_by_source"] as Dictionary
+	assert_eq(credit[1] as int, 3, "slot 1's curse amplification (3) returned in curse_amplified_by_source")
+
+
+func test_compute_incoming_damage_curse_amplified_empty_when_no_curse() -> void:
+	var result: Dictionary = StatusSystem.compute_incoming_damage(5, _s(), _s())
+	assert_true((result["curse_amplified_by_source"] as Dictionary).is_empty())
+
+
+func test_tick_returns_curse_amplified_by_source_on_dot() -> void:
+	var s: Dictionary = _s()
+	(s["poison"] as Dictionary)["stacks"] = 2
+	(s["poison"] as Dictionary)["by_source"] = { 0: 2 }
+	var curse: Dictionary = s["curse"] as Dictionary
+	curse["stacks"] = 1
+	curse["damage_amplifier"] = 4
+	curse["by_source"] = { 3: 1 }
+	var result: Dictionary = StatusSystem.tick(s)
+	var credit: Dictionary = result["curse_amplified_by_source"] as Dictionary
+	assert_eq(credit[3] as int, 4, "curse amplifier (4) attributed to slot 3")
+
+
+func test_tick_curse_amplified_empty_when_no_dot() -> void:
+	var s: Dictionary = _s()
+	var result: Dictionary = StatusSystem.tick(s)
+	assert_true((result["curse_amplified_by_source"] as Dictionary).is_empty())

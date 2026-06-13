@@ -9,7 +9,16 @@ const TIER_NAMES: Dictionary = {
 }
 
 func _ready() -> void:
-	_build_content()
+	# A TabBar between the header and the scrolling content switches the view between the
+	# element roster and the Keystone (Starting Pick) roster.
+	var tabs := TabBar.new()
+	tabs.add_tab("Elements")
+	tabs.add_tab("Keystones")
+	tabs.tab_changed.connect(_on_tab_changed)
+	var vbox: VBoxContainer = $VBoxContainer
+	vbox.add_child(tabs)
+	vbox.move_child(tabs, 2)  # after Header(0) + HSeparator(1), before the ScrollContainer
+	_render_tab(0)
 
 
 func _on_back_pressed() -> void:
@@ -17,9 +26,22 @@ func _on_back_pressed() -> void:
 	get_tree().change_scene_to_file(GameManager.compendium_return_scene)
 
 
-func _build_content() -> void:
-	var root: Node = $VBoxContainer/ScrollContainer/CompendiumContent
+func _on_tab_changed(index: int) -> void:
+	_render_tab(index)
 
+
+func _render_tab(index: int) -> void:
+	var root: Node = $VBoxContainer/ScrollContainer/CompendiumContent
+	for child: Node in root.get_children():
+		root.remove_child(child)
+		child.queue_free()
+	if index == 1:
+		_build_keystones(root)
+	else:
+		_build_elements(root)
+
+
+func _build_elements(root: Node) -> void:
 	var current_tier: int = 0
 	var current_grid: GridContainer = null
 
@@ -165,3 +187,81 @@ func _recipes_for(element_id: String) -> Array[Dictionary]:
 			"b_name":  b["name"]  as String,
 		})
 	return results
+
+
+# ── Keystones tab (Starting Pick roster, ADR 0016) ────────────────────────────
+
+func _build_keystones(root: Node) -> void:
+	var header := Label.new()
+	header.text = "Keystones — the Starting Pick"
+	UIScale.apply(header, UIScale.COMP_HEADER)
+	header.modulate = ThemeData.COLOR_COMP_HEADER_T3
+	root.add_child(header)
+
+	var grid := GridContainer.new()
+	grid.columns = 5
+	grid.add_theme_constant_override("h_separation", 10)
+	grid.add_theme_constant_override("v_separation", 10)
+	root.add_child(grid)
+
+	for keystone: Dictionary in KeystoneData.all():
+		grid.add_child(_make_keystone_card(keystone))
+
+
+func _make_keystone_card(keystone: Dictionary) -> PanelContainer:
+	var card := PanelContainer.new()
+	card.custom_minimum_size = Vector2(CARD_WIDTH, 0)
+
+	var style := StyleBoxFlat.new()
+	style.bg_color = ThemeData.tier_bg(3)
+	style.set_border_width_all(2)
+	style.border_color = ThemeData.tier_border(3)
+	style.set_corner_radius_all(6)
+	card.add_theme_stylebox_override("panel", style)
+
+	var vbox := VBoxContainer.new()
+	vbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	vbox.add_theme_constant_override("separation", 3)
+	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	card.add_child(vbox)
+
+	var emoji_lbl := Label.new()
+	emoji_lbl.text = keystone.get("emoji", "") as String
+	emoji_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	UIScale.apply(emoji_lbl, UIScale.COMP_EMOJI)
+	vbox.add_child(emoji_lbl)
+
+	var name_lbl := Label.new()
+	name_lbl.text = keystone.get("name", "") as String
+	name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	name_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD
+	UIScale.apply(name_lbl, UIScale.COMP_NAME)
+	vbox.add_child(name_lbl)
+
+	var tags_lbl := Label.new()
+	tags_lbl.text = " · ".join(PackedStringArray(keystone.get("tags", []) as Array))
+	tags_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	tags_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD
+	UIScale.apply(tags_lbl, UIScale.COMP_TRIGGER)
+	tags_lbl.modulate = ThemeData.COLOR_COMP_TRIGGER
+	vbox.add_child(tags_lbl)
+
+	var desc_lbl := Label.new()
+	desc_lbl.text = keystone.get("description", "") as String
+	desc_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	desc_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD
+	UIScale.apply(desc_lbl, UIScale.COMP_ABILITY)
+	desc_lbl.modulate = ThemeData.COLOR_COMP_ABILITY
+	vbox.add_child(desc_lbl)
+
+	var pact: String = keystone.get("pact", "") as String
+	if pact != "":
+		var pact_lbl := Label.new()
+		pact_lbl.text = "Pact: %s" % pact
+		pact_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		pact_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD
+		UIScale.apply(pact_lbl, UIScale.COMP_ABILITY)
+		pact_lbl.modulate = ThemeData.FLOAT_DAMAGE
+		vbox.add_child(pact_lbl)
+
+	return card

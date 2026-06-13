@@ -35,9 +35,18 @@ static func create(seed_recipes: Array[String] = []) -> Dictionary:
 		"lives": TuningData.STARTING_LIFE,
 		"wins": 0,
 		"player_starting_hp": TuningData.BASE_PLAYER_HP,  # for the HP bar max; set per combat in to_battle
-		# Persistent run modifier: bonus HP granted by rewards (e.g. the every-3 event),
-		# added on top of the round-scaled base in PhaseSystem.to_battle.
+		# Persistent run modifiers (materialized cache, ADR 0016): the run_state-scope
+		# output of the player's Augments, recomputed by AugmentSystem.materialize_run_state
+		# whenever the augments list changes. The hot readers (_scaled_player_hp, reroll_cost)
+		# read these fields directly instead of walking the augment list every round.
+		# bonus HP (flat) added on top of the round-scaled base; bonus HP (percent) scales it.
 		"hp_bonus": 0,
+		"hp_bonus_percent": 0,
+		# Augments (ADR 0016): the durable per-run list of acquired effect sources — a
+		# Keystone (Starting Pick), an Event Reward, or a (future) Trinket. Each carries
+		# scope-tagged effect atoms applied at their own sites. Survives Shop re-entry,
+		# resets per run. AugmentSystem owns the vocabulary + the four scope apply fns.
+		"augments": [],
 		"opponent_starting_hp": 0,
 		"opponent_snapshot": {},
 	}
