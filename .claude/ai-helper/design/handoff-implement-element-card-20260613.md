@@ -19,14 +19,29 @@ Rebuild the always-visible **Element Card** to the finalised design. It renders 
 - **Sizing:** one scalable component (height = width × 1.45) with graceful degradation; **HD 1280×720 floor** (board band hides ability text first). See SPEC §D.
 - **v1 scope:** static, **emoji** art.
 
-## Build order
-1. **Data layer first** (everything reads from it):
-   - `data/ThemeData.gd` — add `FAMILY_COLOR` (12), `FRAME_METAL_T1/T2/T3`, `FRAME_PRISMATIC_STOPS`, `LEVEL_GLOW_PX`/`LEVEL_BRIGHT`. Retire `TIER_*_BG/BORDER` as card fills (grep usages).
-   - `data/ElementData.gd` — add a `family`/`canonical_family` source for ~105 rows + accessor `canonical_family(id)` and `ThemeData.family_color(...)`.
-   - `data/UIScale.gd` — pod value/label, name, ability font consts.
-2. `scenes/shared/ElementCard.gd` — rebuild `render()` to the SPEC node tree (portrait radial glow via `GradientTexture2D` modulated by family color; metal `StyleBoxFlat`, T4 = `StyleBoxTexture` prismatic; 1–3 stat pods; underbar; RichTextLabel ability reusing TooltipCard's `[url]` keyword logic).
-3. `scenes/slots/InventorySlot.gd` — **refactor to extend `ElementCard`** (currently a bespoke `Button`); layer click/drag/F-forge on top. `ShopItemTile`/`BattleSlot` — add the width/scale param.
-4. Validate: `godot --headless --import` then `--quit`; run GUT suites (see CLAUDE.md).
+## Build order — strict sequence
+
+Do these **in order**. Step 0 is done; **START AT STEP 1.** (Step 4, pass-2 tagging, is the one exception — it is non-blocking and may be done anytime, even last.)
+
+- [x] **0 · Data layer — pass 1** ✅ (2026-06-13)
+  - `ThemeData.FAMILY_COLOR` (12) + `family_color(family)` (neutral fallback).
+  - `ElementData.canonical_family(id)` (T1 = self · forged = `"family"` tag · untagged → `""`) + demo chain tagged (steam→water, lava→fire, volcano→fire, supernova→light).
+  - Tests: `test/unit/data/test_theme_data.gd` (new) + `canonical_family` cases in `test_element_data.gd`. **Written but not executed** (no Godot on the authoring box) — first action below is to run them.
+
+- [ ] **1 · Confirm pass 1 is green.** `godot --headless --import` then the GUT data suite (see CLAUDE.md). Fix any red before continuing.
+
+- [ ] **2 · Finish the data-layer tokens** (blocks the card — must precede step 3):
+  - `ThemeData.gd` — add `FRAME_METAL_T1/T2/T3`, `FRAME_PRISMATIC_STOPS`, `LEVEL_GLOW_PX`/`LEVEL_BRIGHT`; retire `TIER_*_BG/BORDER` as card fills (grep usages: ElementCard, InventorySlot, TooltipCard).
+  - `UIScale.gd` — pod value/label, name, ability font consts.
+  - Values to use: SPEC §E "New tokens" table.
+
+- [ ] **3 · Rebuild `scenes/shared/ElementCard.gd`** `render()` to the SPEC node tree: portrait radial glow via `GradientTexture2D` modulated by `family_color`; metal `StyleBoxFlat` (T4 = `StyleBoxTexture` prismatic); 1–3 stat pods (pod rule = SPEC §B); lineage underbar; ability `RichTextLabel` reusing TooltipCard's `[url]` keyword logic; static level glow. One scalable size param (height = width × 1.45), graceful degradation per SPEC §D.
+
+- [ ] **4 · Refactor the slots onto the one card.** `scenes/slots/InventorySlot.gd` → **extend `ElementCard`** (currently a bespoke `Button`); layer click/drag/F-forge on top — this deletes its duplicate `apply_item_style`. Add the width/scale param to `ShopItemTile`/`BattleSlot`.
+
+- [ ] **5 · Validate end-to-end.** `godot --headless --import` → `--quit`; full GUT suites; eyeball the card in shop/inventory/battle at HD.
+
+- [ ] **(parallel, non-blocking) · Pass-2 roster tagging.** Tag the remaining ~89 forged elements with a `"family"` by result-vibe — a reviewable data sweep. Until done, untagged elements render the neutral fallback hue (no crash). Can run anytime relative to steps 2–5.
 
 ## Deferred — separate features (out of scope here, file as issues)
 - **`card animations`** — embers, L3 halo/sweep, prismatic motion, and the per-fire **firing FX**. The card must leave contrast headroom for firing FX; v1 static level separation is glow-intensity only, so L2↔L3 punch lands with this feature.

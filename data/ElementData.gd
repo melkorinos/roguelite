@@ -19,11 +19,11 @@ const ELEMENTS: Array[Dictionary] = [
 		{ "id": "blood",     "name": "Blood",     "emoji": "🩸", "tier": 1, "price": 5, "cooldown_deciseconds": 25, "damage": 1, "effect": "leech"    },
 		{ "id": "frost",     "name": "Frost",     "emoji": "🌨️", "tier": 1, "price": 5, "cooldown_deciseconds": 30, "damage": 1, "effect": "weaken"   },
 		# ── Tier 2 — cross-combos (original 4 × original 4) ─────────────────────
-		{ "id": "steam",      "name": "Steam",       "emoji": "♨️",  "tier": 2, "price": 8, "cooldown_deciseconds": 35, "damage": 2 },
+		{ "id": "steam",      "name": "Steam",       "emoji": "♨️",  "tier": 2, "price": 8, "cooldown_deciseconds": 35, "damage": 2, "family": "water" },
 		{ "id": "rain",       "name": "Rain",        "emoji": "🌧️", "tier": 2, "price": 8, "cooldown_deciseconds": 30, "damage": 1 },
 		{ "id": "mud",        "name": "Mud",         "emoji": "🟫", "tier": 2, "price": 8, "cooldown_deciseconds": 45, "damage": 1 },
 		{ "id": "smoke",      "name": "Smoke",       "emoji": "🌫️", "tier": 2, "price": 8, "cooldown_deciseconds": 25, "damage": 1 },
-		{ "id": "lava",       "name": "Lava",        "emoji": "🟠", "tier": 2, "price": 8, "cooldown_deciseconds": 50, "damage": 3 },
+		{ "id": "lava",       "name": "Lava",        "emoji": "🟠", "tier": 2, "price": 8, "cooldown_deciseconds": 50, "damage": 3, "family": "fire" },
 		{ "id": "dust",       "name": "Dust",        "emoji": "💨", "tier": 2, "price": 8, "cooldown_deciseconds": 25, "damage": 1 },
 		# ── Tier 2 — cross-combos (Lightning / Nature / Light / Dark / Metal / Fungus × original 4) ──
 		{ "id": "surge",        "name": "Surge",        "emoji": "💫",  "tier": 2, "price": 8, "cooldown_deciseconds": 25, "damage": 2 },
@@ -87,7 +87,7 @@ const ELEMENTS: Array[Dictionary] = [
 		{ "id": "ash",        "name": "Ash",         "emoji": "⚫", "tier": 3, "price": 12, "cooldown_deciseconds": 20, "damage": 1 },
 		{ "id": "acid",       "name": "Acid",        "emoji": "🧪", "tier": 3, "price": 12, "cooldown_deciseconds": 30, "damage": 3 },
 		{ "id": "obsidian",   "name": "Obsidian",    "emoji": "🪨", "tier": 3, "price": 12, "cooldown_deciseconds": 60, "damage": 3 },
-		{ "id": "volcano",    "name": "Volcano",     "emoji": "🌋", "tier": 3, "price": 12, "cooldown_deciseconds": 80, "damage": 6 },
+		{ "id": "volcano",    "name": "Volcano",     "emoji": "🌋", "tier": 3, "price": 12, "cooldown_deciseconds": 80, "damage": 6, "family": "fire" },
 		{ "id": "sand",       "name": "Sand",        "emoji": "🏜️", "tier": 3, "price": 12, "cooldown_deciseconds": 30, "damage": 1 },
 		{ "id": "sandstorm",  "name": "Sandstorm",   "emoji": "🌀", "tier": 3, "price": 12, "cooldown_deciseconds": 25, "damage": 3 },
 		{ "id": "clay",       "name": "Clay",        "emoji": "🏺", "tier": 3, "price": 12, "cooldown_deciseconds": 40, "damage": 1 },
@@ -121,7 +121,7 @@ const ELEMENTS: Array[Dictionary] = [
 		{ "id": "iceage",       "name": "Ice Age",       "emoji": "🏔",  "tier": 4, "price": 16, "cooldown_deciseconds": 80, "damage": 5 },
 		{ "id": "maelstrom",    "name": "Maelstrom",     "emoji": "🌀",  "tier": 4, "price": 16, "cooldown_deciseconds": 30, "damage": 5 },
 		{ "id": "tectonic",     "name": "Tectonic",      "emoji": "🗺️",  "tier": 4, "price": 16, "cooldown_deciseconds": 90, "damage": 7 },
-		{ "id": "supernova",    "name": "Supernova",     "emoji": "⭐",  "tier": 4, "price": 16, "cooldown_deciseconds": 50, "damage": 7 },
+		{ "id": "supernova",    "name": "Supernova",     "emoji": "⭐",  "tier": 4, "price": 16, "cooldown_deciseconds": 50, "damage": 7, "family": "light" },
 		{ "id": "singularity",  "name": "Singularity",   "emoji": "🌒",  "tier": 4, "price": 16, "cooldown_deciseconds": 60, "damage": 6 },
 		{ "id": "worldtree",    "name": "World Tree",    "emoji": "🎋",  "tier": 4, "price": 16, "cooldown_deciseconds": 60, "damage": 4 },
 		{ "id": "pandemic",     "name": "Pandemic",      "emoji": "🧬",  "tier": 4, "price": 16, "cooldown_deciseconds": 40, "damage": 4 },
@@ -215,3 +215,19 @@ static func effective_damage(item: Dictionary) -> int:
 	var tier: int = item.get("tier", 1) as int
 	var tier_multiplier: float = TuningData.TIER_POTENCY_MULTIPLIER.get(tier, 1.0) as float
 	return maxi(1, int(round(float(base * multiplier * level) * tier_multiplier)))
+
+
+# The single dominant Family that drives an element's Element Card hue (ADR-0017).
+# A Tier-1 element IS its own family (id == family). A forged element carries an
+# explicit "family" tag (designer-authored by result vibe). Untagged forged
+# elements return "" — the card falls back to a neutral hue until they are tagged
+# (the pass-2 roster sweep). Unknown ids also return "".
+static func canonical_family(element_id: String) -> String:
+	var def: Dictionary = find(element_id)
+	if def.is_empty():
+		return ""
+	if def.has("family"):
+		return def["family"] as String
+	if (def.get("tier", 0) as int) == 1:
+		return element_id
+	return ""

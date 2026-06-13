@@ -35,6 +35,25 @@ const TIER_3_BORDER := Color(0.72, 0.42, 1.00, 0.95)
 const TIER_4_BG     := Color(0.24, 0.17, 0.04, 0.97)  # legendary — gold
 const TIER_4_BORDER := Color(0.98, 0.74, 0.20, 0.95)
 
+# ── Family colours (ADR-0017) ─────────────────────────────────────────────────
+# Hue = an element's Canonical Family (its identity), independent of Tier. The 12
+# base families; forged elements borrow one of these via ElementData.canonical_family.
+const FAMILY_COLOR: Dictionary = {
+	"fire":      Color(0.941, 0.439, 0.125),  # 240,112,32
+	"water":     Color(0.184, 0.624, 0.847),  # 47,159,216
+	"earth":     Color(0.612, 0.478, 0.275),  # 156,122,70
+	"air":       Color(0.737, 0.816, 0.878),  # 188,208,224
+	"lightning": Color(0.957, 0.824, 0.235),  # 244,210,60
+	"nature":    Color(0.361, 0.761, 0.290),  # 92,194,74
+	"light":     Color(1.000, 0.878, 0.541),  # 255,224,138
+	"dark":      Color(0.478, 0.357, 0.690),  # 122,91,176
+	"metal":     Color(0.604, 0.643, 0.706),  # 154,164,180
+	"fungus":    Color(0.690, 0.380, 0.878),  # 176,97,224
+	"blood":     Color(0.784, 0.188, 0.227),  # 200,48,58
+	"frost":     Color(0.498, 0.816, 0.910),  # 127,208,232
+}
+const FAMILY_COLOR_FALLBACK := Color(0.60, 0.60, 0.66)  # untagged element → neutral
+
 # ── Slot / tile empty state ───────────────────────────────────────────────────
 const SLOT_BG_EMPTY     := Color(0.10, 0.10, 0.14, 0.85)
 const SLOT_BORDER_EMPTY := Color(0.28, 0.28, 0.36, 0.65)
@@ -175,3 +194,9 @@ static func comp_tier_color(tier: int) -> Color:
 		3: return COLOR_COMP_HEADER_T3
 		4: return COLOR_COMP_HEADER_T4
 		_: return COLOR_COMP_HEADER_T1
+
+
+# Hue for an element's Canonical Family (ADR-0017). Unknown / untagged families
+# fall back to a neutral so a card never crashes on a missing tag.
+static func family_color(family: String) -> Color:
+	return FAMILY_COLOR.get(family, FAMILY_COLOR_FALLBACK) as Color

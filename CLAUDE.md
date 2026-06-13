@@ -57,7 +57,9 @@ F5 in Godot editor. CLI: `godot --path . scenes/screens/Boot.tscn` (scene) · `g
 
 ## Build validation — run before closing any task
 
-```
+**Windows shell rule: all `godot` commands must use PowerShell — `godot` is NOT on the Bash PATH.**
+
+```powershell
 godot --headless --import   # compile all scripts
 godot --headless --quit     # boot check — exit 0 means scripts load and autoloads init
 ```
@@ -66,7 +68,7 @@ Requires `godot` on PATH. On Windows: add the Godot editor directory to system P
 CI runs the same two commands on every push (see [.github/workflows/ci.yml](.github/workflows/ci.yml)).
 
 **Run GUT tests** (19 suites across `test/unit/data/`, `test/unit/systems/`, `test/unit/autoloads/`):
-```
+```powershell
 godot --headless -s addons/gut/gut_cmdln.gd -gdir=res://test/unit/data/ -gdir=res://test/unit/systems/ -gdir=res://test/unit/autoloads/ -gprefix=test_ -gexit
 ```
 Note: `-gsuffix` is not supported by this GUT version — omit it. `-gdir` must use `res://` prefix. **Do not pass a single parent dir** (`res://test/unit/`) — this GUT version does not recurse and will silently run nothing. Pass all three leaf dirs explicitly with separate `-gdir` flags.

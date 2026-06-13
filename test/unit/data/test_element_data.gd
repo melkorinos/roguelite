@@ -101,3 +101,38 @@ func test_t2_elements_all_have_price_8() -> void:
 	for elem: Dictionary in ElementData.all_elements():
 		if (elem["tier"] as int) == 2:
 			assert_eq(elem["price"], 8, elem["id"] + " should cost 8g")
+
+
+# ── canonical_family (ADR-0017) ───────────────────────────────────────────────
+
+const _BASE_FAMILIES: Array[String] = [
+	"fire", "water", "earth", "air", "lightning", "nature",
+	"light", "dark", "metal", "fungus", "blood", "frost",
+]
+
+
+func test_canonical_family_tier1_element_is_its_own_family() -> void:
+	# A Tier-1 element's id IS its family — no explicit tag needed.
+	assert_eq(ElementData.canonical_family("fire"), "fire")
+	assert_eq(ElementData.canonical_family("water"), "water")
+	assert_eq(ElementData.canonical_family("fungus"), "fungus")
+
+
+func test_canonical_family_reads_tagged_field_for_forged_elements() -> void:
+	assert_eq(ElementData.canonical_family("lava"), "fire")
+	assert_eq(ElementData.canonical_family("steam"), "water")
+	assert_eq(ElementData.canonical_family("volcano"), "fire")
+	assert_eq(ElementData.canonical_family("supernova"), "light")
+
+
+func test_canonical_family_unknown_element_is_empty() -> void:
+	assert_eq(ElementData.canonical_family("not_an_element"), "")
+
+
+func test_every_canonical_family_is_a_known_base_family_or_empty() -> void:
+	# Untagged T2+ elements return "" until the pass-2 tagging lands; any non-empty
+	# value must be one of the 12 base families.
+	for elem: Dictionary in ElementData.all_elements():
+		var fam: String = ElementData.canonical_family(elem["id"] as String)
+		if fam != "":
+			assert_true(_BASE_FAMILIES.has(fam), elem["id"] + " has unknown family '" + fam + "'")
