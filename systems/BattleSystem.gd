@@ -276,6 +276,57 @@ static func select_freeze_target(grid: Array, last_frozen_slot: int) -> int:
 	return occupied[0]
 
 
+# Per-element Battle Summary rows for one side, one row per occupied Battle Slot in
+# slot order. Sized to the side's FULL board (grid.size()), so Grid Growth boards of
+# 5–8 slots all report — the view used to iterate a hardcoded 4 and silently drop the
+# grown slots (ADR 0014). Pure: derives every displayed value (name, effects text, DPS)
+# from battle_stats + the element def so the Summary view only renders, never derives.
+# Each row: { slot:int, name:String, fires:int, damage:int, effects:String, dps:float }
+static func summary_rows(state: Dictionary, side: String) -> Array[Dictionary]:
+	var grid: Array = state[CombatSide.keys(side)["grid"]] as Array
+	var stats: Array = (state["battle_stats"] as Dictionary)[CombatSide.keys(side)["stats"]] as Array
+	var battle_time: float = maxf(state["battle_timer"] as float, 0.001)
+	var rows: Array[Dictionary] = []
+	for i: int in grid.size():
+		if grid[i] == null or i >= stats.size():
+			continue
+		var elem: Dictionary = grid[i] as Dictionary
+		var st: Dictionary = stats[i] as Dictionary
+		var damage: int = st["damage"] as int
+		rows.append({
+			"slot": i,
+			"name": "%s %s L%d" % [elem["emoji"], elem["name"], elem["level"] as int],
+			"fires": st["fires"] as int,
+			"damage": damage,
+			"effects": _summary_effects_text(elem, st),
+			"dps": float(damage) / battle_time,
+		})
+	return rows
+
+
+# The Effects-column text for one Summary row. T1 Actions read "Apply N Status";
+# T2+ Abilities append their trigger label, "N Status (Every 3 activations)".
+# Empty tally → "—".
+static func _summary_effects_text(elem: Dictionary, st: Dictionary) -> String:
+	var fx_map: Dictionary = st.get("effects_by_status", {}) as Dictionary
+	if fx_map.is_empty():
+		return "—"
+	var is_tier1: bool = (elem.get("tier", 1) as int) == 1
+	var tlabel: String = "" if is_tier1 else AbilityData.trigger_label(AbilityData.get_ability(elem.get("id", "") as String))
+	var parts: Array[String] = []
+	for status: Variant in fx_map:
+		var s: String = status as String
+		var cap: String = s.substr(0, 1).to_upper() + s.substr(1)
+		var count: int = fx_map[status] as int
+		if is_tier1:
+			parts.append("Apply %d %s" % [count, cap])
+		elif tlabel != "":
+			parts.append("%d %s (%s)" % [count, cap, tlabel])
+		else:
+			parts.append("%d %s" % [count, cap])
+	return "  ".join(parts)
+
+
 # Folds a tick's per-source DOT attribution ({ "burn"/"poison": { slot: damage } })
 # into the applying side's Contribution rows, so each element's bar reflects the HP
 # its burn/poison dealt this tick. Slots out of range are ignored defensively.

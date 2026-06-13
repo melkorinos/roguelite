@@ -188,6 +188,18 @@ static func scaled_potency(tier: int, level: int) -> int:
 	return maxi(1, int(round(float(maxi(1, level)) * multiplier)))
 
 
+# One-line clarifier for the Element Card / Compendium: an ability's authored status
+# amounts are written at potency 1, but every status application lands at this
+# element's tier-scaled potency, so a "2 [curse]" reads as the multiplied amount in
+# combat. Returns "" at potency 1 (all of Tier 1) — nothing to clarify. Direct-hit
+# damage scales separately and is already shown on the Eff. Dmg row.
+static func potency_note(tier: int, level: int) -> String:
+	var potency: int = scaled_potency(tier, level)
+	if potency <= 1:
+		return ""
+	return "Status amounts apply ×%d at this Level." % potency
+
+
 # Direct hit damage = base × multiplier × level × tier multiplier. Pure-effect
 # elements (not in DAMAGE_DEALERS) return 0 — no tier chip, no hit; their Status
 # carries their damage. (`multiplier` is vestigial — nothing sets it now.)

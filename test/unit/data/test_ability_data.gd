@@ -72,6 +72,51 @@ func test_all_targets_are_own_or_opponent() -> void:
 				assert_true(target == "own" or target == "opponent", element_id + " bad target: " + target)
 
 
+# ── atom schema (AbilitySystem.ATOM_SCHEMAS) ──────────────────────────────────
+
+func test_every_authored_effect_is_a_valid_atom() -> void:
+	# Locks every atom-shaped effect against the atom vocabulary: its "kind" must be a
+	# known atom carrying its required fields. Guards against a typo'd kind or a missing
+	# field shipping as a silent combat no-op. passive_on_hit uses a separate
+	# {status, chance} shape (consumed by on_hit_status_chances) — checked below.
+	for element_id: String in AbilityData.ABILITIES.keys():
+		var ability: Dictionary = AbilityData.ABILITIES[element_id] as Dictionary
+		if (ability.get("trigger", "") as String) == "passive_on_hit":
+			continue
+		for effect: Variant in ability.get("effects", []) as Array:
+			var errors: Array[String] = AbilitySystem.validate_atom(effect as Dictionary)
+			assert_eq(errors.size(), 0, "%s: %s" % [element_id, ", ".join(errors)])
+
+
+func test_passive_on_hit_effects_name_a_real_status_and_chance() -> void:
+	# passive_on_hit effects are not atoms: each carries a status (a real EffectRegistry
+	# effect) and a percent chance, applied probabilistically by on_hit_status_chances.
+	for element_id: String in AbilityData.ABILITIES.keys():
+		var ability: Dictionary = AbilityData.ABILITIES[element_id] as Dictionary
+		if (ability.get("trigger", "") as String) != "passive_on_hit":
+			continue
+		for effect: Variant in ability.get("effects", []) as Array:
+			var e: Dictionary = effect as Dictionary
+			assert_true(EffectRegistry.EFFECTS.has(e.get("status", "") as String),
+				"%s: passive_on_hit status '%s' is not a registered effect" % [element_id, e.get("status", "")])
+			assert_true(e.has("chance"), "%s: passive_on_hit effect missing chance" % element_id)
+
+
+func test_set_status_field_targets_a_registered_modifier() -> void:
+	# Every set_status_field atom must name a real status and one of its author-writable
+	# modifier fields (EffectRegistry.modifier_fields) — not a typo and not an internal
+	# count/ledger field owned by StatusSystem.
+	for element_id: String in AbilityData.ABILITIES.keys():
+		for effect: Variant in (AbilityData.ABILITIES[element_id] as Dictionary).get("effects", []) as Array:
+			var e: Dictionary = effect as Dictionary
+			if (e.get("kind", "") as String) != "set_status_field":
+				continue
+			var status: String = e["status"] as String
+			var field: String = e["field"] as String
+			assert_true(EffectRegistry.is_modifier_field(status, field),
+				"%s: set_status_field %s.%s is not a registered modifier" % [element_id, status, field])
+
+
 # ── get_ability ───────────────────────────────────────────────────────────────
 
 func test_get_ability_returns_description_only_for_tier1() -> void:

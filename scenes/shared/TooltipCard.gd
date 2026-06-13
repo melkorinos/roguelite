@@ -204,6 +204,11 @@ func _render(element: Dictionary, own_statuses: Dictionary) -> void:
 	var element_id: String = element.get("element_id", element.get("id", "")) as String
 	var description: String = AbilityData.get_ability(element_id).get("description", "") as String
 	var new_text: String = _to_bbcode(description) if description != "" else "— none yet —"
+	if description != "":
+		# Surface the tier-scaled potency so the authored amounts don't understate combat.
+		var note: String = ElementData.potency_note(tier, level)
+		if note != "":
+			new_text += "\n[color=#8a8aa0]%s[/color]" % note
 	if new_text != _last_ability_text:
 		_ability_rich.text = new_text
 		_ability_rich.modulate = Color(0.82, 0.82, 0.9) if description != "" else Color(0.42, 0.42, 0.48)

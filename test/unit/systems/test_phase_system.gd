@@ -401,3 +401,47 @@ func test_forfeit_does_not_mutate_original() -> void:
 	var s := _make_state()
 	PhaseSystem.forfeit(s)
 	assert_eq(s["phase"], "shop")
+
+
+# ── begin_combat (shared combat-setup seam) ───────────────────────────────────
+# to_battle and the balance harness are the two adapters over begin_combat; these
+# lock the shared contract so the harness can't drift from real combat.
+
+func test_begin_combat_sets_phase_hp_and_seed_from_config() -> void:
+	var s := _make_state()
+	var out := PhaseSystem.begin_combat(s, [null, null, null, null], {
+		"player_hp": 130, "opponent_hp": 90, "combat_seed": 42,
+	})
+	assert_eq(out["phase"], "battle")
+	assert_eq(out["player_hp"] as int, 130)
+	assert_eq(out["player_starting_hp"] as int, 130)
+	assert_eq(out["opponent_hp"] as int, 90)
+	assert_eq(out["opponent_starting_hp"] as int, 90)
+	var expected := RandomNumberGenerator.new()
+	expected.seed = 42
+	assert_eq(out["combat_rng_state"], expected.state)
+
+
+func test_begin_combat_sizes_each_side_from_its_own_board() -> void:
+	# Asymmetric boards (Grid Growth, ADR 0014): per-side arrays size independently.
+	var s := _make_state()
+	s["battle_grid"] = CombatState.empty_slots(6)  # grown player board
+	var out := PhaseSystem.begin_combat(s, CombatState.empty_slots(4), {
+		"player_hp": 100, "opponent_hp": 100, "combat_seed": 1,
+	})
+	assert_eq((out["element_timers"] as Array).size(), 6, "player per-slot arrays match its 6-slot board")
+	assert_eq((out["opponent_timers"] as Array).size(), 4, "opponent per-slot arrays match its 4-slot board")
+	assert_eq(((out["battle_stats"] as Dictionary)["player"] as Array).size(), 6)
+
+
+func test_begin_combat_fires_combat_start_abilities() -> void:
+	# Boulder's combat_start grants armor — proof begin_combat ran resolve_combat_start.
+	var s := _make_state()
+	var elem: Dictionary = ElementData.find("boulder").duplicate()
+	elem["element_id"] = "boulder"
+	elem["level"] = 1
+	s["battle_grid"][0] = elem
+	var out := PhaseSystem.begin_combat(s, [null, null, null, null], {
+		"player_hp": 130, "opponent_hp": 130, "combat_seed": 7,
+	})
+	assert_gt(((out["player_statuses"] as Dictionary)["armor"] as Dictionary)["value"] as int, 0)

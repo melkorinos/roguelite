@@ -15,32 +15,46 @@ static func _scaled_player_hp(state: Dictionary) -> int:
 	return TuningData.BASE_PLAYER_HP + (round_num - 1) * TuningData.HP_PER_ROUND + (state.get("hp_bonus", 0) as int)
 
 
+# The single combat-setup path. Sizes both sides' per-combat fields from their own
+# boards (Grid Growth, ADR 0014: the player's count from battle_grid, the opponent's
+# from opponent_grid), sets phase, both sides' HP + bar max, seeds the combat RNG, and
+# fires combat_start abilities. Mutates and returns `state` (callers pass a duplicate
+# or a fresh GameState). Decisions that vary by caller — how HP is scaled, who the
+# opponent is, which seed — are made BEFORE this and handed in via `config`:
+#   { "player_hp": int, "opponent_hp": int, "combat_seed": int }
+# to_battle is the live adapter (round-scaled HP, hash seed, Ghost board); the balance
+# harness is the second (mirror HP, sweep seed) — so the harness can't drift into
+# measuring a different combat than players fight.
+static func begin_combat(state: Dictionary, opponent_grid: Array, config: Dictionary) -> Dictionary:
+	var player_count: int = (state["battle_grid"] as Array).size()
+	var opponent_count: int = opponent_grid.size()
+	# CombatState owns the per-combat shape: every per-slot array, the status pools,
+	# and the Battle Summary stat rows, all sized to each side's board.
+	state = CombatState.reset(state, player_count, opponent_count)
+	state["phase"] = "battle"
+	state["opponent_grid"] = opponent_grid
+	state["player_hp"] = config["player_hp"] as int
+	state["player_starting_hp"] = config["player_hp"] as int
+	state["opponent_hp"] = config["opponent_hp"] as int
+	state["opponent_starting_hp"] = config["opponent_hp"] as int
+	var combat_rng := RandomNumberGenerator.new()
+	combat_rng.seed = config["combat_seed"] as int
+	state["combat_rng_state"] = combat_rng.state
+	return AbilitySystem.resolve_combat_start(state)
+
+
 static func to_battle(state: Dictionary, opponent_snapshot: Dictionary) -> Dictionary:
 	var s: Dictionary = state.duplicate(true)
-	# Boards can differ in size per side (Grid Growth, ADR 0014): the player's
-	# size comes from their (possibly grown) battle_grid, the opponent's from the
-	# Ghost snapshot grid. Size every per-side array accordingly.
 	var opp_grid: Array = opponent_snapshot.get("grid", CombatState.empty_slots()) as Array
-	var player_count: int = (s["battle_grid"] as Array).size()
-	var opponent_count: int = opp_grid.size()
-	# CombatState owns the per-combat shape: every per-slot array, the status
-	# pools, and the Battle Summary stat rows, all sized to each side's board.
-	s = CombatState.reset(s, player_count, opponent_count)
-	s["phase"] = "battle"
-	s["player_hp"] = _scaled_player_hp(s)
-	s["player_starting_hp"] = s["player_hp"]
+	var round_num: int = s["round"] as int
 	s["opponent_snapshot"] = opponent_snapshot
-	s["opponent_grid"] = opp_grid
-	# Seed the combat RNG deterministically per round so Replay and async Ghost
-	# playback reproduce the exact fight.
-	var combat_rng := RandomNumberGenerator.new()
-	combat_rng.seed = hash("combat:%d" % (s["round"] as int))
-	s["combat_rng_state"] = combat_rng.state
-	var opp_hp: int = BattleSystem.compute_opponent_hp(s["round"] as int)
-	s["opponent_hp"] = opp_hp
-	s["opponent_starting_hp"] = opp_hp
-	s = AbilitySystem.resolve_combat_start(s)
-	return s
+	# Live adapter over begin_combat: round-scaled player HP, round-derived opponent HP,
+	# and a per-round hash seed so Replay and async Ghost playback reproduce the fight.
+	return begin_combat(s, opp_grid, {
+		"player_hp": _scaled_player_hp(s),
+		"opponent_hp": BattleSystem.compute_opponent_hp(round_num),
+		"combat_seed": hash("combat:%d" % round_num),
+	})
 
 
 # Single source of truth for how a finished combat resolves into a Round outcome.

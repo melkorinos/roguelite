@@ -34,6 +34,38 @@ const EFFECTS: Dictionary = {
 }
 
 
+# Side-wide status fields — not owned by any single effect, but living in a side's
+# status pool alongside the per-effect dicts. Declared here so the set is defined in
+# one place; StatusSystem.empty_statuses() builds them from this instead of hardcoding.
+const SIDE_WIDE_FIELDS: Dictionary = {
+	# Signed cooldown shift on this side's fire timers (the modify_cooldown atom).
+	"cooldown_modifier_deciseconds": 0,
+	# One-shot bonus consumed by this side's NEXT damaging direct hit (prime_next_hit).
+	"next_hit_bonus": 0,
+}
+
+
+# The author-writable modifier fields of a status: every status_shape key that is
+# neither the headline count (count_field) nor the internal by_source attribution
+# ledger. These are the only fields a set_status_field ability atom may target —
+# everything else (the count, the ledger) is owned by StatusSystem's apply/tick/
+# decrement. test_ability_data locks every set_status_field against this.
+static func modifier_fields(status: String) -> Array[String]:
+	var entry: Dictionary = EFFECTS.get(status, {}) as Dictionary
+	var shape: Dictionary = entry.get("status_shape", {}) as Dictionary
+	var count_field: String = entry.get("count_field", "") as String
+	var result: Array[String] = []
+	for field: String in shape.keys():
+		if field == count_field or field == "by_source":
+			continue
+		result.append(field)
+	return result
+
+
+static func is_modifier_field(status: String, field: String) -> bool:
+	return modifier_fields(status).has(field)
+
+
 # The floating combat label for an on-fire effect — { text, nudge } — or {} if the
 # effect has no status popup. Text is composed from the one canonical emoji so the
 # popup and the Status Tray can't drift. Color comes from ThemeData.FLOAT_LABEL_COLORS

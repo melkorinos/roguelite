@@ -440,12 +440,9 @@ func _build_summary() -> void:
 		child.queue_free()
 
 	var s: Dictionary = GameManager.state
-	var battle_time: float = maxf(s["battle_timer"] as float, 0.001)
-	var bstats: Dictionary = s["battle_stats"] as Dictionary
 
 	var player_panel := _build_side_table(
-		"YOU", ThemeData.COLOR_PLAYER_SIDE,
-		s["battle_grid"] as Array, bstats["player"] as Array, battle_time
+		"YOU", ThemeData.COLOR_PLAYER_SIDE, BattleSystem.summary_rows(s, "player")
 	)
 	player_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	container.add_child(player_panel)
@@ -455,14 +452,13 @@ func _build_summary() -> void:
 	container.add_child(gap)
 
 	var opp_panel := _build_side_table(
-		"OPPONENT", ThemeData.COLOR_OPP_SIDE,
-		s["opponent_grid"] as Array, bstats["opponent"] as Array, battle_time
+		"OPPONENT", ThemeData.COLOR_OPP_SIDE, BattleSystem.summary_rows(s, "opponent")
 	)
 	opp_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	container.add_child(opp_panel)
 
 
-func _build_side_table(title: String, accent: Color, grid: Array, stats: Array, battle_time: float) -> PanelContainer:
+func _build_side_table(title: String, accent: Color, rows: Array[Dictionary]) -> PanelContainer:
 	var panel := PanelContainer.new()
 	var outer := StyleBoxFlat.new()
 	outer.bg_color = Color(0.06, 0.04, 0.09, 0.95)
@@ -486,27 +482,16 @@ func _build_side_table(title: String, accent: Color, grid: Array, stats: Array, 
 		hdr_bg, true
 	))
 
-	var any_elem: bool = false
-	for i: int in 4:
-		if grid[i] == null:
-			continue
-		any_elem = true
-		var elem: Dictionary = grid[i] as Dictionary
-		var st: Dictionary = stats[i] as Dictionary
-		var fires: int = st["fires"] as int
-		var dmg: int = st["damage"] as int
-		var _fx_map: Dictionary = st.get("effects_by_status", {}) as Dictionary
-		var fx_text: String = _format_effects(elem, st)
-		var dps: float = float(dmg) / battle_time
-
+	for row: Dictionary in rows:
 		vbox.add_child(_summary_row(
-			["%s %s L%d" % [elem["emoji"], elem["name"], elem["level"] as int],
-			 "%d×" % fires, "%d" % dmg, fx_text, "%.1f" % dps],
+			[row["name"] as String,
+			 "%d×" % (row["fires"] as int), "%d" % (row["damage"] as int),
+			 row["effects"] as String, "%.1f" % (row["dps"] as float)],
 			[Color.WHITE, Color(0.78, 0.78, 0.78), Color(1.0, 0.75, 0.4), Color(0.7, 0.95, 0.7), Color(0.6, 0.85, 1.0)],
 			Color(0.0, 0.0, 0.0, 0.0), false
 		))
 
-	if not any_elem:
+	if rows.is_empty():
 		vbox.add_child(_summary_row(
 			["(no elements)", "", "", "", ""],
 			[Color(0.5, 0.5, 0.5), Color.WHITE, Color.WHITE, Color.WHITE, Color.WHITE],
@@ -552,32 +537,6 @@ func _summary_row(texts: Array, colors: Array, bg: Color, is_header: bool) -> Pa
 		hbox.add_child(lbl)
 
 	return pc
-
-
-# ── Effects formatting ────────────────────────────────────────────────────────
-
-func _format_effects(elem: Dictionary, st: Dictionary) -> String:
-	var fx_map: Dictionary = st.get("effects_by_status", {}) as Dictionary
-	if fx_map.is_empty():
-		return "—"
-	var tier: int = elem.get("tier", 1) as int
-	var result: String = ""
-	if tier == 1:
-		for status: Variant in fx_map:
-			if result != "":
-				result += "  "
-			var s: String = status as String
-			result += "Apply %d %s" % [fx_map[status] as int, s.substr(0, 1).to_upper() + s.substr(1)]
-	else:
-		var ability: Dictionary = AbilityData.get_ability(elem.get("id", "") as String)
-		var tlabel: String = AbilityData.trigger_label(ability)
-		for status: Variant in fx_map:
-			if result != "":
-				result += "  "
-			var s: String = status as String
-			var cap: String = s.substr(0, 1).to_upper() + s.substr(1)
-			result += "%d %s (%s)" % [fx_map[status] as int, cap, tlabel] if tlabel != "" else "%d %s" % [fx_map[status] as int, cap]
-	return result
 
 
 # ── Item Tooltip ─────────────────────────────────────────────────────────────

@@ -15,10 +15,9 @@ static func empty_statuses() -> Dictionary:
 		var shape: Dictionary = entry.get("status_shape", {}) as Dictionary
 		if not shape.is_empty():
 			result[effect as String] = shape.duplicate(true)
-	result["cooldown_modifier_deciseconds"] = 0
-	# Side-wide one-shot bonus consumed by this side's NEXT damaging direct hit
-	# (primed by the prime_next_hit ability atom — Crystal, Aether).
-	result["next_hit_bonus"] = 0
+	# Side-wide fields (cooldown shift, next-hit primer) live in EffectRegistry too.
+	for field: Variant in EffectRegistry.SIDE_WIDE_FIELDS:
+		result[field as String] = EffectRegistry.SIDE_WIDE_FIELDS[field]
 	return result
 
 

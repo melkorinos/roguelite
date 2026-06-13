@@ -455,6 +455,81 @@ func test_battle_stats_tracks_effects_by_status() -> void:
 	assert_eq(by_status["armor"] as int, 4)
 
 
+# ── summary_rows (Battle Summary derivation) ──────────────────────────────────
+# These guard against the bug where the Summary iterated a hardcoded 4 slots and
+# silently dropped Grid Growth slots 5–8 (ADR 0014).
+
+# Builds a combat state with a player board of `slot_count` slots (Grid Growth
+# sizing), placing `fire` in every occupied slot index given. Stat rows are sized
+# to match so summary_rows can read fires/damage per slot.
+func _grown_battle_state(slot_count: int, occupied: Array) -> Dictionary:
+	var st := _make_state()
+	st["battle_grid"] = CombatState.empty_slots(slot_count)
+	st["battle_slot_count"] = slot_count
+	for i: int in occupied:
+		var elem: Dictionary = ElementData.find("fire").duplicate()
+		elem["element_id"] = "fire"
+		elem["level"] = 1
+		(st["battle_grid"] as Array)[i] = elem
+	return PhaseSystem.to_battle(st, _fixture())
+
+
+func test_summary_rows_one_row_per_occupied_slot() -> void:
+	var s := _grown_battle_state(4, [0, 2])
+	var rows: Array[Dictionary] = BattleSystem.summary_rows(s, "player")
+	assert_eq(rows.size(), 2, "only occupied slots produce a row")
+	assert_eq(rows[0]["slot"] as int, 0)
+	assert_eq(rows[1]["slot"] as int, 2)
+
+
+func test_summary_rows_reports_grown_slots_beyond_four() -> void:
+	# The original bug: a 6-slot board with elements in slots 4 and 5 dropped them.
+	var s := _grown_battle_state(6, [0, 4, 5])
+	var rows: Array[Dictionary] = BattleSystem.summary_rows(s, "player")
+	var slots: Array = []
+	for row: Dictionary in rows:
+		slots.append(row["slot"] as int)
+	assert_eq(slots, [0, 4, 5], "grown Battle Slots 4 and 5 must appear in the Summary")
+
+
+func test_summary_rows_empty_board_yields_no_rows() -> void:
+	var s := _grown_battle_state(6, [])
+	assert_eq(BattleSystem.summary_rows(s, "player").size(), 0)
+
+
+func test_summary_rows_carries_name_fires_damage_dps() -> void:
+	var st := _grown_battle_state(4, [0])
+	var cooldown: float = float(ElementData.find("fire")["cooldown_deciseconds"] as int) / 10.0
+	var s := BattleSystem.tick_battle(st, cooldown)
+	var row: Dictionary = BattleSystem.summary_rows(s, "player")[0]
+	assert_string_contains(row["name"] as String, "Fire")
+	assert_string_contains(row["name"] as String, "L1")
+	assert_eq(row["fires"] as int, 1, "one cooldown → one fire")
+	assert_almost_eq(row["dps"] as float, float(row["damage"] as int) / (s["battle_timer"] as float), 0.001)
+
+
+func test_summary_rows_tier1_effects_text_reads_apply() -> void:
+	# Fire (T1) applies burn on fire; the Effects column reads "Apply N Burn".
+	var st := _grown_battle_state(4, [0])
+	_silence_opponent(st)
+	var cooldown: float = float(ElementData.find("fire")["cooldown_deciseconds"] as int) / 10.0
+	var s := BattleSystem.tick_battle(st, cooldown)
+	assert_string_contains(BattleSystem.summary_rows(s, "player")[0]["effects"] as String, "Apply")
+
+
+func test_summary_rows_no_effects_reads_dash() -> void:
+	# A slot that never applied a status shows the em-dash placeholder.
+	var s := _grown_battle_state(4, [0])
+	assert_eq(BattleSystem.summary_rows(s, "player")[0]["effects"] as String, "—")
+
+
+func test_summary_rows_reads_opponent_side() -> void:
+	# The opponent grid comes from the Ghost fixture; its occupied slots report too.
+	var s := PhaseSystem.to_battle(_make_state(), _fixture())
+	var rows: Array[Dictionary] = BattleSystem.summary_rows(s, "opponent")
+	assert_gt(rows.size(), 0, "the fixture opponent board produces Summary rows")
+
+
 # ── timed commands (Innate Ability / Replay seam) ─────────────────────────────
 
 func _deal3_command() -> Dictionary:

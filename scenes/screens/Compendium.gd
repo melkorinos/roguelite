@@ -114,6 +114,17 @@ func _make_card(elem: Dictionary) -> PanelContainer:
 		ability_lbl.modulate = ThemeData.COLOR_COMP_ABILITY
 		vbox.add_child(ability_lbl)
 
+		# Tier-scaled potency clarifier — the authored amounts are written at potency 1.
+		var note: String = ElementData.potency_note(elem["tier"] as int, 1)
+		if note != "":
+			var note_lbl := Label.new()
+			note_lbl.text = note
+			note_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			note_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD
+			UIScale.apply(note_lbl, UIScale.COMP_ABILITY)
+			note_lbl.modulate = Color(0.55, 0.55, 0.62)
+			vbox.add_child(note_lbl)
+
 	# Recipes — emoji row + name row per ingredient pair
 	var recipes: Array[Dictionary] = _recipes_for(elem["id"] as String)
 	if recipes.size() > 0:

@@ -152,22 +152,17 @@ func _pick_other(pool: Array, element_id: String, rng: RandomNumberGenerator) ->
 	return pick
 
 
-# Mirrors PhaseSystem.to_battle but with symmetric HP (set BEFORE combat_start so
-# add_max_hp abilities still count) and a caller-supplied combat seed.
+# Mirror adapter over PhaseSystem.begin_combat: the same combat setup players get,
+# but with symmetric HP so neither side is favoured, and a caller-supplied sweep seed.
+# Sharing begin_combat keeps the harness measuring the real combat, not a hand-copy.
 func _fight(player_board: Array, opponent_board: Array, combat_seed: int) -> Dictionary:
 	var state: Dictionary = GameState.create()
 	state["battle_grid"] = player_board.duplicate(true)
-	state = CombatState.reset(state, BOARD_SLOTS, BOARD_SLOTS)
-	state["phase"] = "battle"
-	state["player_hp"] = MIRROR_HP
-	state["player_starting_hp"] = MIRROR_HP
-	state["opponent_hp"] = MIRROR_HP
-	state["opponent_starting_hp"] = MIRROR_HP
-	state["opponent_grid"] = opponent_board.duplicate(true)
-	var combat_rng: RandomNumberGenerator = RandomNumberGenerator.new()
-	combat_rng.seed = combat_seed
-	state["combat_rng_state"] = combat_rng.state
-	state = AbilitySystem.resolve_combat_start(state)
+	state = PhaseSystem.begin_combat(state, opponent_board.duplicate(true), {
+		"player_hp": MIRROR_HP,
+		"opponent_hp": MIRROR_HP,
+		"combat_seed": combat_seed,
+	})
 	state = BattleSystem.simulate_battle(state)
 	var outcome: String = BattleSystem.compute_result(state)
 	var win: float = 0.0

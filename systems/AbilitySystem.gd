@@ -97,15 +97,57 @@ static func _source_potency(state: Dictionary, source_side: String, source_slot:
 
 # ── effect application (mutates the passed state) ─────────────────────────────
 
+# The atomic effect vocabulary. The single source for the facts an Ability author
+# must know to write an effect: its required fields, the side it acts on when no
+# explicit "target" is given, and whether its quantities scale by the source's
+# potency (Level × tier multiplier). _apply_atom reads default_target from here, and
+# test_ability_data validates every authored effect against it — so a typo'd kind or
+# a missing field fails red in a test instead of silently no-opping in combat.
+# haste_timers / leech_heal are synthesised by _on_fire_effects (never authored in
+# AbilityData); they appear here so the dispatcher and the validator stay complete.
+const ATOM_SCHEMAS: Dictionary = {
+	"apply_status":     { "required": ["status"],                   "default_target": "opponent", "potency_aware": true },
+	"deal_damage":      { "required": ["amount"],                   "default_target": "opponent", "potency_aware": false },
+	"modify_cooldown":  { "required": ["deciseconds"],              "default_target": "opponent", "potency_aware": false },
+	"freeze":           { "required": ["deciseconds"],              "default_target": "opponent", "potency_aware": false },
+	"set_status_field": { "required": ["status", "field", "value"], "default_target": "opponent", "potency_aware": false },
+	"haste_timers":     { "required": [],                           "default_target": "own",      "potency_aware": false },
+	"leech_heal":       { "required": ["amount"],                   "default_target": "own",      "potency_aware": false },
+	"add_max_hp":       { "required": ["amount"],                   "default_target": "own",      "potency_aware": true },
+	"prime_dot":        { "required": ["status", "amount"],         "default_target": "opponent", "potency_aware": true },
+	"prime_next_hit":   { "required": ["amount"],                   "default_target": "own",      "potency_aware": true },
+}
+
+
+# Validates one authored effect dict against ATOM_SCHEMAS. Returns human-readable
+# error strings (empty Array = valid). test_ability_data runs this over all 120
+# Abilities so a bad atom can't ship as a silent combat no-op.
+static func validate_atom(effect: Dictionary) -> Array[String]:
+	var errors: Array[String] = []
+	var kind: String = effect.get("kind", "") as String
+	if not ATOM_SCHEMAS.has(kind):
+		errors.append("unknown atom kind: '%s'" % kind)
+		return errors
+	for field: String in (ATOM_SCHEMAS[kind] as Dictionary)["required"] as Array:
+		if not effect.has(field):
+			errors.append("atom '%s' missing required field '%s'" % [kind, field])
+	return errors
+
+
 # Returns a { status_name: count } map of the status applications made (for the
 # Summary breakdown). deal_damage / modify_cooldown / set_status_field apply no
-# named status and return {}.
+# named status and return {}. The acted-on side's keys are resolved once from
+# ATOM_SCHEMAS.default_target (an explicit effect "target" overrides it); an
+# unknown kind is a no-op.
 static func _apply_atom(state: Dictionary, effect: Dictionary, source_side: String, potency: int = 1, source_slot: int = -1) -> Dictionary:
 	var kind: String = effect.get("kind", "") as String
+	var schema: Dictionary = ATOM_SCHEMAS.get(kind, {}) as Dictionary
+	if schema.is_empty():
+		return {}
+	var target_side: String = _resolve_target(effect.get("target", schema["default_target"] as String) as String, source_side)
+	var keys: Dictionary = _side_keys(target_side)
 	match kind:
 		"apply_status":
-			var target_side: String = _resolve_target(effect.get("target", "opponent") as String, source_side)
-			var keys: Dictionary = _side_keys(target_side)
 			var statuses: Dictionary = state[keys["statuses"]] as Dictionary
 			var status: String = effect["status"] as String
 			var amount: int = effect.get("amount", 1) as int
@@ -116,19 +158,13 @@ static func _apply_atom(state: Dictionary, effect: Dictionary, source_side: Stri
 			state[keys["statuses"]] = statuses
 			return { status: amount }
 		"deal_damage":
-			var target_side: String = _resolve_target(effect.get("target", "opponent") as String, source_side)
-			var keys: Dictionary = _side_keys(target_side)
 			state[keys["hp"]] = maxi(0, (state[keys["hp"]] as int) - (effect["amount"] as int))
 			return {}
 		"modify_cooldown":
-			var target_side: String = _resolve_target(effect.get("target", "opponent") as String, source_side)
-			var keys: Dictionary = _side_keys(target_side)
 			var statuses: Dictionary = state[keys["statuses"]] as Dictionary
 			statuses["cooldown_modifier_deciseconds"] = (statuses["cooldown_modifier_deciseconds"] as int) + (effect["deciseconds"] as int)
 			return {}
 		"freeze":
-			var target_side: String = _resolve_target(effect.get("target", "opponent") as String, source_side)
-			var keys: Dictionary = _side_keys(target_side)
 			var grid: Array = state[keys["grid"]] as Array
 			var frozen: Array = state[keys["frozen"]] as Array
 			var duration_seconds: float = float(effect["deciseconds"] as int) / 10.0
@@ -142,8 +178,6 @@ static func _apply_atom(state: Dictionary, effect: Dictionary, source_side: Stri
 					frozen_applied += 1
 			return { "freeze": frozen_applied } if frozen_applied > 0 else {}
 		"set_status_field":
-			var target_side: String = _resolve_target(effect.get("target", "opponent") as String, source_side)
-			var keys: Dictionary = _side_keys(target_side)
 			var statuses: Dictionary = state[keys["statuses"]] as Dictionary
 			var status_dict: Dictionary = statuses[effect["status"] as String] as Dictionary
 			var field: String = effect["field"] as String
@@ -156,7 +190,6 @@ static func _apply_atom(state: Dictionary, effect: Dictionary, source_side: Stri
 		"haste_timers":
 			# Air/Gust on-fire: shave every own cooldown timer by the per-application
 			# Haste amount plus any reduction_bonus (set by Gust). Always own side.
-			var keys: Dictionary = _side_keys(source_side)
 			var haste: Dictionary = (state[keys["statuses"]] as Dictionary)["haste"] as Dictionary
 			var haste_seconds: float = float(TuningData.HASTE_REDUCTION_DECISECONDS + (haste["reduction_bonus_deciseconds"] as int)) / 10.0
 			var timers: Array = state[keys["timers"]] as Array
@@ -166,7 +199,6 @@ static func _apply_atom(state: Dictionary, effect: Dictionary, source_side: Stri
 		"leech_heal":
 			# Blood/Pulse/Ichor on-fire: heal own HP by this fire's damage plus the
 			# leech.bonus, doubled when leech.double is set. amount = damage landed.
-			var keys: Dictionary = _side_keys(source_side)
 			var leech: Dictionary = (state[keys["statuses"]] as Dictionary)["leech"] as Dictionary
 			var heal: int = (effect["amount"] as int) + (leech["bonus"] as int)
 			if leech["double"] as bool:
@@ -176,8 +208,6 @@ static func _apply_atom(state: Dictionary, effect: Dictionary, source_side: Stri
 		"add_max_hp":
 			# Raises the side's HP AND its bar max for this fight (Ironwood, World Tree).
 			# Level-scaled like every status quantity.
-			var target_side: String = _resolve_target(effect.get("target", "own") as String, source_side)
-			var keys: Dictionary = _side_keys(target_side)
 			var gain: int = (effect["amount"] as int) * potency
 			state[keys["hp"]] = (state[keys["hp"]] as int) + gain
 			var starting_key: String = keys["starting_hp"] as String
@@ -187,15 +217,11 @@ static func _apply_atom(state: Dictionary, effect: Dictionary, source_side: Stri
 		"prime_dot":
 			# One-shot primer: the target side's NEXT burn/poison tick deals +amount.
 			# Waits until that DOT actually ticks; does not stack a status.
-			var target_side: String = _resolve_target(effect.get("target", "opponent") as String, source_side)
-			var keys: Dictionary = _side_keys(target_side)
 			var dot: Dictionary = (state[keys["statuses"]] as Dictionary)[effect["status"] as String] as Dictionary
 			dot["next_tick_bonus"] = (dot["next_tick_bonus"] as int) + (effect["amount"] as int) * potency
 			return {}
 		"prime_next_hit":
 			# One-shot primer: this side's NEXT damaging direct hit deals +amount.
-			var target_side: String = _resolve_target(effect.get("target", "own") as String, source_side)
-			var keys: Dictionary = _side_keys(target_side)
 			var statuses: Dictionary = state[keys["statuses"]] as Dictionary
 			statuses["next_hit_bonus"] = (statuses["next_hit_bonus"] as int) + (effect["amount"] as int) * potency
 			return {}

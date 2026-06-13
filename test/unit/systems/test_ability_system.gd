@@ -460,3 +460,22 @@ func test_tier2_element_applies_tier_scaled_stacks() -> void:
 	var s: Dictionary = AbilitySystem.resolve_combat_start(st)
 	assert_eq(((s["opponent_statuses"] as Dictionary)["burn"] as Dictionary)["stacks"] as int, 2,
 		"a T2 element applies potency-2 stacks per application at Lv1")
+
+
+# ── validate_atom (atom-schema guard) ─────────────────────────────────────────
+
+func test_validate_atom_accepts_a_well_formed_effect() -> void:
+	assert_eq(AbilitySystem.validate_atom({ "kind": "apply_status", "status": "burn" }).size(), 0)
+
+
+func test_validate_atom_flags_unknown_kind() -> void:
+	var errors: Array[String] = AbilitySystem.validate_atom({ "kind": "aply_status", "status": "burn" })
+	assert_eq(errors.size(), 1)
+	assert_string_contains(errors[0], "unknown atom kind")
+
+
+func test_validate_atom_flags_missing_required_field() -> void:
+	# prime_dot requires both status and amount; omit amount.
+	var errors: Array[String] = AbilitySystem.validate_atom({ "kind": "prime_dot", "status": "burn" })
+	assert_eq(errors.size(), 1)
+	assert_string_contains(errors[0], "amount")
