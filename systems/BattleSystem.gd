@@ -212,6 +212,11 @@ static func _fire_element_once(s: Dictionary, ctx: Dictionary, side: String, ele
 	var opp_hp_key: String = opp_k["hp"] as String
 	var raw: int = ElementData.effective_damage(elem)
 	var dmg: int = raw
+	# Portion of `dmg` that is Curse amplification on this hit. It's credited to the
+	# curse-applying element's `curse` Contribution bucket below, so it must NOT also
+	# land in this attacker's `direct` bucket (that double-counted the amp — the loss
+	# is real once, the credit must be too).
+	var curse_amp_credited: int = 0
 	# Pure-effect elements (raw == 0) skip the whole damage block — no mitigation, no
 	# armour-strip, no curse-vulnerability — and just fire a 0-damage event + their effect.
 	# Damage-dealers pick up adjacency auras (Root/Obsidian/Primordial) and consume the
@@ -234,8 +239,11 @@ static func _fire_element_once(s: Dictionary, ctx: Dictionary, side: String, ele
 		_credit_dot_contrib((s["battle_stats"] as Dictionary)[opp_k["stats"] as String] as Array,
 			{ "blocked": hit["blocked_by_source"] as Dictionary })
 		# Curse amplification credited to the attacker's curse-applying elements (Dark etc.).
+		var curse_split: Dictionary = hit["curse_amplified_by_source"] as Dictionary
 		_credit_dot_contrib((s["battle_stats"] as Dictionary)[k["stats"] as String] as Array,
-			{ "curse": hit["curse_amplified_by_source"] as Dictionary })
+			{ "curse": curse_split })
+		for amp_amount: Variant in curse_split.values():
+			curse_amp_credited += amp_amount as int
 		var armor_after: int = ((s[opp_statuses_key] as Dictionary)["armor"] as Dictionary)["value"] as int
 		if armor_before > 0 and armor_after == 0:
 			events.append(AbilitySystem.trigger_event("on_armor_stripped", side, slot_index))
@@ -246,7 +254,8 @@ static func _fire_element_once(s: Dictionary, ctx: Dictionary, side: String, ele
 	slot_stats["fires"] = (slot_stats["fires"] as int) + 1
 	slot_stats["damage"] = (slot_stats["damage"] as int) + dmg
 	var contrib: Dictionary = slot_stats["contrib"] as Dictionary
-	contrib["direct"] = (contrib["direct"] as int) + dmg
+	# Subtract the curse amp already credited to the curse bucket, so direct + curse == dmg.
+	contrib["direct"] = (contrib["direct"] as int) + dmg - curse_amp_credited
 	if use_effects and elem.has("effect"):
 		# On-fire Action runs through the same effect vocabulary as Abilities;
 		# apply_on_fire also records this element's Summary tally.
@@ -264,7 +273,7 @@ static func _fire_element_once(s: Dictionary, ctx: Dictionary, side: String, ele
 			var entry: Dictionary = chance_entry as Dictionary
 			if combat_rng.randf() * 100.0 < float(entry["chance"] as int):
 				var statuses_key: String = own_statuses_key if (entry.get("target", "opponent") as String) == "own" else opp_statuses_key
-				var res: Dictionary = StatusSystem.apply_effect(s[statuses_key] as Dictionary, entry["status"] as String, entry.get("potency", 1) as int)
+				var res: Dictionary = StatusSystem.apply_effect(s[statuses_key] as Dictionary, entry["status"] as String, entry.get("potency", 1) as int, entry.get("slot", -1) as int)
 				s[statuses_key] = res["statuses"] as Dictionary
 				_tally_effect(slot_stats, entry["status"] as String)
 

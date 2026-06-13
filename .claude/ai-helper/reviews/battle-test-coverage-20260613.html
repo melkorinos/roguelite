@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Battle-Combo Test Coverage &amp; Risk — 2026-06-13</title>
+<style>
+  :root{
+    --bg:#0f1117; --panel:#171a23; --panel2:#1d212c; --ink:#e7e9ee; --mut:#9aa3b2;
+    --line:#2a2f3b; --green:#3fb950; --amber:#d29922; --red:#f85149; --blue:#58a6ff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:1080px;margin:0 auto;padding:32px 24px 80px}
+  h1{font-size:26px;margin:0 0 4px}
+  h2{font-size:19px;margin:36px 0 12px;border-bottom:1px solid var(--line);padding-bottom:6px}
+  .sub{color:var(--mut);margin:0 0 24px}
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:18px 0 8px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+  .card .n{font-size:30px;font-weight:700;line-height:1}
+  .card .l{color:var(--mut);font-size:13px;margin-top:4px}
+  table{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:8px 0 4px}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:var(--panel2);font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--mut)}
+  tr:last-child td{border-bottom:none}
+  td.cov{white-space:nowrap;font-weight:600}
+  .pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:600}
+  .ok{color:var(--green)} .part{color:var(--amber)} .no{color:var(--red)}
+  .r-low{background:rgba(63,185,80,.15);color:var(--green)}
+  .r-med{background:rgba(210,153,34,.18);color:var(--amber)}
+  .r-high{background:rgba(248,81,73,.16);color:var(--red)}
+  code{background:#0c0e14;border:1px solid var(--line);border-radius:5px;padding:1px 5px;font-size:12.5px;color:#cdd3df}
+  .legend{display:flex;gap:18px;flex-wrap:wrap;color:var(--mut);font-size:13px;margin:10px 0 0}
+  .legend b{color:var(--ink)}
+  .note{background:var(--panel2);border-left:3px solid var(--blue);border-radius:0 8px 8px 0;padding:12px 16px;margin:14px 0;color:#cdd3df}
+  .bug{border-left-color:var(--red)}
+  .verdict{font-size:17px}
+  .small{font-size:12.5px;color:var(--mut)}
+  ul{margin:8px 0 0;padding-left:20px} li{margin:4px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Battle-Combo Test Coverage &amp; Risk</h1>
+  <p class="sub">Generated 2026-06-13 (rev c, batch A–F + all 12 T1 effect mechanics complete) · scope = how combat mechanics <b>compose</b> in a real fight (the layer unit tests miss) · suite <b>692/692</b> green, import+boot 0</p>
+
+  <div class="grid">
+    <div class="card"><div class="n" style="color:var(--green)">12</div><div class="l">interaction areas covered</div></div>
+    <div class="card"><div class="n" style="color:var(--amber)">3</div><div class="l">partial coverage</div></div>
+    <div class="card"><div class="n" style="color:var(--red)">1</div><div class="l">untested gap (low)</div></div>
+    <div class="card"><div class="n" style="color:var(--blue)">3</div><div class="l">real bugs caught</div></div>
+  </div>
+  <div class="legend">
+    <span><b class="ok">✅ Covered</b> — asserted end-to-end</span>
+    <span><b class="part">🟡 Partial</b> — some cases / math only</span>
+    <span><b class="no">❌ Gap</b> — no composition test</span>
+    <span>Risk: <span class="pill r-low">LOW</span> <span class="pill r-med">MED</span> <span class="pill r-high">HIGH</span></span>
+  </div>
+
+  <div class="note verdict">
+    <b>Overall risk: LOW.</b> The full A–F batch is in: damage-accounting (HP-conservation invariant over a
+    24-board corpus + exact mitigation/curse arithmetic), every per-modifier field (B), timing as a fight
+    consequence (D: haste/shock/freeze → fire counts), and side-isolation (E: no status leaks across sides).
+    The batch caught <b>three real bugs</b> (two attribution, one gameplay — see below). Only one low-severity
+    gap remains (lethal-fight overkill/heal accounting, deliberately outside the conservation domain), plus a
+    few partials worth tightening. Known follow-up: the cosmetic <code>haste</code> status (its <code>reduction</code>
+    field isn't read by the cooldown math) — a small design task, not a correctness hole.
+  </div>
+
+  <h2>What the invariant already caught (evidence it works)</h2>
+  <div class="note bug">
+    <b>Bug 1 — curse amplification double-counted on direct hits.</b> <code>_fire_element_once</code> credited the
+    curse amp to both <code>contrib["direct"]</code> (inside <code>dmg</code>) and <code>contrib["curse"]</code> →
+    the Summary overstated curse-build damage. <span class="small">Witness: board 16, removed 21 but credited 24.</span>
+  </div>
+  <div class="note bug">
+    <b>Bug 2 — <code>deal_damage</code> ability atom credited nothing.</b> supernova's detonation / combat_start
+    nukes removed HP but appeared in no Contribution bucket (invisible in Summary). <span class="small">Witness:
+    board 20, removed 131 but credited 121 — the missing 10 = supernova's bonus.</span>
+  </div>
+  <div class="note bug">
+    <b>Bug 3 — haste was inverted (GAMEPLAY, caught by batch D).</b> Combat timers count UP to the cooldown,
+    but the <code>haste_timers</code> atom SUBTRACTED from them → haste made a side fire <i>slower</i>, the
+    opposite of its purpose. <span class="small">Compounding: the <code>haste</code> status's <code>reduction</code>
+    field is display-only, so most haste abilities did nothing to fire rate. Fixed: <code>haste_timers</code> now
+    advances timers (fires sooner).</span>
+  </div>
+  <p class="small">All three fixed; suite green. Two were invisible to every isolated unit test — exactly the composition-bug class this batch exists to kill (original trigger: a poison element that dealt damage but reported 0).</p>
+
+  <h2>Coverage matrix</h2>
+
+  <table>
+    <tr><th>Interaction</th><th class="cov">Status</th><th>Risk</th><th>Where / note</th></tr>
+
+    <tr><td><b>Mitigation order on one hit</b><br><span class="small">weaken → plating → armor → curse</span></td>
+      <td class="cov ok">✅ Covered</td><td><span class="pill r-low">LOW</span></td>
+      <td><code>test_full_mitigation_stack_exact_arithmetic</code>, <code>test_plating_applies_before_armor</code>. Exact arithmetic + order witnessed by armor-remaining. <span class="small">Doc corrected: plating runs <i>before</i> armor.</span></td></tr>
+
+    <tr><td><b>Curse charge consumption</b><br><span class="small">spent only on a damaging event</span></td>
+      <td class="cov ok">✅ Covered</td><td><span class="pill r-low">LOW</span></td>
+      <td><code>test_curse_direct_hit_spends_one_charge</code>, <code>…dot_tick…</code>, <code>…fully_mitigated_hit_spends_nothing</code>, <code>…unchanged_by_nondamaging_tick</code>. Freeze = the non-damaging case.</td></tr>
+
+    <tr><td><b>One-shot DOT primer</b><br><span class="small">prime_dot consumed once</span></td>
+      <td class="cov ok">✅ Covered</td><td><span class="pill r-low">LOW</span></td>
+      <td><code>test_dot_primer_is_consumed_exactly_once</code>.</td></tr>
+
+    <tr><td><b>Cleanse floor + curse immunity</b></td>
+      <td class="cov ok">✅ Covered</td><td><span class="pill r-low">LOW</span></td>
+      <td><code>test_cleanse_floors_at_zero_and_leaves_curse</code>. Code-as-truth: curse is not cleansable.</td></tr>
+
+    <tr><td><b>Blind = fire suppression</b><br><span class="small">not a damage reducer</span></td>
+      <td class="cov ok">✅ Covered</td><td><span class="pill r-low">LOW</span></td>
+      <td><code>test_blind_suppresses_the_fire_it_does_not_reduce_damage</code>. Tested separately from the damage pipeline (where it does not live).</td></tr>
+
+    <tr><td><b>HP-conservation invariant</b><br><span class="small">removed == Σ credited contribution</span></td>
+      <td class="cov ok">✅ Covered</td><td><span class="pill r-low">LOW</span></td>
+      <td><code>test_opponent_hp_loss_equals_credited_player_contribution</code> over 24 seeded random boards. Vacuity-guarded by <code>test_corpus_actually_deals_damage</code>. <span class="small">Domain: non-lethal, pre-sandstorm (overkill clamp &amp; uncredited storm damage excluded by design).</span></td></tr>
+
+    <tr><td><b>Keystone amplify, end-to-end</b><br><span class="small">flat + board-scaling</span></td>
+      <td class="cov ok">✅ Covered</td><td><span class="pill r-low">LOW</span></td>
+      <td><code>test_ashen_affinity_…</code>, <code>test_emberswarm_scales_burn_with_fire_count</code> (pre-existing).</td></tr>
+
+    <tr><td><b>Multi-source stacking — burn field</b></td>
+      <td class="cov ok">✅ Covered</td><td><span class="pill r-low">LOW</span></td>
+      <td><code>test_two_sources_stack_the_same_modifier_field</code> (burn.tick_damage_bonus accumulates).</td></tr>
+
+    <tr><td><b>Single-status math · triggers · determinism · sandstorm</b></td>
+      <td class="cov ok">✅ Covered</td><td><span class="pill r-low">LOW</span></td>
+      <td>Mature unit suites: <code>test_status_system</code>, <code>test_ability_system</code>, replay/determinism, sandstorm symmetry.</td></tr>
+
+    <tr><td><b>Status × mitigation pairs</b><br><span class="small">burn×armor, poison×plating</span></td>
+      <td class="cov part">🟡 Partial</td><td><span class="pill r-med">MED</span></td>
+      <td>A few pairs in <code>test_status_system</code>; the full stack is now covered, but not every pairwise combo.</td></tr>
+
+    <tr><td><b>Multi-source stacking — non-burn fields</b><br><span class="small">cooldown, armor.floor, weaken</span></td>
+      <td class="cov part">🟡 Partial</td><td><span class="pill r-med">MED</span></td>
+      <td>Only burn proven to accumulate from two sources; other fields unproven under double application.</td></tr>
+
+    <tr><td><b>Consumption — primers (next_hit)</b></td>
+      <td class="cov part">🟡 Partial</td><td><span class="pill r-med">MED</span></td>
+      <td>DOT primer covered; <code>next_hit_bonus</code> (direct-hit primer) not yet asserted end-to-end.</td></tr>
+
+    <tr><td><b>Per-modifier field × its mechanic (B)</b><br><span class="small">outgoing_damage_flat · cooldown_modifier · shock.effective_stack_bonus · weaken.duration_bonus · armor.floor · plating.reduces_dot · suppress_heal</span></td>
+      <td class="cov ok">✅ Covered</td><td><span class="pill r-low">LOW</span></td>
+      <td>One fight-level A/B per field (the field injected into one of two identical fights, strict delta assert): <code>test_outgoing_damage_flat_…</code>, <code>…cooldown_modifier_penalty…</code>, <code>…suppress_heal_blocks_a_nature_healer</code>, <code>…armor_floor_caps_absorption…</code>, <code>…plating_reduces_dot_shaves…</code>, <code>…weaken_duration_bonus_extends…</code>, <code>…shock_effective_stack_bonus_slows…</code>. Ability→field wiring locked by <code>test_ability_data</code>/<code>test_keystone_data</code>.</td></tr>
+
+    <tr><td><b>Timing end-to-end (D)</b><br><span class="small">haste fires sooner · shock slower · freeze pauses</span></td>
+      <td class="cov ok">✅ Covered</td><td><span class="pill r-low">LOW</span></td>
+      <td><code>test_haste_makes_the_side_fire_more</code>, <code>test_shock_makes_the_side_fire_fewer</code>, <code>test_frozen_slot_does_not_fire_while_frozen</code>. <b>Caught the inverted-haste gameplay bug</b> (now fixed).</td></tr>
+
+    <tr><td><b>Side-targeting / leak isolation (E)</b></td>
+      <td class="cov ok">✅ Covered</td><td><span class="pill r-low">LOW</span></td>
+      <td><code>test_self_buff_does_not_leak_to_the_opponent</code>, <code>test_debuff_lands_only_on_the_target_side</code>, <code>test_apply_external_effects_routes_to_the_named_side_only</code>. Buffs/debuffs and the atom dispatcher proven to honour side boundaries.</td></tr>
+
+    <tr><td><b>Full mitigation order incl. overkill / heal interplay in lethal fights</b></td>
+      <td class="cov no">❌ Gap</td><td><span class="pill r-low">LOW</span></td>
+      <td>Conservation deliberately runs non-lethal. Overkill-clamp and heal-during-lethal accounting are out of the invariant's domain — low odds, but unasserted.</td></tr>
+  </table>
+
+  <h2>Remaining follow-ups (low leverage)</h2>
+  <ul>
+    <li><b>Haste status wiring (design, not correctness).</b> Decide whether the <code>haste</code> status's <code>reduction</code> should be a persistent cooldown reduction (wire into <code>effective_cooldown_deciseconds</code>) or stay a pure timer-shave; today it's display-only.</li>
+    <li><b>Tighten partials.</b> More status×mitigation pairs; prove multi-source stacking on non-burn fields (cooldown, armor.floor, weaken); assert the <code>next_hit</code> direct-hit primer end-to-end.</li>
+    <li><b>Invariant extensions:</b> <code>curse_charges_spent ≤ damaging_events</code>; a <code>suppress_heal</code> side never gains HP from heal; same seed → identical event log. Each must hold on the existing roster first (a wrong invariant = false failures).</li>
+    <li><b>Lethal-fight accounting (low).</b> Optional invariant for overkill-clamp + heal-during-lethal, outside the current conservation domain.</li>
+  </ul>
+
+  <p class="small">Source of gaps: <code>.claude/ai-helper/handoff-battle-testing.md</code>. Tests: <code>test/unit/systems/test_combat_integration.gd</code> (A/C), <code>test/unit/systems/test_combat_invariants.gd</code> (F).</p>
+
+</div>
+</body>
+</html>

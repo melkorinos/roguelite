@@ -197,13 +197,15 @@ static func _apply_atom(state: Dictionary, effect: Dictionary, source_side: Stri
 				status_dict[field] = (status_dict[field] as int) + (value as int)
 			return {}
 		"haste_timers":
-			# Air/Gust on-fire: shave every own cooldown timer by the per-application
-			# Haste amount plus any reduction_bonus (set by Gust). Always own side.
+			# Air/Gust on-fire: bring every own cooldown timer CLOSER to its next fire by the
+			# per-application Haste amount plus any reduction_bonus (set by Gust). Always own
+			# side. Timers count UP to the cooldown (see BattleSystem._tick_side), so advancing
+			# them — adding — is what fires sooner; subtracting would (wrongly) slow the side.
 			var haste: Dictionary = (state[keys["statuses"]] as Dictionary)["haste"] as Dictionary
 			var haste_seconds: float = float(TuningData.HASTE_REDUCTION_DECISECONDS + (haste["reduction_bonus_deciseconds"] as int)) / 10.0
 			var timers: Array = state[keys["timers"]] as Array
 			for j: int in timers.size():
-				timers[j] = maxf(0.0, (timers[j] as float) - haste_seconds)
+				timers[j] = (timers[j] as float) + haste_seconds
 			return {}
 		"leech_heal":
 			# Blood/Pulse/Ichor on-fire: heal own HP by this fire's damage plus the
@@ -291,6 +293,11 @@ static func _apply_effects(state: Dictionary, effects: Array, source_side: Strin
 	# leech) — credited to its heal Contribution. Raw, so overheal counts.
 	var own_hp_key: String = _side_keys(source_side)["hp"] as String
 	var hp_before: int = state[own_hp_key] as int
+	# Opponent-side HP drop over this application is the source element's direct ability
+	# damage (the deal_damage atom — supernova's detonation, combat_start nukes) — credited
+	# to its direct Contribution, which it otherwise dealt invisibly to the Summary.
+	var opp_hp_key: String = _side_keys(CombatSide.opponent_of(source_side))["hp"] as String
+	var opp_hp_before: int = state[opp_hp_key] as int
 	var applied: Dictionary = {}
 	for effect: Variant in effects:
 		var e: Dictionary = effect as Dictionary
@@ -303,6 +310,9 @@ static func _apply_effects(state: Dictionary, effects: Array, source_side: Strin
 	var healed: int = (state[own_hp_key] as int) - hp_before
 	if source_slot >= 0 and healed > 0:
 		_credit_heal_contrib(state, source_side, source_slot, healed)
+	var dealt: int = opp_hp_before - (state[opp_hp_key] as int)
+	if source_slot >= 0 and dealt > 0:
+		_credit_direct_contrib(state, source_side, source_slot, dealt)
 
 
 # Credits `healed` HP to the source element's heal Contribution row (green bar).
@@ -315,6 +325,19 @@ static func _credit_heal_contrib(state: Dictionary, side: String, slot: int, hea
 		return
 	var contrib: Dictionary = (rows[slot] as Dictionary)["contrib"] as Dictionary
 	contrib["heal"] = (contrib["heal"] as int) + healed
+
+
+# Credits `dealt` HP to the source element's direct Contribution row — ability damage
+# (deal_damage atom) that bypassed the BattleSystem hit path and so was uncredited.
+static func _credit_direct_contrib(state: Dictionary, side: String, slot: int, dealt: int) -> void:
+	var battle_stats: Dictionary = state.get("battle_stats", {}) as Dictionary
+	if not battle_stats.has(side):
+		return
+	var rows: Array = battle_stats[side] as Array
+	if slot < 0 or slot >= rows.size():
+		return
+	var contrib: Dictionary = (rows[slot] as Dictionary)["contrib"] as Dictionary
+	contrib["direct"] = (contrib["direct"] as int) + dealt
 
 
 static func _record_effects(state: Dictionary, side: String, slot: int, applied: Dictionary) -> void:
@@ -558,20 +581,23 @@ static func apply_command(state: Dictionary, command: Dictionary) -> void:
 # rolls each against the combat-seeded RNG so replays stay deterministic.
 static func on_hit_status_chances(grid: Array) -> Array:
 	var chances: Array = []
-	for slot: Variant in grid:
-		if slot == null:
+	for i: int in grid.size():
+		if grid[i] == null:
 			continue
-		var ability: Dictionary = ability_for(slot as Dictionary)
+		var element: Dictionary = grid[i] as Dictionary
+		var ability: Dictionary = ability_for(element)
 		if (ability.get("trigger", "") as String) != "passive_on_hit":
 			continue
 		for effect: Variant in ability.get("effects", []) as Array:
 			var e: Dictionary = effect as Dictionary
-			var element: Dictionary = slot as Dictionary
 			chances.append({
 				"status": e["status"] as String,
 				"chance": e.get("chance", 0) as int,
 				"target": e.get("target", "opponent") as String,
 				# potency for status scaling — Level × tier multiplier
 				"potency": ElementData.scaled_potency(element.get("tier", 1) as int, element.get("level", 1) as int),
+				# Owning slot, so the applied status is attributed to THIS passive element's
+				# Summary row (its DOT/curse Contribution was previously unattributed).
+				"slot": i,
 			})
 	return chances
