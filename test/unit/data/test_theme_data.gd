@@ -26,6 +26,43 @@ func test_family_color_unknown_returns_a_color_not_a_crash() -> void:
 	assert_true(c is Color, "unknown family must fall back to a Color, never error")
 
 
+# ── blended_family_color ───────────────────────────────────────────────────────
+
+func test_blended_family_color_empty_returns_fallback() -> void:
+	assert_eq(ThemeData.blended_family_color({}), ThemeData.FAMILY_COLOR_FALLBACK)
+
+
+func test_blended_family_color_single_weight_gives_exact_color() -> void:
+	for fam: String in FAMILIES:
+		var result: Color = ThemeData.blended_family_color({ fam: 1 })
+		assert_eq(result, ThemeData.FAMILY_COLOR[fam] as Color,
+			"single-weight blend for '" + fam + "' must equal the exact family color")
+
+
+func test_blended_family_color_equal_weights_is_midpoint() -> void:
+	var water: Color = ThemeData.FAMILY_COLOR["water"] as Color
+	var fire: Color  = ThemeData.FAMILY_COLOR["fire"]  as Color
+	var result: Color = ThemeData.blended_family_color({ "water": 1, "fire": 1 })
+	assert_almost_eq(result.r, (water.r + fire.r) * 0.5, 0.001)
+	assert_almost_eq(result.g, (water.g + fire.g) * 0.5, 0.001)
+	assert_almost_eq(result.b, (water.b + fire.b) * 0.5, 0.001)
+
+
+func test_blended_family_color_proportional_weights() -> void:
+	# 2/3 water + 1/3 frost
+	var water: Color = ThemeData.FAMILY_COLOR["water"] as Color
+	var frost: Color = ThemeData.FAMILY_COLOR["frost"] as Color
+	var result: Color = ThemeData.blended_family_color({ "water": 2, "frost": 1 })
+	assert_almost_eq(result.r, water.r * (2.0 / 3.0) + frost.r * (1.0 / 3.0), 0.001)
+	assert_almost_eq(result.g, water.g * (2.0 / 3.0) + frost.g * (1.0 / 3.0), 0.001)
+	assert_almost_eq(result.b, water.b * (2.0 / 3.0) + frost.b * (1.0 / 3.0), 0.001)
+
+
+func test_blended_family_color_always_returns_opaque() -> void:
+	var result: Color = ThemeData.blended_family_color({ "fire": 3, "dark": 1 })
+	assert_eq(result.a, 1.0)
+
+
 # ── tier frame metals (ADR-0017: tier = frame material) ───────────────────────
 
 func test_frame_metal_is_distinct_per_tier() -> void:

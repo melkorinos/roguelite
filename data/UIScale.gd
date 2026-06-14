@@ -55,13 +55,17 @@ const TOOLTIP_BODY    := 13
 # actual width via apply_scaled, so one component degrades gracefully across contexts.
 const CARD_REFERENCE_WIDTH := 200
 const CARD_EMOJI           := 50
-const CARD_NAME            := 18
+const CARD_NAME            := 20  # bumped — name is the top of the hierarchy
 const CARD_POD_VALUE       := 18  # 2-pod default
 const CARD_POD_VALUE_SOLO  := 20  # single CD pod
 const CARD_POD_VALUE_TRIO  := 14  # 3-pod squeeze
 const CARD_POD_LABEL       := 9
 const CARD_POD_LABEL_TRIO  := 8
-const CARD_ABILITY         := 10
+const CARD_ABILITY         := 12  # ability body (bumped up for readability)
+const CARD_TRIGGER         := 13  # trigger prefix — only slightly above body, not heavier
+
+# Scene panel header (ScenePanel title) — native-size, not card-scaled.
+const PANEL_HEADER         := 18
 
 
 static func apply(node: Control, size: int) -> void:

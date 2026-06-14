@@ -1,6 +1,7 @@
-# Handoff — Implement the Element Card (build phase)
+# Handoff — Implement the Element Card (build phase) — COMPLETE
 
 **2026-06-13 · Supersedes the old design handoff.** Design is finalised; this is the build brief.
+**2026-06-14 · All steps done. Pass-2 roster tagging superseded — hue is now auto-blended from T1 root weights (`ElementData.root_family_weights` + `ThemeData.blended_family_color`); no manual family tags needed.**
 
 ## What this is
 Rebuild the always-visible **Element Card** to the finalised design. It renders one element identically in shop (for-sale), inventory, board (shop screen), and battle — only price badge / charge bar differ per context. This is a **view rebuild**: every value is already derivable from existing data — **only the Family→hue mapping is new**. No `systems/` changes.
@@ -39,7 +40,7 @@ Do these **in order**. Step 0 is done; **START AT STEP 1.** (Step 4, pass-2 tagg
 
 - [x] **4 · Refactored the slots onto the one card** ✅ (2026-06-13). `InventorySlot` now extends `ElementCard` (drag/F-forge layered on; bespoke Button styling deleted); `ShopItemTile`/`BattleSlot` set `card_width`; `Shop.gd` inventory rebuild uses `render()`/`clear()`.
 
-- [~] **5 · Validate end-to-end.** import ✅ · `--quit` boot ✅ · **GUT 715/715 green** ✅. (Also fixed a pre-existing unrelated drift: `test_advance_round_adds_5_gold` hardcoded 8 while `TuningData.GOLD_PER_ROUND=10` → now asserts `3 + GOLD_PER_ROUND`, renamed `..._adds_gold_per_round`.) **PENDING: visual eyeball at HD 1280×720** (needs a display — confirm the 1.45 aspect doesn't overflow the shop board's 720p budget, SPEC §D note).
+- [x] **5 · Validate end-to-end.** ✅ import · boot · GUT 715/715 · visual verified at HD 1280×720 (board, forge bench, inventory all confirmed). (Also fixed a pre-existing unrelated drift: `test_advance_round_adds_5_gold` hardcoded 8 while `TuningData.GOLD_PER_ROUND=10` → now asserts `3 + GOLD_PER_ROUND`, renamed `..._adds_gold_per_round`.)
 
 - [ ] **(parallel, non-blocking) · Pass-2 roster tagging.** Tag the remaining ~89 forged elements with a `"family"` by result-vibe — a reviewable data sweep. Until done, untagged elements render the neutral fallback hue (no crash). Can run anytime relative to steps 2–5.
 

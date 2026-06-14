@@ -191,7 +191,7 @@ func render(element: Dictionary) -> void:
 	emoji = element.get("emoji", "") as String
 	var tier: int = element.get("tier", 1) as int
 	var level: int = element.get("level", 1) as int
-	var hue: Color = ThemeData.family_color(ElementData.canonical_family(element_id))
+	var hue: Color = ThemeData.blended_family_color(ElementData.root_family_weights(element_id))
 
 	# Frame = tier material.
 	_apply_frame(tier)
@@ -278,27 +278,14 @@ func _apply_lineage(tier: int) -> void:
 	if tier < 2:
 		_underbar.visible = false
 		return
-	var parents: Array[String] = _parent_families()
-	if parents.size() < 2:
-		_underbar.visible = false
-		return
-	_underbar.visible = card_width >= SECONDARY_POD_MIN_WIDTH
-	_underbar_left.color = ThemeData.family_color(parents[0])
-	_underbar_right.color = ThemeData.family_color(parents[1])
-
-
-# The two parents' canonical families for the lineage bar, from the first recipe
-# that forges this element. Empty when no recipe (base elements) or unknown.
-func _parent_families() -> Array[String]:
 	var recipes: Array[Dictionary] = RecipeData.recipes_for(element_id)
 	if recipes.is_empty():
-		return []
+		_underbar.visible = false
+		return
 	var pair: Dictionary = recipes[0]
-	var fam_a: String = ElementData.canonical_family(pair["a"] as String)
-	var fam_b: String = ElementData.canonical_family(pair["b"] as String)
-	if fam_a == "" or fam_b == "":
-		return []
-	return [fam_a, fam_b]
+	_underbar.visible = card_width >= SECONDARY_POD_MIN_WIDTH
+	_underbar_left.color = ThemeData.blended_family_color(ElementData.root_family_weights(pair["a"] as String))
+	_underbar_right.color = ThemeData.blended_family_color(ElementData.root_family_weights(pair["b"] as String))
 
 
 func _render_pods(pods: Array[Dictionary], hue: Color) -> void:
@@ -363,7 +350,10 @@ func _ability_bbcode(id: String) -> String:
 		body = body.replace("[%s]" % k, "[url=%s][color=#8fd3ff]%s[/color][/url]" % [k, k])
 	var trigger: String = AbilityData.trigger_label(ability)
 	if trigger != "":
-		return "[b][color=#8fd3ff]%s[/color][/b]  %s" % [trigger.to_upper(), body]
+		# Trigger prefix: kept bold/blue (its style) but only a hair larger than the body,
+		# so it no longer reads as the heaviest thing on the card.
+		var trigger_px: int = maxi(6, int(round(float(UIScale.CARD_TRIGGER) * _scale)))
+		return "[font_size=%d][b][color=#8fd3ff]%s[/color][/b][/font_size]  %s" % [trigger_px, trigger.to_upper(), body]
 	return body
 
 

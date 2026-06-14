@@ -76,6 +76,29 @@ const FRAME_PRISMATIC_STOPS: Array[Color] = [
 const LEVEL_GLOW_PX: Dictionary = { 1: 3, 2: 13, 3: 24 }
 const LEVEL_BRIGHT: Dictionary = { 1: 1.24, 2: 1.46, 3: 1.72 }
 
+# ── Scene frame system (beveled "hardware" panels — see ScenePanel) ────────────
+# Every area panel is a thick raised-metal frame (one top-left light source) + a
+# stepped inner accent line, near-black interior. Accent is per-area (frame only).
+const FRAME_THICKNESS: int    = 5      # px border band (native 1920×1080)
+const FRAME_RADIUS: int       = 11
+const FRAME_STEP_GAP: int     = 4      # inset of the stepped inner line past the border
+const FRAME_STEP_ALPHA: float = 0.22   # inner accent line opacity
+const FRAME_BEVEL_LIGHT: float = 0.35  # accent.lightened() for the top/left edge
+const FRAME_BEVEL_DARK: float  = 0.45  # accent.darkened()  for the bottom/right edge
+const PANEL_INTERIOR := Color(0.050, 0.035, 0.030, 1.0)  # near-black; matches the card interior
+
+# Per-area accents (frame colour only — interiors stay PANEL_INTERIOR). Shop is a warm
+# amber, NOT tier gold: gold stays the T3/T4 card signal + the FIGHT chip, so axes don't leak.
+const AREA_SHOP      := Color(0.851, 0.620, 0.220)  # #d99e38 amber
+const AREA_INVENTORY := Color(0.353, 0.608, 0.847)  # #5a9bd8 blue
+const AREA_BATTLE    := Color(0.847, 0.392, 0.235)  # #d8643c red-orange
+const AREA_FORGE     := Color(0.651, 0.310, 0.878)  # #a64fe0 purple
+
+# FIGHT call-to-action gold — the only gold UI chrome (so the eye always finds it).
+const FIGHT_BG   := Color(0.910, 0.604, 0.196)
+const FIGHT_RIM  := Color(1.000, 0.902, 0.659)
+const FIGHT_TEXT := Color(0.227, 0.141, 0.000)
+
 # ── Slot / tile empty state ───────────────────────────────────────────────────
 const SLOT_BG_EMPTY     := Color(0.10, 0.10, 0.14, 0.85)
 const SLOT_BORDER_EMPTY := Color(0.28, 0.28, 0.36, 0.65)
@@ -218,10 +241,30 @@ static func comp_tier_color(tier: int) -> Color:
 		_: return COLOR_COMP_HEADER_T1
 
 
-# Hue for an element's Canonical Family (ADR-0017). Unknown / untagged families
-# fall back to a neutral so a card never crashes on a missing tag.
+# Hue for a single named family. Unknown names fall back to neutral.
 static func family_color(family: String) -> Color:
 	return FAMILY_COLOR.get(family, FAMILY_COLOR_FALLBACK) as Color
+
+
+# Weighted-average hue from a root_family_weights dict (ElementData). A single
+# T1 element gives its exact color. A dual-parent T2 gives 50/50. A T3 with two
+# water-lineage parents and one frost-lineage parent gives 2/3 water + 1/3 frost.
+# Empty weights dict → FAMILY_COLOR_FALLBACK.
+static func blended_family_color(weights: Dictionary) -> Color:
+	if weights.is_empty():
+		return FAMILY_COLOR_FALLBACK
+	var total: int = 0
+	for key: String in weights:
+		total += weights[key] as int
+	var result: Color = Color(0.0, 0.0, 0.0, 0.0)
+	for family: String in weights:
+		var c: Color = family_color(family)
+		var w: float = float(weights[family] as int) / float(total)
+		result.r += c.r * w
+		result.g += c.g * w
+		result.b += c.b * w
+	result.a = 1.0
+	return result
 
 
 # Frame metal for a tier (ADR-0017). T4 has no flat metal — it uses the prismatic

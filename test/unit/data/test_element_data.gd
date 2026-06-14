@@ -130,12 +130,45 @@ func test_canonical_family_unknown_element_is_empty() -> void:
 
 
 func test_every_canonical_family_is_a_known_base_family_or_empty() -> void:
-	# Untagged T2+ elements return "" until the pass-2 tagging lands; any non-empty
-	# value must be one of the 12 base families.
+	# Any non-empty return must be one of the 12 base families.
 	for elem: Dictionary in ElementData.all_elements():
 		var fam: String = ElementData.canonical_family(elem["id"] as String)
 		if fam != "":
 			assert_true(_BASE_FAMILIES.has(fam), elem["id"] + " has unknown family '" + fam + "'")
+
+
+# ── root_family_weights ────────────────────────────────────────────────────────
+
+func test_root_family_weights_t1_is_self() -> void:
+	assert_eq(ElementData.root_family_weights("water"), { "water": 1 })
+	assert_eq(ElementData.root_family_weights("fire"),  { "fire":  1 })
+	assert_eq(ElementData.root_family_weights("frost"), { "frost": 1 })
+
+
+func test_root_family_weights_unknown_is_empty() -> void:
+	assert_eq(ElementData.root_family_weights("not_an_element"), {})
+	assert_eq(ElementData.root_family_weights(""), {})
+
+
+func test_root_family_weights_all_keys_are_base_families() -> void:
+	for elem: Dictionary in ElementData.all_elements():
+		var weights: Dictionary = ElementData.root_family_weights(elem["id"] as String)
+		for key: String in weights:
+			assert_true(_BASE_FAMILIES.has(key),
+				elem["id"] + " has non-base root key '" + key + "'")
+
+
+func test_root_family_weights_sum_matches_tier_depth() -> void:
+	# Each tier doubles the root count: T1→1, T2→2, T3→4, T4→8.
+	for elem: Dictionary in ElementData.all_elements():
+		var tier: int = elem["tier"] as int
+		var expected: int = int(pow(2.0, tier - 1))
+		var weights: Dictionary = ElementData.root_family_weights(elem["id"] as String)
+		var total: int = 0
+		for v: Variant in weights.values():
+			total += v as int
+		assert_eq(total, expected,
+			elem["id"] + " root weight sum should be " + str(expected) + " for tier " + str(tier))
 
 
 # ── stat_pods (Element Card §B pod rule, ADR-0017) ─────────────────────────────

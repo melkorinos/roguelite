@@ -217,11 +217,10 @@ static func effective_damage(item: Dictionary) -> int:
 	return maxi(1, int(round(float(base * multiplier * level) * tier_multiplier)))
 
 
-# The single dominant Family that drives an element's Element Card hue (ADR-0017).
-# A Tier-1 element IS its own family (id == family). A forged element carries an
-# explicit "family" tag (designer-authored by result vibe). Untagged forged
-# elements return "" — the card falls back to a neutral hue until they are tagged
-# (the pass-2 roster sweep). Unknown ids also return "".
+# The single dominant Family string for an element. T1 elements return their own
+# id. Forged elements return an explicit "family" tag if present, otherwise "".
+# Used by AugmentSystem tests and Keystone descriptions; the Element Card hue
+# now uses root_family_weights + ThemeData.blended_family_color instead.
 static func canonical_family(element_id: String) -> String:
 	var def: Dictionary = find(element_id)
 	if def.is_empty():
@@ -231,6 +230,30 @@ static func canonical_family(element_id: String) -> String:
 	if (def.get("tier", 0) as int) == 1:
 		return element_id
 	return ""
+
+
+# Proportional T1-root breakdown for hue blending. Walks the canonical first
+# recipe pair at each tier; each T1 root is counted once per path that reaches
+# it, giving a natural weight. T1 → {self: 1}. T2 → {a: 1, b: 1} (or {a: 2}
+# for a self-combo). T3 → sum of both T2 breakdowns (total 4). T4 → total 8.
+# Unknown or empty id → {}. Pure; calls RecipeData (no circular init — static
+# functions are resolved at call time, not at class load).
+static func root_family_weights(element_id: String) -> Dictionary:
+	if element_id == "":
+		return {}
+	var def: Dictionary = find(element_id)
+	if def.is_empty():
+		return {}
+	var recipes: Array[Dictionary] = RecipeData.recipes_for(element_id)
+	if recipes.is_empty():
+		return { element_id: 1 }
+	var pair: Dictionary = recipes[0]
+	var weights: Dictionary = {}
+	for ingredient: String in [pair["a"] as String, pair["b"] as String]:
+		var sub: Dictionary = root_family_weights(ingredient)
+		for fam: String in sub:
+			weights[fam] = (weights.get(fam, 0) as int) + (sub[fam] as int)
+	return weights
 
 
 # The 1–3 Element Card stat pods for an item (SPEC §B pod rule, ADR-0017). Always

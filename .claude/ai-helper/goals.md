@@ -5,11 +5,10 @@ Phases 1–3 below are the historical foundation. The north-star loop (start-pic
 shop → Event every N → win/loss) is **structurally complete**. The 2026-06-12 content pass landed:
 ability overhaul (trigger mix + new atoms), forge out-degree floor, all T4 abilities, T2
 consolidation 78→51 + shop family-filter removal (ADR 0015), and the Monte Carlo balance harness.
-**Next:** step ⑥ status-mechanics review (haste strength · ramping CD modifiers · Sandstorm
-element-vs-storm name collision) · balance levers (poison dominance; T1→T2 step now addressed by
-TIER_POTENCY_MULTIPLIER — verify with a harness rerun; Blood T1 leech heals 0 — pure-effect bug) ·
-UI for primers/auras/max-HP (invisible in combat) · 15 Group-G placeholder T2 names ·
-F5 eyeball backlog · PlatformLayer (Steam seam).
+**Next:** UI for primers/auras/max-HP (invisible in combat) ·
+Trinkets (unblocked — battle-test pass complete) ·
+Element card hue now auto-blended from T1 root weights (no manual family tagging needed) ·
+PlatformLayer (Steam seam).
 (Handoff files were retired 2026-06-12 — state lives in memory.md, backlog here, regen workflow in
 `diagrams/README.md`.)
 
