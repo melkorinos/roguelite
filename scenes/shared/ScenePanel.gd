@@ -51,6 +51,14 @@ func _ready() -> void:
 	_body.add_theme_constant_override("separation", 8)
 	col.add_child(_body)
 
+	# Adopt any nodes the .tscn placed directly under this panel (besides the col we
+	# just built) into the body — lets a scene wrap existing content in a frame without
+	# rebuilding it. Reference those nodes via unique names (%Name) so the move is safe.
+	for child: Node in get_children():
+		if child != col:
+			remove_child(child)
+			_body.add_child(child)
+
 	resized.connect(queue_redraw)
 	_refresh()
 
