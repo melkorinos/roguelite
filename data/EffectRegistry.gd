@@ -15,8 +15,9 @@ class_name EffectRegistry
 # float:        the floating combat label — { label, nudge }. The popup text is
 #               composed as "<emoji> <label>" so the Tray and the popup share ONE
 #               emoji (see float_label()). Colors live in ThemeData. An effect with
-#               no "float" entry shows no status popup: heal/leech show an HP-gain
-#               amount built at the call site, and slow has no popup.
+#               no "float" entry shows no status popup: heal/leech are handled by
+#               float_label_with_amount() (HP-gain, amount-parameterised), slow
+#               has no popup.
 const EFFECTS: Dictionary = {
 	"burn":    { "status_shape": { "stacks": 0, "tick_damage_bonus": 0, "next_tick_bonus": 0, "by_source": {} }, "count_field": "stacks",    "triggers": ["on_burn_applied", "on_status_applied:burn"], "emoji": "🔥", "valence": "debuff", "float": { "label": "BURN", "nudge": -4.0 } },
 	"poison":  { "status_shape": { "stacks": 0, "tick_damage_bonus": 0, "next_tick_bonus": 0, "by_source": {} }, "count_field": "stacks",    "triggers": ["on_status_applied:poison"], "emoji": "🧪", "valence": "debuff", "float": { "label": "POISON", "nudge": -4.0 } },
@@ -85,3 +86,15 @@ static func float_label(effect: String) -> Dictionary:
 		return {}
 	var f: Dictionary = entry["float"] as Dictionary
 	return { "text": "%s %s" % [entry["emoji"] as String, f["label"] as String], "nudge": f["nudge"] as float }
+
+
+# Variant that absorbs the amount-formatted labels for heal and leech (HP-gain popups
+# whose text depends on the event's numeric amount). All other effects delegate to
+# float_label(). Returns {} when the effect has no popup. Color still lives in
+# ThemeData.FLOAT_LABEL_COLORS — both "heal" and "leech" are keyed there.
+static func float_label_with_amount(effect: String, amount: int) -> Dictionary:
+	if effect == "heal":
+		return {"text": "+1 HP", "nudge": 0.0}
+	if effect == "leech":
+		return {"text": "+%d HP" % amount, "nudge": 0.0}
+	return float_label(effect)

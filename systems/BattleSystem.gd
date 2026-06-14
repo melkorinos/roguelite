@@ -346,6 +346,21 @@ static func _summary_effects_text(elem: Dictionary, st: Dictionary) -> String:
 	return "  ".join(parts)
 
 
+# Per-slot contribution sums for one side — the running max the Contribution Bars
+# normalise against. Returns one float per stat row (0.0 for empty slots), sized
+# to the full grid. Pure: reads only battle_stats; Replay can call it identically.
+static func contribution_totals(state: Dictionary, side: String) -> Array[float]:
+	var stats: Array = (state["battle_stats"] as Dictionary)[CombatSide.keys(side)["stats"] as String] as Array
+	var totals: Array[float] = []
+	for stat_entry: Variant in stats:
+		var contrib: Dictionary = (stat_entry as Dictionary)["contrib"] as Dictionary
+		var total: float = 0.0
+		for key: Variant in contrib:
+			total += float(contrib[key] as int)
+		totals.append(total)
+	return totals
+
+
 # Folds a tick's per-source DOT attribution ({ "burn"/"poison": { slot: damage } })
 # into the applying side's Contribution rows, so each element's bar reflects the HP
 # its burn/poison dealt this tick. Slots out of range are ignored defensively.

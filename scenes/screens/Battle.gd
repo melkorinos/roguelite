@@ -248,15 +248,14 @@ func _update_contrib_bars(s: Dictionary, snap: bool) -> void:
 	if not _contrib_visible:
 		return
 	var rows: Array = (s["battle_stats"] as Dictionary)["player"] as Array
-	# Pass 1: refresh the running max from each element's total contribution.
+	# Refresh the running max (monotonic within this combat) from BattleSystem totals.
+	var totals: Array[float] = BattleSystem.contribution_totals(s, "player")
 	for entry: Variant in _contrib_rows:
-		var contrib: Dictionary = (rows[(entry as Dictionary)["slot"] as int] as Dictionary)["contrib"] as Dictionary
-		var total: float = 0.0
-		for seg_type: Variant in ThemeData.CONTRIB_SEGMENT_ORDER:
-			total += float(contrib[seg_type] as int)
-		_contrib_max = maxf(_contrib_max, total)
+		var slot_idx: int = (entry as Dictionary)["slot"] as int
+		if slot_idx < totals.size():
+			_contrib_max = maxf(_contrib_max, totals[slot_idx])
 	var denom: float = maxf(_contrib_max, 1.0)
-	# Pass 2: stack the segments left→right at their normalised widths.
+	# Stack the segments left→right at their normalised widths.
 	for entry: Variant in _contrib_rows:
 		var row: Dictionary = entry as Dictionary
 		var contrib: Dictionary = (rows[row["slot"] as int] as Dictionary)["contrib"] as Dictionary
@@ -363,18 +362,10 @@ func _spawn_float_labels(slot: BattleSlot, event: Dictionary) -> void:
 	var effect: String = event.get("effect", "") as String
 	if dmg > 0:
 		_float_label(slot, "-%d" % dmg, ThemeData.FLOAT_DAMAGE, 0.0)
-	# Heal and leech show an HP-gain amount (dynamic), not a status icon.
-	if effect == "heal":
-		_float_label(slot, "+1 HP", ThemeData.FLOAT_HEAL, 0.0)
-	elif effect == "leech":
-		_float_label(slot, "+%d HP" % dmg, ThemeData.FLOAT_HEAL, 0.0)
-	else:
-		# Status popups: text + emoji from EffectRegistry (one canonical emoji,
-		# shared with the Status Tray), color from ThemeData.
-		var fx: Dictionary = EffectRegistry.float_label(effect)
-		if not fx.is_empty():
-			var color: Color = ThemeData.FLOAT_LABEL_COLORS.get(effect, Color.WHITE) as Color
-			_float_label(slot, fx["text"] as String, color, fx["nudge"] as float)
+	var fx: Dictionary = EffectRegistry.float_label_with_amount(effect, dmg)
+	if not fx.is_empty():
+		var color: Color = ThemeData.FLOAT_LABEL_COLORS.get(effect, Color.WHITE) as Color
+		_float_label(slot, fx["text"] as String, color, fx["nudge"] as float)
 
 
 func _float_label(slot: BattleSlot, text: String, color: Color, y_nudge: float) -> void:

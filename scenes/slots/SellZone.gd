@@ -47,10 +47,10 @@ func hide_hint() -> void:
 func _can_drop_data(_at_position: Vector2, data: Variant) -> bool:
 	if not data is Dictionary:
 		return false
-	var t: String = (data as Dictionary).get("type", "") as String
-	return t == "inventory" or t == "grid"
+	var zone: String = (data as Dictionary).get("zone", "") as String
+	return zone == "inventory" or zone == "grid"
 
 
 func _drop_data(_at_position: Vector2, data: Variant) -> void:
 	var d: Dictionary = data as Dictionary
-	sold.emit(d["type"] as String, d["slot"] as int)
+	sold.emit(d["zone"] as String, d["slot"] as int)

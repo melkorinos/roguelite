@@ -52,7 +52,7 @@ func _get_drag_data(_at_position: Vector2) -> Variant:
 	preview.text = emoji
 	UIScale.apply(preview, UIScale.DRAG_SHOP)
 	set_drag_preview(preview)
-	return {"type": "shop", "element_id": element_id, "price": _price, "shop_slot": shop_slot_index}
+	return DragLoc.shop(shop_slot_index, element_id, _price)
 
 
 # Inventory slots accept "shop" drops; the InventorySlot emits the buy signal.

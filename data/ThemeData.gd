@@ -200,6 +200,8 @@ const FLOAT_LABEL_COLORS: Dictionary = {
 	"plating": Color(0.60, 0.65, 0.72),
 	"cleanse": Color(0.92, 0.92, 0.45),
 	"haste":   Color(0.55, 0.92, 0.92),
+	"heal":    Color(0.30, 1.00, 0.55),  # = FLOAT_HEAL
+	"leech":   Color(0.30, 1.00, 0.55),  # = FLOAT_HEAL
 }
 
 

@@ -662,6 +662,30 @@ func test_tick_battle_credits_curse_amplification_to_curse_applier() -> void:
 		"curse amplification credited to Dark's contrib.curse")
 
 
+# ── contribution_totals ───────────────────────────────────────────────────────
+
+func test_contribution_totals_returns_zero_for_unfired_state() -> void:
+	var state := PhaseSystem.to_battle(_state_with_player_element(DEALER), _fixture())
+	var totals: Array[float] = BattleSystem.contribution_totals(state, "player")
+	assert_eq(totals.size(), state["battle_grid"].size())
+	assert_eq(totals[0], 0.0, "no fires yet — total must be 0")
+
+
+func test_contribution_totals_reflects_direct_damage_after_fire() -> void:
+	var state := PhaseSystem.to_battle(_state_with_player_element(DEALER), _fixture())
+	var s := BattleSystem.tick_battle(state, _dealer_cooldown())
+	var totals: Array[float] = BattleSystem.contribution_totals(s, "player")
+	assert_gt(totals[0], 0.0, "damage-dealer fired — total must be > 0")
+
+
+func test_contribution_totals_sized_to_full_grid() -> void:
+	# Grid Growth board (5 slots): totals must cover all slots, not just 4.
+	var state := _make_state()
+	CombatState.reset(state, 5)
+	var totals: Array[float] = BattleSystem.contribution_totals(state, "player")
+	assert_eq(totals.size(), 5)
+
+
 # ── summary_rows damage includes DOT contributions ────────────────────────────
 
 func test_summary_rows_includes_poison_in_damage_field() -> void:

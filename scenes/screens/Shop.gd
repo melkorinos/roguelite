@@ -303,10 +303,7 @@ func _on_inv_drag_ended() -> void:
 func _on_sell_zone_sold(from_type: String, from_index: int) -> void:
 	AudioManager.play("sell")
 	GameManager.save_undo()
-	if from_type == "inventory":
-		GameManager.state = ShopSystem.sell_item(GameManager.state, from_index)
-	elif from_type == "grid":
-		GameManager.state = ShopSystem.sell_grid_item(GameManager.state, from_index)
+	GameManager.state = ShopSystem.transfer(GameManager.state, {"zone": from_type, "slot": from_index}, {"zone": "sell", "slot": 0})
 	_render()
 
 

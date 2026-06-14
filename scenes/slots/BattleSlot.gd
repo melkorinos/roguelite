@@ -65,7 +65,7 @@ func _get_drag_data(_at_position: Vector2) -> Variant:
 	UIScale.apply(preview, UIScale.DRAG_SLOT)
 	set_drag_preview(preview)
 	drag_started.emit(element_id, slot_index, sell_price)
-	return {"type": "grid", "slot": slot_index}
+	return DragLoc.grid(slot_index)
 
 
 func _can_drop_data(_at_position: Vector2, data: Variant) -> bool:
@@ -76,6 +76,4 @@ func _can_drop_data(_at_position: Vector2, data: Variant) -> bool:
 
 func _drop_data(_at_position: Vector2, data: Variant) -> void:
 	var d: Dictionary = data
-	var from_type: String = d["type"] as String
-	var from_slot: int = d["shop_slot"] as int if from_type == "shop" else d["slot"] as int
-	slot_dropped.emit(from_type, from_slot, slot_index)
+	slot_dropped.emit(d["zone"] as String, d["slot"] as int, slot_index)

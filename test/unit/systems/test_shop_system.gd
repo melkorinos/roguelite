@@ -232,24 +232,24 @@ func test_transfer_grid_grid_does_not_mutate_original() -> void:
 	assert_not_null(state["battle_grid"][0])
 
 
-# ── sell ──────────────────────────────────────────────────────────────────────
+# ── sell (routed through transfer with zone="sell") ───────────────────────────
 
 func test_sell_refunds_half_price_rounded_down() -> void:
 	var state := _state_with_inv_item(0, "water")
 	state["gold"] = 5
-	var s := ShopSystem.sell_item(state, 0)
+	var s := ShopSystem.transfer(state, {"zone": "inventory", "slot": 0}, {"zone": "sell", "slot": 0})
 	assert_eq(s["gold"], 7)
 
 
 func test_sell_clears_slot() -> void:
 	var state := _state_with_inv_item(0, "water")
-	var s := ShopSystem.sell_item(state, 0)
+	var s := ShopSystem.transfer(state, {"zone": "inventory", "slot": 0}, {"zone": "sell", "slot": 0})
 	assert_null(s["inventory"][0])
 
 
 func test_sell_does_not_mutate_original() -> void:
 	var state := _state_with_inv_item(0, "water")
-	ShopSystem.sell_item(state, 0)
+	ShopSystem.transfer(state, {"zone": "inventory", "slot": 0}, {"zone": "sell", "slot": 0})
 	assert_not_null(state["inventory"][0])
 
 
@@ -257,7 +257,7 @@ func test_sell_level2_refunds_double_lv1() -> void:
 	var state := _state_with_inv_item(0, "water")
 	(state["inventory"][0] as Dictionary)["level"] = 2
 	state["gold"] = 0
-	var s := ShopSystem.sell_item(state, 0)
+	var s := ShopSystem.transfer(state, {"zone": "inventory", "slot": 0}, {"zone": "sell", "slot": 0})
 	# water price=5, Lv2 → (5*2)/2 = 5
 	assert_eq(s["gold"], 5)
 
@@ -268,9 +268,28 @@ func test_sell_grid_item_refunds_and_clears() -> void:
 	elem["element_id"] = "fire"
 	elem["level"] = 1
 	state["battle_grid"][1] = elem
-	var s := ShopSystem.sell_grid_item(state, 1)
+	var s := ShopSystem.transfer(state, {"zone": "grid", "slot": 1}, {"zone": "sell", "slot": 0})
 	assert_null(s["battle_grid"][1])
 	assert_gt(s["gold"] as int, state["gold"] as int)
+
+
+func test_can_transfer_sell_from_inventory_with_item() -> void:
+	var state := _state_with_inv_item(0, "water")
+	assert_true(ShopSystem.can_transfer(state, {"zone": "inventory", "slot": 0}, {"zone": "sell", "slot": 0}))
+
+
+func test_can_transfer_sell_empty_slot_rejected() -> void:
+	var state := _make_state()
+	assert_false(ShopSystem.can_transfer(state, {"zone": "inventory", "slot": 0}, {"zone": "sell", "slot": 0}))
+
+
+func test_can_transfer_sell_from_grid() -> void:
+	var state := _make_state()
+	var elem: Dictionary = ElementData.find("fire").duplicate()
+	elem["element_id"] = "fire"
+	elem["level"] = 1
+	state["battle_grid"][0] = elem
+	assert_true(ShopSystem.can_transfer(state, {"zone": "grid", "slot": 0}, {"zone": "sell", "slot": 0}))
 
 
 # ── reroll ────────────────────────────────────────────────────────────────────
@@ -625,31 +644,31 @@ func test_resolve_drop_inventory_non_mergeable_reports_rejected() -> void:
 	assert_eq(r["outcome"], "rejected")
 
 
-# ── drag-drop intake seam: drag_to_loc + can_drop ─────────────────────────────
+# ── drag-drop intake seam: DragLoc + drag_to_loc + can_drop ──────────────────
 
-func test_drag_to_loc_translates_shop_payload() -> void:
-	assert_eq(ShopSystem.drag_to_loc({"type": "shop", "shop_slot": 2}), {"zone": "shop", "slot": 2})
-
-
-func test_drag_to_loc_translates_grid_and_inventory() -> void:
-	assert_eq(ShopSystem.drag_to_loc({"type": "grid", "slot": 1}), {"zone": "grid", "slot": 1})
-	assert_eq(ShopSystem.drag_to_loc({"type": "inventory", "slot": 3}), {"zone": "inventory", "slot": 3})
+func test_drag_to_loc_accepts_shop_payload() -> void:
+	assert_eq(ShopSystem.drag_to_loc(DragLoc.shop(2, "water", 5)), {"zone": "shop", "slot": 2})
 
 
-func test_drag_to_loc_empty_for_unknown_or_missing() -> void:
-	assert_true((ShopSystem.drag_to_loc({"type": "junk"})).is_empty())
-	assert_true((ShopSystem.drag_to_loc({"type": "grid"})).is_empty())  # no slot
+func test_drag_to_loc_accepts_grid_and_inventory() -> void:
+	assert_eq(ShopSystem.drag_to_loc(DragLoc.grid(1)), {"zone": "grid", "slot": 1})
+	assert_eq(ShopSystem.drag_to_loc(DragLoc.inventory(3)), {"zone": "inventory", "slot": 3})
+
+
+func test_drag_to_loc_empty_for_unknown_or_missing_slot() -> void:
+	assert_true((ShopSystem.drag_to_loc({"zone": "junk"})).is_empty())
+	assert_true((ShopSystem.drag_to_loc({"zone": "grid"})).is_empty())  # no slot key
 
 
 func test_can_drop_shop_to_inventory_with_gold() -> void:
 	var state := _state_with_shop_item(0, "water")
-	assert_true(ShopSystem.can_drop(state, {"type": "shop", "shop_slot": 0}, {"zone": "inventory", "slot": 0}))
+	assert_true(ShopSystem.can_drop(state, DragLoc.shop(0, "water", 5), {"zone": "inventory", "slot": 0}))
 
 
 func test_can_drop_rejects_when_gold_insufficient() -> void:
 	var state := _state_with_shop_item(0, "water")
 	state["gold"] = 0
-	assert_false(ShopSystem.can_drop(state, {"type": "shop", "shop_slot": 0}, {"zone": "inventory", "slot": 0}))
+	assert_false(ShopSystem.can_drop(state, DragLoc.shop(0, "water", 5), {"zone": "inventory", "slot": 0}))
 
 
 func test_can_drop_rejects_non_dictionary_payload() -> void:
@@ -661,8 +680,8 @@ func test_can_drop_grid_to_inventory_allowed() -> void:
 	var elem: Dictionary = ElementData.find("fire").duplicate()
 	elem["element_id"] = "fire"; elem["level"] = 1
 	state["battle_grid"][0] = elem
-	assert_true(ShopSystem.can_drop(state, {"type": "grid", "slot": 0}, {"zone": "inventory", "slot": 1}))
+	assert_true(ShopSystem.can_drop(state, DragLoc.grid(0), {"zone": "inventory", "slot": 1}))
 
 
 func test_can_drop_grid_onto_same_grid_slot_rejected() -> void:
-	assert_false(ShopSystem.can_drop(_make_state(), {"type": "grid", "slot": 2}, {"zone": "grid", "slot": 2}))
+	assert_false(ShopSystem.can_drop(_make_state(), DragLoc.grid(2), {"zone": "grid", "slot": 2}))

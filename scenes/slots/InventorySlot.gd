@@ -52,7 +52,7 @@ func _get_drag_data(_at_position: Vector2) -> Variant:
 	@warning_ignore("integer_division")
 	var sell_price: int = (_item.get("price", 0) as int) / 2
 	drag_started.emit(element_id, slot_index, sell_price)
-	return {"type": "inventory", "slot": slot_index}
+	return DragLoc.inventory(slot_index)
 
 
 func _can_drop_data(_at_position: Vector2, data: Variant) -> bool:
@@ -61,11 +61,10 @@ func _can_drop_data(_at_position: Vector2, data: Variant) -> bool:
 
 func _drop_data(_at_position: Vector2, data: Variant) -> void:
 	var d: Dictionary = data as Dictionary
-	if d["type"] == "shop":
-		var shop_slot: int = d.get("shop_slot", -1) as int
+	if d["zone"] == "shop":
 		if has_item:
-			shop_buy_upgrade_requested.emit(d["element_id"] as String, slot_index, shop_slot)
+			shop_buy_upgrade_requested.emit(d["element_id"] as String, slot_index, d["slot"] as int)
 		else:
-			shop_buy_to_slot_requested.emit(d["element_id"] as String, slot_index, shop_slot)
+			shop_buy_to_slot_requested.emit(d["element_id"] as String, slot_index, d["slot"] as int)
 	else:
-		slot_dropped.emit(d["type"] as String, d["slot"] as int, slot_index)
+		slot_dropped.emit(d["zone"] as String, d["slot"] as int, slot_index)

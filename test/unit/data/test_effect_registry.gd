@@ -16,7 +16,7 @@ func test_float_label_uses_the_registry_emoji_no_drift() -> void:
 
 
 func test_float_label_empty_for_amount_only_and_unknown_effects() -> void:
-	# heal/leech show an HP-gain amount (built at the call site), not a status popup.
+	# heal/leech have no "float" key — they go through float_label_with_amount.
 	assert_true(EffectRegistry.float_label("heal").is_empty())
 	assert_true(EffectRegistry.float_label("leech").is_empty())
 	# slow has no popup; unknown effects return {}.
@@ -29,6 +29,33 @@ func test_every_floatable_effect_has_a_color() -> void:
 	for effect_key: Variant in EffectRegistry.EFFECTS:
 		if (EffectRegistry.EFFECTS[effect_key] as Dictionary).has("float"):
 			assert_true(ThemeData.FLOAT_LABEL_COLORS.has(effect_key), "missing float color: " + (effect_key as String))
+
+
+func test_float_label_with_amount_heal_returns_fixed_text() -> void:
+	var fx: Dictionary = EffectRegistry.float_label_with_amount("heal", 0)
+	assert_eq(fx["text"], "+1 HP")
+	assert_eq(fx["nudge"], 0.0)
+
+
+func test_float_label_with_amount_leech_uses_amount() -> void:
+	var fx: Dictionary = EffectRegistry.float_label_with_amount("leech", 7)
+	assert_eq(fx["text"], "+7 HP")
+	assert_eq(fx["nudge"], 0.0)
+
+
+func test_float_label_with_amount_delegates_to_float_label_for_other_effects() -> void:
+	var fx: Dictionary = EffectRegistry.float_label_with_amount("burn", 0)
+	assert_eq(fx, EffectRegistry.float_label("burn"))
+
+
+func test_float_label_with_amount_empty_for_no_popup_effects() -> void:
+	assert_true(EffectRegistry.float_label_with_amount("slow", 0).is_empty())
+	assert_true(EffectRegistry.float_label_with_amount("nonexistent", 0).is_empty())
+
+
+func test_heal_and_leech_have_float_label_colors() -> void:
+	assert_true(ThemeData.FLOAT_LABEL_COLORS.has("heal"))
+	assert_true(ThemeData.FLOAT_LABEL_COLORS.has("leech"))
 
 
 # ── modifier fields + side-wide schema ────────────────────────────────────────

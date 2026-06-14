@@ -98,13 +98,20 @@ static func _pick_spread(source: Array, count: int) -> Array[Dictionary]:
 
 
 # Moves an item from one location to another.
-# from_loc / to_loc: {"zone": "shop"|"inventory"|"grid", "slot": int}
-# slot = -1 in to_loc means "first empty slot" in that zone.
+# from_loc / to_loc: {"zone": "shop"|"inventory"|"grid"|"sell", "slot": int}
+# slot = -1 in to_loc means "first empty slot" in that zone (not applicable for "sell").
 static func transfer(state: Dictionary, from_loc: Dictionary, to_loc: Dictionary) -> Dictionary:
 	var from_zone: String = from_loc["zone"] as String
 	var from_slot: int = from_loc["slot"] as int
 	var to_zone: String = to_loc["zone"] as String
 	var to_slot: int = to_loc["slot"] as int
+
+	if to_zone == "sell":
+		if from_zone == "inventory":
+			return _sell_item(state, from_slot)
+		if from_zone == "grid":
+			return _sell_grid_item(state, from_slot)
+		return state
 
 	if to_slot == -1:
 		var target_arr: Array = state["inventory"] if to_zone == "inventory" else state["battle_grid"]
@@ -206,6 +213,14 @@ static func can_transfer(state: Dictionary, from_loc: Dictionary, to_loc: Dictio
 	var to_zone: String = to_loc["zone"] as String
 	var to_slot: int = to_loc["slot"] as int
 
+	if to_zone == "sell":
+		if from_zone != "inventory" and from_zone != "grid":
+			return false
+		var arr: Array = (state["inventory"] if from_zone == "inventory" else state["battle_grid"]) as Array
+		if from_slot < 0 or from_slot >= arr.size():
+			return false
+		return arr[from_slot] != null
+
 	if from_zone == "shop":
 		var shop_items: Array = state["shop_items"] as Array
 		if from_slot < 0 or from_slot >= shop_items.size():
@@ -252,14 +267,11 @@ static func can_transfer(state: Dictionary, from_loc: Dictionary, to_loc: Dictio
 # scripts stop re-deriving the translation. The apply path is resolve_drop.
 
 # Translates a drag payload into a transfer loc ({"zone", "slot"}). {} = unrecognised.
+# Payloads use the uniform DragLoc shape: {"zone": "grid"|"inventory"|"shop", "slot": int}.
 static func drag_to_loc(drag: Dictionary) -> Dictionary:
-	match drag.get("type", "") as String:
-		"shop":
-			return {"zone": "shop", "slot": drag.get("shop_slot", -1) as int}
-		"inventory", "grid":
-			if not drag.has("slot"):
-				return {}
-			return {"zone": drag["type"] as String, "slot": drag["slot"] as int}
+	var zone: String = drag.get("zone", "") as String
+	if zone in ["shop", "inventory", "grid"] and drag.has("slot"):
+		return {"zone": zone, "slot": drag["slot"] as int}
 	return {}
 
 
@@ -273,7 +285,7 @@ static func can_drop(state: Dictionary, drag: Variant, to_loc: Dictionary) -> bo
 	return can_transfer(state, from_loc, to_loc)
 
 
-static func sell_item(state: Dictionary, slot_index: int) -> Dictionary:
+static func _sell_item(state: Dictionary, slot_index: int) -> Dictionary:
 	var inv: Array = state["inventory"]
 	if slot_index < 0 or slot_index >= inv.size():
 		return state
@@ -289,7 +301,7 @@ static func sell_item(state: Dictionary, slot_index: int) -> Dictionary:
 	return s
 
 
-static func sell_grid_item(state: Dictionary, grid_slot: int) -> Dictionary:
+static func _sell_grid_item(state: Dictionary, grid_slot: int) -> Dictionary:
 	var grid: Array = state["battle_grid"]
 	if grid_slot < 0 or grid_slot >= grid.size():
 		return state
