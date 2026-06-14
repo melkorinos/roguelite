@@ -1,61 +1,67 @@
 class_name ForgePanel
 extends VBoxContainer
 
-# The Forge bench, extracted from Shop.gd. Owns the bench UI (two ForgeSlots, the
-# info/result labels, the Forge button) and the forge discoverability hint (ADR
-# 0009). Bench operations mutate GameManager.state here, then signal the Shop so
-# the rest of the shop re-renders. The Shop stays the orchestrator; the bench now
-# reads as one module. Attached to the RightPanel node in Shop.tscn.
+# The Forge bench. Two-column layout: the BENCH (2 ForgeSlot Element Cards + the Forge
+# button + status line) on the LEFT, the FORGE PATHS on the RIGHT. The right column shows,
+# depending on the bench:
+#   • one element present → its "Made from" / "Forges with" paths (hoverable chips; hover
+#     pops the partner/result as a full ElementCard via CardPreview).
+#   • two valid (forgeable) elements → the entire resulting ElementCard.
+# Bench operations mutate GameManager.state here, then signal the Shop so the rest of the
+# shop re-renders. Attached to the RightPanel node in Shop.tscn.
 #
 # Interface (called by Shop):
-#   setup()                          one-time theme + wiring, after the node exists
-#   render(state)                    rebuild bench + info + hint
-#   quick_add_from_inventory(slot)   F-key quick-forge from an inventory slot
-#   quick_add_from_grid(slot)        F-key quick-forge from a battle-grid slot
-#
-# Signals (Shop connects):
-#   state_changed              a bench op changed GameManager.state → Shop re-renders
-#   forge_succeeded            a forge discovered a new recipe → Shop fires achievement
-#   tooltip_requested(element) / tooltip_hide   show/hide the shared Item Tooltip
+#   setup() · render(state) · quick_add_from_inventory(slot) · quick_add_from_grid(slot)
+# Signals (Shop connects): state_changed · forge_succeeded
 
 signal state_changed
 signal forge_succeeded
-signal tooltip_requested(element: Dictionary)
-signal tooltip_hide
 
-var _hint_box: VBoxContainer = null
-var _result_elem: Variant = null
-var _result_hover_timer: Timer
+var _paths_box: VBoxContainer = null      # right column: forge paths / result card
+var _card_preview: CardPreview = null     # floating preview for hovered path chips
+var _glossary: GlossaryPopup = null       # keyword popup for the inline result card
+# Bench nodes captured before the .tscn children are reparented into the left column.
+var _slots_row: HBoxContainer
+var _info_lbl: Label
+var _result_lbl: Label
+var _forge_btn: Button
 
 
-# One-time setup: forge theme, the dynamic hint box, the result-hover tooltip, and
-# the Forge button signal (wired here instead of in the .tscn so the panel owns it).
+# One-time setup: theme, the two-column split, and the forge-path preview helpers.
 func setup() -> void:
 	_apply_theme()
 
-	_hint_box = VBoxContainer.new()
-	_hint_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_hint_box.add_theme_constant_override("separation", 2)
-	add_child(_hint_box)
+	# Capture the .tscn bench nodes before moving them.
+	_slots_row = $ForgeSlotsRow
+	_info_lbl = $ForgeInfoLabel
+	_result_lbl = $ForgeResultLabel
+	_forge_btn = $ForgeButton
+	($ForgeSeparator as HSeparator).visible = false  # the frame divides; no inner rule
 
-	_result_hover_timer = Timer.new()
-	_result_hover_timer.wait_time = 0.3
-	_result_hover_timer.one_shot = true
-	add_child(_result_hover_timer)
-	_result_hover_timer.timeout.connect(_on_result_hover_timeout)
+	var columns := HBoxContainer.new()
+	columns.add_theme_constant_override("separation", LayoutData.COLUMN_GAP)
+	columns.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	columns.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	add_child(columns)
 
-	var result_lbl: Label = $ForgeResultLabel
-	result_lbl.mouse_filter = Control.MOUSE_FILTER_STOP
-	result_lbl.mouse_entered.connect(func() -> void:
-		if _result_elem != null:
-			_result_hover_timer.start()
-	)
-	result_lbl.mouse_exited.connect(func() -> void:
-		_result_hover_timer.stop()
-		tooltip_hide.emit()
-	)
+	var left := VBoxContainer.new()
+	left.add_theme_constant_override("separation", 8)
+	left.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	columns.add_child(left)
+	for node: Variant in [$ForgeHintLine, _info_lbl, _slots_row, _forge_btn, _result_lbl]:
+		(node as Control).reparent(left)
 
-	($ForgeButton as Button).pressed.connect(_on_forge_button_pressed)
+	_paths_box = VBoxContainer.new()
+	_paths_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_paths_box.add_theme_constant_override("separation", 4)
+	columns.add_child(_paths_box)
+
+	_card_preview = CardPreview.new()
+	add_child(_card_preview)
+	_glossary = GlossaryPopup.new()
+	add_child(_glossary)
+
+	_forge_btn.pressed.connect(_on_forge_button_pressed)
 
 
 func _apply_theme() -> void:
@@ -97,80 +103,88 @@ func _button_style(bg: Color) -> StyleBoxFlat:
 # ── render ────────────────────────────────────────────────────────────────────
 
 func render(s: Dictionary) -> void:
-	var row: Node = $ForgeSlotsRow
-	for child: Node in row.get_children():
+	for child: Node in _slots_row.get_children():
 		child.queue_free()
 	var forge_slots: Array = s["forge_slots"]
 	for i: int in 2:
 		var fslot: ForgeSlot = ForgeSlot.new()
 		fslot.forge_slot_index = i
-		row.add_child(fslot)
+		_slots_row.add_child(fslot)
 		fslot.set_item(forge_slots[i])
 		fslot.item_placed.connect(_on_slot_item_placed)
-		fslot.tooltip_requested.connect(_on_slot_tooltip)
-		fslot.tooltip_hide_requested.connect(_on_slot_tooltip_hide)
 		fslot.item_removed.connect(_on_slot_item_removed)
 	_update_info(s)
 
 
 func _update_info(s: Dictionary) -> void:
-	_update_partner_hint(s)
-	var info: Label = $ForgeInfoLabel
-	var result: Label = $ForgeResultLabel
-	var forge_btn: Button = $ForgeButton
 	var slots: Array = s["forge_slots"]
 	var ea: Variant = slots[0]
 	var eb: Variant = slots[1]
-	result.text = ""
-	_result_elem = null
+	_result_lbl.text = ""
 	if ea == null and eb == null:
-		info.text = "Drop 2 items to forge"
-		forge_btn.disabled = true
+		_info_lbl.text = "Drop 2 items to forge"
+		_forge_btn.disabled = true
 	elif ea != null and eb == null:
 		var da: Dictionary = ea as Dictionary
-		info.text = "%s %s in slot 1 — add second item" % [da["emoji"], da["name"]]
-		forge_btn.disabled = true
+		_info_lbl.text = "%s %s in slot 1 — add second item" % [da["emoji"], da["name"]]
+		_forge_btn.disabled = true
 	elif ea == null and eb != null:
 		var db: Dictionary = eb as Dictionary
-		info.text = "%s %s in slot 2 — add first item" % [db["emoji"], db["name"]]
-		forge_btn.disabled = true
+		_info_lbl.text = "%s %s in slot 2 — add first item" % [db["emoji"], db["name"]]
+		_forge_btn.disabled = true
 	else:
-		# Both items present — show the resulting element prominently so the player can
-		# decide before committing. preview returns "→ …" on a hit, "✗ …" on a miss.
+		# Both present — the result is shown as a full card on the right (see _render_paths);
+		# the status line only carries the miss reason, if any.
 		var preview_text: String = ForgeSystem.preview(s, {"kind": "forge_bench"})
 		var has_recipe: bool = preview_text.begins_with("→")
-		info.text = "Forge result:"
-		result.text = preview_text
-		result.add_theme_color_override("font_color", ThemeData.COLOR_PLAYER_SIDE if has_recipe else ThemeData.COLOR_OPP_SIDE)
-		forge_btn.disabled = not has_recipe
-		# The hoverable result Element comes straight from ForgeSystem — the scene
-		# never re-derives the ADR-0008 level rule.
-		_result_elem = ForgeSystem.result_element(s, {"kind": "forge_bench"})
+		_info_lbl.text = "Forge result →" if has_recipe else "Forge result:"
+		_forge_btn.disabled = not has_recipe
+		if not has_recipe:
+			_result_lbl.text = preview_text
+			_result_lbl.add_theme_color_override("font_color", ThemeData.COLOR_OPP_SIDE)
+	_render_paths(s)
 
 
-# ── Forge discoverability hint (ADR 0009) ─────────────────────────────────────
-# Populated when exactly one element sits in the bench. Shows "Made from" (the
-# recipe(s) that produce the placed element) + "Forges with" (everything it can
-# forge into). Each element is a hoverable chip that pops the Item Tooltip via the
-# tooltip_requested signal — the SAME card used everywhere, no duplication.
+# ── Forge paths (right column) ────────────────────────────────────────────────
+# One element → its "Made from" / "Forges with" recipe chips. Two valid elements →
+# the resulting ElementCard. Each path chip pops the partner/result as a full card.
 
-func _update_partner_hint(s: Dictionary) -> void:
-	for child: Node in _hint_box.get_children():
+func _render_paths(s: Dictionary) -> void:
+	for child: Node in _paths_box.get_children():
 		child.queue_free()
 
-	# Show only when exactly one bench slot is filled (the "what next?" moment).
 	var slots: Array = s["forge_slots"]
-	var single: Variant = null
-	if slots[0] != null and slots[1] == null:
-		single = slots[0]
-	elif slots[1] != null and slots[0] == null:
-		single = slots[1]
-	if single == null:
-		_hint_box.visible = false
-		return
-	_hint_box.visible = true
+	var a: Variant = slots[0]
+	var b: Variant = slots[1]
 
-	var elem: Dictionary = single as Dictionary
+	if a != null and b != null:
+		# Both present: show the resulting card when there is a recipe.
+		if ForgeSystem.preview(s, {"kind": "forge_bench"}).begins_with("→"):
+			var result_elem: Variant = ForgeSystem.result_element(s, {"kind": "forge_bench"})
+			if result_elem != null and not (result_elem as Dictionary).is_empty():
+				_add_paths_header("RESULT", ThemeData.COLOR_PLAYER_SIDE)
+				_add_result_card(result_elem as Dictionary)
+		return
+
+	# Exactly one present: the discoverability paths (ADR 0009).
+	var single: Variant = a if a != null else b
+	if single == null:
+		return
+	_build_partner_hint(s, single as Dictionary)
+
+
+# A non-interactive ElementCard of the forge result, with live keyword links.
+func _add_result_card(elem: Dictionary) -> void:
+	var card := ElementCard.new()
+	card.card_width = LayoutData.CARD_PREVIEW
+	card.keywords_interactive = true
+	_paths_box.add_child(card)
+	card.render(elem)
+	card.keyword_hovered.connect(func(keyword: String) -> void: _glossary.show_keyword(keyword))
+	card.keyword_unhovered.connect(func() -> void: _glossary.hide_popup())
+
+
+func _build_partner_hint(s: Dictionary, elem: Dictionary) -> void:
 	var elem_id: String = elem["element_id"] as String
 
 	# Honest about ADR 0008: a Level-1 bench item can't forge until merged up.
@@ -180,22 +194,19 @@ func _update_partner_hint(s: Dictionary) -> void:
 		note.autowrap_mode = TextServer.AUTOWRAP_WORD
 		note.modulate = ThemeData.COLOR_OPP_SIDE
 		UIScale.apply(note, UIScale.TOOLTIP_SECTION)
-		_hint_box.add_child(note)
+		_paths_box.add_child(note)
 
-	# Made from — the recipe(s) that produce this element (reverse). T2+ only; a T1
-	# bench item has none. Hover any ingredient chip for its card.
+	# Made from — the recipe(s) that produce this element (reverse). T2+ only.
 	var made: Array[Dictionary] = RecipeData.recipes_for(elem_id)
 	if not made.is_empty():
-		_add_section_header("Made from:")
-		var neutral := Color(0.7, 0.82, 0.95)
+		_add_paths_header("Made from:", ThemeData.COLOR_SUBTITLE)
 		for pair: Dictionary in made:
 			var resolved: Dictionary = RecipeData.describe_pair(pair)
 			if resolved.is_empty():
 				continue
-			_add_recipe_row(_make_chip(resolved["a"], neutral), "+", _make_chip(resolved["b"], neutral))
+			_add_recipe_row(_make_chip(resolved["a"], ThemeData.COLOR_COMP_ABILITY), "+", _make_chip(resolved["b"], ThemeData.COLOR_COMP_ABILITY))
 
-	# Forges with — everything this element can forge INTO (forward). Owned partners
-	# (inventory + grid) first and highlighted. Hidden when empty (a forward dead-end).
+	# Forges with — everything this element can forge INTO. Owned partners first + highlighted.
 	var owned: Dictionary = _owned_element_ids(s)
 	var rows: Array = []
 	for recipe: Dictionary in RecipeData.recipes_with(elem_id):
@@ -214,48 +225,45 @@ func _update_partner_hint(s: Dictionary) -> void:
 		return (x["tier"] as int) < (y["tier"] as int))
 
 	if not rows.is_empty():
-		_add_section_header("Forges with:")
-		var owned_color := Color(0.55, 0.95, 0.6)
-		var unowned_color := Color(0.62, 0.64, 0.72)
+		_add_paths_header("Forges with:", ThemeData.COLOR_SUBTITLE)
 		for row: Dictionary in rows:
-			var partner_color: Color = owned_color if (row["owned"] as bool) else unowned_color
+			var partner_color: Color = ThemeData.COLOR_PLAYER_SIDE if (row["owned"] as bool) else ThemeData.COLOR_SUBTITLE.lightened(0.2)
 			var partner_chip: Control = _make_chip(row["partner"] as Dictionary, partner_color)
-			var result_chip: Control = _make_chip(row["result"] as Dictionary, Color(0.85, 0.85, 0.92))
+			var result_chip: Control = _make_chip(row["result"] as Dictionary, ThemeData.COLOR_COMP_ABILITY)
 			_add_recipe_row(partner_chip, "→", result_chip)
 
 
-func _add_section_header(text: String) -> void:
+func _add_paths_header(text: String, color: Color) -> void:
 	var header := Label.new()
 	header.text = text
-	header.modulate = Color(0.6, 0.6, 0.68)
+	header.add_theme_color_override("font_color", color)
 	UIScale.apply(header, UIScale.TOOLTIP_SECTION)
-	_hint_box.add_child(header)
+	_paths_box.add_child(header)
 
 
-# Assembles one recipe row: [chip] sep [chip], the chips hoverable for their card.
 func _add_recipe_row(left: Control, separator: String, right: Control) -> void:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 5)
 	row.add_child(left)
 	var sep := Label.new()
 	sep.text = separator
-	sep.modulate = Color(0.5, 0.5, 0.56)
+	sep.modulate = ThemeData.COLOR_SUBTITLE
 	UIScale.apply(sep, UIScale.TOOLTIP_STAT)
 	row.add_child(sep)
 	row.add_child(right)
-	_hint_box.add_child(row)
+	_paths_box.add_child(row)
 
 
-# A hoverable element chip (emoji + name). Hovering pops the shared Item Tooltip
-# through tooltip_requested so the player can read the element's full info.
+# A hoverable element chip (emoji + name). Hovering pops the element's full ElementCard
+# via the floating CardPreview (the "show me the card" path the player asked for).
 func _make_chip(def: Dictionary, color: Color) -> Control:
 	var chip := Label.new()
 	chip.text = "%s %s" % [def["emoji"], def["name"]]
-	chip.modulate = color
+	chip.add_theme_color_override("font_color", color)
 	chip.mouse_filter = Control.MOUSE_FILTER_STOP
 	UIScale.apply(chip, UIScale.TOOLTIP_STAT)
-	chip.mouse_entered.connect(func() -> void: tooltip_requested.emit(def))
-	chip.mouse_exited.connect(func() -> void: tooltip_hide.emit())
+	chip.mouse_entered.connect(func() -> void: _card_preview.show_for(def, chip.get_global_rect()))
+	chip.mouse_exited.connect(func() -> void: _card_preview.request_hide())
 	return chip
 
 
@@ -307,38 +315,24 @@ func _on_forge_button_pressed() -> void:
 		discovered_new = (GameManager.state["discovered_recipes"] as Array).size() > pre_recipe_count
 
 	# Shop re-renders the whole shop (inventory changed); our render() runs as part of
-	# that and resets the result label, so set the outcome message afterwards.
+	# that and resets the status line, so set the outcome message afterwards.
 	state_changed.emit()
 	if discovered_new:
 		forge_succeeded.emit()
 
-	var result_lbl: Label = $ForgeResultLabel
 	match outcome:
 		"ok":
 			var msg: String = "Forged!"
 			if level_mismatch:
 				msg += "  ⚠ Level mismatch — result at lower level"
-			result_lbl.text = msg
+			_result_lbl.text = msg
 		"no_recipe":
-			result_lbl.text = "✗ No recipe — items returned"
+			_result_lbl.text = "✗ No recipe — items returned"
 		"level_too_low":
-			result_lbl.text = "✗ Inputs must be Level %d+ — Merge them first" % TuningData.FORGE_MIN_INPUT_LEVEL
+			_result_lbl.text = "✗ Inputs must be Level %d+ — Merge them first" % TuningData.FORGE_MIN_INPUT_LEVEL
 		"no_gold":
-			result_lbl.text = "✗ Not enough gold to forge"
+			_result_lbl.text = "✗ Not enough gold to forge"
 		"inv_full":
-			result_lbl.text = "✗ Inventory full — clear a slot first"
+			_result_lbl.text = "✗ Inventory full — clear a slot first"
 		_:
-			result_lbl.text = ""
-
-
-func _on_result_hover_timeout() -> void:
-	if _result_elem != null:
-		tooltip_requested.emit(_result_elem as Dictionary)
-
-
-func _on_slot_tooltip(element: Dictionary) -> void:
-	tooltip_requested.emit(element)
-
-
-func _on_slot_tooltip_hide() -> void:
-	tooltip_hide.emit()
+			_result_lbl.text = ""

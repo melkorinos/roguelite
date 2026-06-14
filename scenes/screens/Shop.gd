@@ -2,7 +2,6 @@ extends Control
 
 var _inv_slot_nodes: Array = []
 var _battle_slot_nodes: Array = []
-var _tooltip: TooltipCard
 var _pause_overlay: PauseOverlay
 var _starting_pick_overlay: StartingPickOverlay
 var _event_overlay: EventOverlay
@@ -13,9 +12,6 @@ var _fight_chip: Button = null
 
 
 func _ready() -> void:
-	_tooltip = TooltipCard.new()
-	add_child(_tooltip)
-
 	_pause_overlay = PauseOverlay.new()
 	add_child(_pause_overlay)
 	_pause_overlay.resumed.connect(func() -> void: _pause_overlay.hide_overlay())
@@ -34,8 +30,6 @@ func _ready() -> void:
 	_forge_panel.setup()
 	_forge_panel.state_changed.connect(_render)
 	_forge_panel.forge_succeeded.connect(func() -> void: _fire_achievement("forge_discovered"))
-	_forge_panel.tooltip_requested.connect(_on_tooltip_requested)
-	_forge_panel.tooltip_hide.connect(_on_tooltip_hide)
 
 	_starting_pick_overlay = StartingPickOverlay.new()
 	add_child(_starting_pick_overlay)
@@ -156,7 +150,6 @@ func _unhandled_key_input(event: InputEvent) -> void:
 			if _pause_overlay.is_open():
 				_pause_overlay.hide_overlay()
 			else:
-				_tooltip.hide_card()
 				_pause_overlay.show_overlay()
 		elif ke.keycode == KEY_Z and ke.ctrl_pressed:
 			get_viewport().set_input_as_handled()
@@ -182,7 +175,6 @@ func _on_pause_menu() -> void:
 
 
 func _render() -> void:
-	_tooltip.hide_card()
 	var s: Dictionary = GameManager.state
 	$VBox/TopBar/RoundLabel.text = "Round %d" % s["round"]
 	$VBox/TopBar/GoldLabel.text = ""
@@ -231,8 +223,6 @@ func _rebuild_shop_grid(s: Dictionary) -> void:
 			grid.add_child(tile)
 			tile.setup(elem, gold, i)
 			tile.buy_pressed.connect(_on_buy_pressed)
-			tile.tooltip_requested.connect(_on_tooltip_requested)
-			tile.tooltip_hide_requested.connect(_on_tooltip_hide)
 
 
 func _rebuild_inventory(s: Dictionary) -> void:
@@ -257,8 +247,6 @@ func _rebuild_inventory(s: Dictionary) -> void:
 		slot.drag_started.connect(_on_inv_drag_started)
 		slot.drag_ended.connect(_on_inv_drag_ended)
 		slot.forge_quick_slot.connect(_forge_panel.quick_add_from_inventory)
-		slot.tooltip_requested.connect(_on_tooltip_requested)
-		slot.tooltip_hide_requested.connect(_on_tooltip_hide)
 		_inv_slot_nodes.append(slot)
 
 
@@ -279,21 +267,9 @@ func _rebuild_battle_grid(s: Dictionary) -> void:
 		slot.drag_started.connect(_on_grid_drag_started)
 		slot.drag_ended.connect(_on_inv_drag_ended)
 		slot.forge_quick_slot_grid.connect(_forge_panel.quick_add_from_grid)
-		slot.tooltip_requested.connect(_on_tooltip_requested)
-		slot.tooltip_hide_requested.connect(_on_tooltip_hide)
 		container.add_child(slot)
 		slot.set_element(grid[i])
 		_battle_slot_nodes.append(slot)
-
-
-# ── Item Tooltip ─────────────────────────────────────────────────────────────
-
-func _on_tooltip_requested(element: Dictionary) -> void:
-	_tooltip.show_for(element)
-
-
-func _on_tooltip_hide() -> void:
-	_tooltip.hide_card()
 
 
 # ── Drag hint overlays ────────────────────────────────────────────────────────

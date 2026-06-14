@@ -23,23 +23,11 @@ func _build_ui() -> void:
 	add_child(dimmer)
 
 	var panel := PanelContainer.new()
-	var style := StyleBoxFlat.new()
-	style.bg_color = ThemeData.EVENT_PANEL_BG
-	style.set_border_width_all(1)
-	style.border_color = ThemeData.EVENT_PANEL_BORDER
-	style.set_corner_radius_all(6)
-	panel.add_theme_stylebox_override("panel", style)
-
-	var margin := MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 24)
-	margin.add_theme_constant_override("margin_right", 24)
-	margin.add_theme_constant_override("margin_top", 20)
-	margin.add_theme_constant_override("margin_bottom", 20)
-	panel.add_child(margin)
+	panel.add_theme_stylebox_override("panel", UIStyle.dialog_panel(ThemeData.AREA_FORGE))
 
 	var vbox := VBoxContainer.new()
 	vbox.add_theme_constant_override("separation", 16)
-	margin.add_child(vbox)
+	panel.add_child(vbox)
 
 	var title := Label.new()
 	title.text = "Choose a reward"

@@ -12,7 +12,7 @@ Early-stage auto-battler built with **Godot 4 / GDScript**. Ability-chain combat
 ## Project structure
 
 ```
-project.godot          ← Godot 4 project, 1280×720
+project.godot          ← Godot 4 project, 1920×1080 (canvas_items / expand)
 autoloads/             ← GameManager (global state)
 data/                  ← GameState, ItemData
 scenes/                ← .tscn + .gd pairs

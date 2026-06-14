@@ -6,6 +6,26 @@ func _ready() -> void:
 	var rtl: RichTextLabel = $Margin/VBox/Scroll/Content
 	UIScale.apply_rich(rtl, 15)
 	rtl.text = _build_content()
+	_apply_theme()
+
+
+# Wraps the rules scroll in a ScenePanel (info-cyan help accent) and themes the back
+# button to match. The scroll is reparented into the panel body so its content survives.
+func _apply_theme() -> void:
+	var accent: Color = ThemeData.AREA_HELP
+	var vbox: VBoxContainer = $Margin/VBox
+	vbox.add_theme_constant_override("separation", 16)
+
+	var panel := ScenePanel.new()
+	panel.setup("RULES", "📖", accent)
+	panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	vbox.add_child(panel)
+	vbox.move_child(panel, 1)  # between Title and BackButton
+	($Margin/VBox/Scroll as ScrollContainer).reparent(panel.body())
+
+	var back: Button = $Margin/VBox/BackButton
+	back.custom_minimum_size = Vector2(160, 0)
+	UIStyle.accent_button(back, accent)
 
 
 static func _build_content() -> String:

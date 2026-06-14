@@ -14,7 +14,7 @@ PlatformLayer (Steam seam).
 
 ## Phase 1 — Godot setup (COMPLETE — 2026-06-01)
 - [x] Migrate from Phaser 3 / TypeScript to Godot 4 / GDScript
-- [x] Project at repo root: `project.godot`, 1280×720, canvas_items stretch
+- [x] Project at repo root: `project.godot`, 1920×1080, canvas_items stretch
 - [x] `GameManager` Autoload, `GameState.create()` factory
 - [x] Scene chain: Boot → MainMenu → Settings
 - [x] Game scene: player entity moves with arrow keys

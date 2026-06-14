@@ -33,7 +33,7 @@ Produce HTML mockups the user opens in a browser to react to. This is a brainsto
    ```
    (The classic blank-page bug was a duplicate `const` — art fn and data object sharing a name. Prefix art fns `ART_*`.) Only open after both pass. **Windows:** `start "" FILE.html` can fail on a relative path — use `Invoke-Item "<absolute-path>.html"` from PowerShell.
 
-6. **Iterate like a designer.** Lead with 3+ distinct proposals when a direction is open; once one is chosen, deepen it (tiers, states, levels, context sizes). **On refinement rounds, drop to 1–3 variants that differ only in the open parameter** (split ratio, sizing, accent) — don't re-explore settled structure. Batch grilling questions (5+ at a time) with a recommendation each. Keep cards true to their real footprint. **Canvas:** the game's native viewport is **1920×1080** (`project.godot` — `canvas_items` / `expand`); design full-screen layouts to that, and treat **1280×720** as the graceful-degradation *floor*, not the target.
+6. **Iterate like a designer.** Lead with 3+ distinct proposals when a direction is open; once one is chosen, deepen it (tiers, states, levels, context sizes). **On refinement rounds, drop to 1–3 variants that differ only in the open parameter** (split ratio, sizing, accent) — don't re-explore settled structure. Batch grilling questions (5+ at a time) with a recommendation each. Keep cards true to their real footprint. **Canvas:** the game's native viewport is **1920×1080** (`project.godot` — `canvas_items` / `expand`); design full-screen layouts to that. **1080p is the budget — design to it, not below it.** (`canvas_items`/`expand` scales the whole UI to the window, so a smaller window shrinks everything uniformly; there is no separate sub-1080 layout to budget for.)
 
 7. **Hand off via docs, not the HTML — "show in HTML, specify in Markdown".** The split is deliberate:
    - **HTML** = the *visual* you judge by eye — mockups, rendered components, frame/colour samples. Authoritative for *look*. One working file per thread (point 3).
@@ -70,6 +70,6 @@ For *scene layouts* (not single components), render at the **true 1920×1080** i
 - Don't open without `node --check` — silent blank page.
 - Don't invent data — every stat/color/recipe must trace to a `data/*.gd` source.
 - Don't let gold/colour leak across axes — gold is the T3/T4 frame signal, not a generic accent.
-- Don't design tiny battlegrid cards without checking the 720p vertical budget (graceful degradation: hide ability text first, then secondary pods).
+- Don't design tiny battlegrid cards without checking the **1080p** vertical budget (the native canvas; graceful degradation by card width band: hide ability text first, then secondary pods).
 
 </supporting-info>

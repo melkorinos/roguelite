@@ -41,7 +41,7 @@ ElementCard (PanelContainer)        ← "panel" = tier frame: metal StyleBoxFlat
 ## Sizing & degradation
 - One scalable param `card_width`; **height = width × 1.45** (`HEIGHT_RATIO`). Fonts scale via `UIScale.apply_scaled(base, card_width/CARD_REFERENCE_WIDTH)`.
 - Graceful degradation by width band (SPEC §D): ability text hidden below `ABILITY_MIN_WIDTH` (140px → lives in tooltip); secondary pods + lineage drop below `SECONDARY_POD_MIN_WIDTH` (110px, CD pod survives).
-- **Native canvas 1920×1080** (`canvas_items`/`expand`); 1280×720 is the degradation floor, not the target.
+- **Native canvas 1920×1080** (`canvas_items`/`expand`) — the design budget. The width-band degradation above is the card's own responsiveness, NOT a sub-1080 layout target (`canvas_items`/`expand` scales the whole UI uniformly to the window).
 
 ## Tokens
 **`ThemeData`:** `FAMILY_COLOR` (12) + `family_color()`/`blended_family_color()`/`FAMILY_COLOR_FALLBACK`; `FRAME_METAL_T1/T2/T3` (#a8703c/#b4bac6/#dcb653) + `frame_metal()`; `FRAME_PRISMATIC_STOPS` (6 stops, conic, baked **linear** `StyleBoxTexture` in v1); `LEVEL_GLOW_PX {1:3,2:13,3:24}` / `LEVEL_BRIGHT {1:1.24,2:1.46,3:1.72}` + `level_glow_px()/level_bright()` (clamp 1–3).

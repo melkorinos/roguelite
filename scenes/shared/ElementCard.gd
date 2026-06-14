@@ -16,6 +16,10 @@ extends PanelContainer
 
 signal tooltip_requested(element: Dictionary)
 signal tooltip_hide_requested()
+# Keyword inspection (non-draggable contexts only — Compendium, forge preview). Emitted
+# when `keywords_interactive` and the player hovers a [keyword] link in the ability text.
+signal keyword_hovered(keyword: String)
+signal keyword_unhovered()
 
 const HOVER_DELAY_SECONDS: float = 0.3
 const HEIGHT_RATIO: float = LayoutData.CARD_HEIGHT_RATIO   # card height = width × this
@@ -31,6 +35,10 @@ var name_with_level: bool = false
 var empty_glyph: String = "+"
 var empty_bg: Color = ThemeData.SLOT_BG_EMPTY
 var empty_border: Color = ThemeData.SLOT_BORDER_EMPTY
+# The card self-describes now, so the old hover→stats-tooltip is off by default. Only the
+# non-draggable preview contexts opt keywords back in via `keywords_interactive`.
+var hover_tooltip_enabled: bool = false
+var keywords_interactive: bool = false
 
 # ── live state ─────────────────────────────────────────────────────────────────
 var has_item: bool = false
@@ -163,6 +171,13 @@ func _ready() -> void:
 	_ability_rich.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	UIScale.apply_rich_scaled(_ability_rich, UIScale.CARD_ABILITY, _scale)
 	vbox.add_child(_ability_rich)
+
+	# Non-draggable contexts: make the [keyword] links live so the player can read the
+	# glossary popup. Draggable slots leave this off (mouse-stop text would eat drags).
+	if keywords_interactive:
+		_ability_rich.mouse_filter = Control.MOUSE_FILTER_STOP
+		_ability_rich.meta_hover_started.connect(func(meta: Variant) -> void: keyword_hovered.emit(str(meta)))
+		_ability_rich.meta_hover_ended.connect(func(_meta: Variant) -> void: keyword_unhovered.emit())
 
 	if show_price:
 		_price_lbl = Label.new()
@@ -419,7 +434,7 @@ func _build_prismatic_box() -> StyleBoxTexture:
 
 func _on_mouse_entered() -> void:
 	_hovered = true
-	if has_item and not _hover_suppressed:
+	if hover_tooltip_enabled and has_item and not _hover_suppressed:
 		_hover_timer.start()
 
 

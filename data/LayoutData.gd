@@ -16,8 +16,9 @@ const CARD_HEIGHT_RATIO: float = 1.45   # card height = width × this
 const CARD_SHOP: int        = 170   # FOR SALE tiles (5-across the left column)
 const CARD_INVENTORY: int   = 170   # inventory slots (3-across, kept equal to shop)
 const CARD_BATTLE: int      = 180   # battle slots — SHARED with the Battle scene (see note)
-const CARD_FORGE: int       = 115   # forge bench slots (square: CARD_FORGE × CARD_FORGE)
+const CARD_FORGE: int       = 150   # forge bench slots — full ElementCards, like every other context
 const CARD_COMPENDIUM: int  = 160   # compendium grid cards
+const CARD_PREVIEW: int     = 190   # floating ElementCard preview (forge-path chip hover, CardPreview)
 
 # NOTE: CARD_BATTLE drives BattleSlot, which the Battle arena also uses. The Battle
 # scene art has not been redesigned yet — revisit / split this if the arena needs a

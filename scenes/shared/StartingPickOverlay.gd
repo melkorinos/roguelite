@@ -18,34 +18,24 @@ func _ready() -> void:
 
 func _build_ui() -> void:
 	var dimmer := ColorRect.new()
-	dimmer.color = Color(0.0, 0.0, 0.0, 0.7)
+	dimmer.color = ThemeData.OVERLAY_DIMMER
 	dimmer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(dimmer)
 
-	var panel := PanelContainer.new()
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.08, 0.08, 0.13, 0.98)
-	style.set_border_width_all(1)
-	style.border_color = Color(0.45, 0.45, 0.65, 0.9)
-	style.set_corner_radius_all(6)
-	panel.add_theme_stylebox_override("panel", style)
+	var accent: Color = ThemeData.AREA_FORGE  # keystones are the arcane run commit
 
-	var margin := MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 24)
-	margin.add_theme_constant_override("margin_right", 24)
-	margin.add_theme_constant_override("margin_top", 20)
-	margin.add_theme_constant_override("margin_bottom", 20)
-	panel.add_child(margin)
+	var panel := PanelContainer.new()
+	panel.add_theme_stylebox_override("panel", UIStyle.dialog_panel(accent))
 
 	var vbox := VBoxContainer.new()
 	vbox.add_theme_constant_override("separation", 14)
-	margin.add_child(vbox)
+	panel.add_child(vbox)
 
 	var title := Label.new()
 	title.text = "Choose your Keystone — one pick, the whole run"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	UIScale.apply(title, UIScale.TOOLTIP_TITLE)
-	title.modulate = Color(0.8, 0.8, 0.92)
+	title.add_theme_color_override("font_color", accent.lightened(0.4))
 	vbox.add_child(title)
 
 	_options_row = HBoxContainer.new()
@@ -70,15 +60,10 @@ func show_options(options: Array) -> void:
 # A Keystone card: emoji + name, the axis/dimension tag chips, the upside description, the
 # pact line (if any, tinted as a warning), and a Choose button that emits the pick.
 func _make_card(keystone: Dictionary) -> PanelContainer:
+	var accent: Color = ThemeData.AREA_FORGE
 	var card := PanelContainer.new()
 	card.custom_minimum_size = Vector2(210, 240)
-	var card_style := StyleBoxFlat.new()
-	card_style.bg_color = Color(0.12, 0.12, 0.18, 1.0)
-	card_style.set_border_width_all(1)
-	card_style.border_color = Color(0.4, 0.4, 0.55, 0.8)
-	card_style.set_corner_radius_all(6)
-	card_style.set_content_margin_all(10)
-	card.add_theme_stylebox_override("panel", card_style)
+	card.add_theme_stylebox_override("panel", UIStyle.dialog_card(accent))
 
 	var vbox := VBoxContainer.new()
 	vbox.add_theme_constant_override("separation", 6)
@@ -96,7 +81,7 @@ func _make_card(keystone: Dictionary) -> PanelContainer:
 	tags_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	tags_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD
 	UIScale.apply(tags_lbl, UIScale.TOOLTIP_BODY)
-	tags_lbl.modulate = Color(0.6, 0.75, 0.95)
+	tags_lbl.modulate = ThemeData.COLOR_COMP_TRIGGER
 	vbox.add_child(tags_lbl)
 
 	var desc_lbl := Label.new()
@@ -105,7 +90,7 @@ func _make_card(keystone: Dictionary) -> PanelContainer:
 	desc_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD
 	desc_lbl.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	UIScale.apply(desc_lbl, UIScale.TOOLTIP_BODY)
-	desc_lbl.modulate = Color(0.85, 0.9, 0.85)
+	desc_lbl.modulate = ThemeData.COLOR_COMP_ABILITY
 	vbox.add_child(desc_lbl)
 
 	var pact: String = keystone.get("pact", "") as String
@@ -115,11 +100,12 @@ func _make_card(keystone: Dictionary) -> PanelContainer:
 		pact_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		pact_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD
 		UIScale.apply(pact_lbl, UIScale.TOOLTIP_BODY)
-		pact_lbl.modulate = Color(0.95, 0.55, 0.5)
+		pact_lbl.modulate = ThemeData.FLOAT_DAMAGE
 		vbox.add_child(pact_lbl)
 
 	var choose_btn := Button.new()
 	choose_btn.text = "Choose"
+	UIStyle.accent_button(choose_btn, accent)
 	var id: String = keystone.get("id", "") as String
 	choose_btn.pressed.connect(func() -> void: emit_signal("picked", id))
 	vbox.add_child(choose_btn)

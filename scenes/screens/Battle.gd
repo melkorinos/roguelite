@@ -2,11 +2,16 @@ extends Control
 
 var _player_slots: Array[BattleSlot] = []
 var _opp_slots: Array[BattleSlot] = []
-var _summary_visible: bool = false
+# The two side VBoxes get reparented into ScenePanels in _apply_theme; the live render
+# reaches them through these refs (not $ paths, which the reframe invalidates).
+var _player_side: VBoxContainer
+var _opp_side: VBoxContainer
 var _paused: bool = false
 var _speed_mult: float = 1.0
-var _tooltip: TooltipCard
 var _pause_overlay: PauseOverlay
+# Battle Summary is a centered pop-up overlay (built once, toggled by the Summary button).
+var _summary_overlay: CanvasLayer
+var _summary_content: HBoxContainer
 var _combat_accumulator: float = 0.0
 const MAX_FLOAT_LABELS: int = 40  # cap concurrent combat labels so heavy multicast can't flood the renderer
 var _active_float_labels: int = 0
@@ -17,7 +22,7 @@ var _player_chips: Dictionary = {}
 var _opp_chips: Dictionary = {}
 # Contribution Bars (live, player-only): one segmented bar per occupied player slot,
 # normalised to a single running max (the largest element total this combat).
-var _contrib_panel: PanelContainer
+var _contrib_panel: ScenePanel
 var _contrib_button: Button
 var _contrib_rows: Array = []   # [{ slot, bg: Panel, segments: {type: ColorRect}, displayed: {type: float} }]
 var _contrib_max: float = 1.0   # running max element total; monotonic within this combat
@@ -27,9 +32,6 @@ const CONTRIB_BAR_HEIGHT: float = 16.0
 
 
 func _ready() -> void:
-	_tooltip = TooltipCard.new()
-	add_child(_tooltip)
-
 	_pause_overlay = PauseOverlay.new()
 	add_child(_pause_overlay)
 	_pause_overlay.resumed.connect(_on_pause_resumed)
@@ -38,10 +40,7 @@ func _ready() -> void:
 	_pause_overlay.quit_to_menu_requested.connect(_on_pause_menu)
 	_pause_overlay.quit_to_desktop_requested.connect(func() -> void: get_tree().quit())
 
-	($VBox/Header as Label).add_theme_color_override("font_color", ThemeData.COLOR_HEADER_BATTLE)
-	($VBox/BattleRow/PlayerSide/PlayerLabel as Label).add_theme_color_override("font_color", ThemeData.COLOR_PLAYER_SIDE)
-	($VBox/BattleRow/OppSide/OppLabel as Label).add_theme_color_override("font_color", ThemeData.COLOR_OPP_SIDE)
-	($VBox/TimerRow/TimerLabel as Label).add_theme_color_override("font_color", ThemeData.COLOR_ROUND_LABEL)
+	_apply_theme()
 
 	_player_hp_bar = $VBox/HpBarRow/PlayerHpBar as ProgressBar
 	_opp_hp_bar = $VBox/HpBarRow/OppHpBar as ProgressBar
@@ -51,7 +50,54 @@ func _ready() -> void:
 	_build_grids()
 	_build_status_trays()
 	_build_contrib_panel()
+	_build_summary_overlay()
 	_render()
+
+
+# Frames the two boards in ScenePanels (you = inventory-green, enemy = battle-red), themes
+# every control button to the battle accent, and drops the .tscn separators (the frames +
+# spacing rhythm divide the screen now). Runs before _build_grids/_build_status_trays so
+# those reach the side VBoxes through _player_side/_opp_side rather than $ paths.
+func _apply_theme() -> void:
+	($VBox/Header as Label).add_theme_color_override("font_color", ThemeData.COLOR_HEADER_BATTLE)
+	($VBox/TimerRow/TimerLabel as Label).add_theme_color_override("font_color", ThemeData.COLOR_ROUND_LABEL)
+	($VBox/ResultLabel as Label).add_theme_color_override("font_color", ThemeData.COLOR_HEADER_BATTLE)
+
+	for sep: Variant in [$VBox/Separator1, $VBox/Separator2, $VBox/Separator3, $VBox/Separator4]:
+		(sep as Control).visible = false
+	($VBox/BattleRow/CenterSep as Control).visible = false
+
+	for b: Variant in [
+		$VBox/ControlsRow/PauseButton, $VBox/ControlsRow/Speed1xButton,
+		$VBox/ControlsRow/Speed15xButton, $VBox/ControlsRow/Speed2xButton,
+		$VBox/ButtonRow/NextRoundButton, $VBox/ButtonRow/SummaryButton,
+	]:
+		UIStyle.accent_button(b as Button, ThemeData.AREA_BATTLE)
+
+	_player_side = $VBox/BattleRow/PlayerSide as VBoxContainer
+	_opp_side = $VBox/BattleRow/OppSide as VBoxContainer
+	# The panel headers carry YOU / OPPONENT now, so the inner labels are redundant.
+	($VBox/BattleRow/PlayerSide/PlayerLabel as Label).visible = false
+	($VBox/BattleRow/OppSide/OppLabel as Label).visible = false
+
+	var battle_row: HBoxContainer = $VBox/BattleRow
+	battle_row.add_theme_constant_override("separation", LayoutData.COLUMN_GAP)
+
+	var player_panel := ScenePanel.new()
+	player_panel.setup("YOU", "🛡", ThemeData.AREA_INVENTORY)
+	player_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	battle_row.add_child(player_panel)
+	battle_row.move_child(player_panel, 0)
+	_player_side.reparent(player_panel.body())
+	_player_side.size_flags_vertical = Control.SIZE_EXPAND_FILL
+
+	var opp_panel := ScenePanel.new()
+	opp_panel.setup("OPPONENT", "☠", ThemeData.AREA_BATTLE)
+	opp_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	battle_row.add_child(opp_panel)
+	battle_row.move_child(opp_panel, 2)  # after PlayerPanel(0) + hidden CenterSep(1)
+	_opp_side.reparent(opp_panel.body())
+	_opp_side.size_flags_vertical = Control.SIZE_EXPAND_FILL
 
 
 func _unhandled_key_input(event: InputEvent) -> void:
@@ -64,7 +110,6 @@ func _unhandled_key_input(event: InputEvent) -> void:
 			if _pause_overlay.is_open():
 				_on_pause_resumed()
 			else:
-				_tooltip.hide_card()
 				_paused = true
 				_pause_overlay.show_overlay()
 
@@ -88,8 +133,8 @@ func _process(delta: float) -> void:
 # dead), built once and toggled in _update_status_trays. Emoji + valence come from
 # EffectRegistry; the live readout from StatusSystem.describe.
 func _build_status_trays() -> void:
-	_player_chips = _build_tray($VBox/BattleRow/PlayerSide)
-	_opp_chips = _build_tray($VBox/BattleRow/OppSide)
+	_player_chips = _build_tray(_player_side)
+	_opp_chips = _build_tray(_opp_side)
 
 
 func _build_tray(side_node: Node) -> Dictionary:
@@ -136,26 +181,20 @@ func _build_contrib_panel() -> void:
 	# Toggle button, in the controls row (visible during combat, unlike the result-only Summary).
 	_contrib_button = Button.new()
 	_contrib_button.text = "📊 Bars"
+	UIStyle.accent_button(_contrib_button, ThemeData.AREA_BATTLE)
 	_contrib_button.pressed.connect(_on_contrib_toggle)
 	$VBox/ControlsRow.add_child(_contrib_button)
 
-	_contrib_panel = PanelContainer.new()
-	var bg := StyleBoxFlat.new()
-	bg.bg_color = ThemeData.CONTRIB_PANEL_BG
-	bg.set_corner_radius_all(6)
-	bg.set_content_margin_all(8)
-	_contrib_panel.add_theme_stylebox_override("panel", bg)
-	_contrib_panel.custom_minimum_size = Vector2(CONTRIB_BAR_WIDTH + 48.0, 0)
+	# Live DPS sidebar in the shared beveled frame (battle-red accent); its header carries
+	# the CONTRIBUTION title now, so the bar rows go straight into the panel body.
+	_contrib_panel = ScenePanel.new()
+	_contrib_panel.setup("CONTRIBUTION", "📊", ThemeData.AREA_BATTLE)
+	_contrib_panel.custom_minimum_size = Vector2(CONTRIB_BAR_WIDTH + 64.0, 0)
 	_contrib_panel.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	$VBox/BattleRow.add_child(_contrib_panel)  # rightmost child → right gutter
 
-	var vbox := VBoxContainer.new()
+	var vbox: VBoxContainer = _contrib_panel.body()
 	vbox.add_theme_constant_override("separation", 6)
-	_contrib_panel.add_child(vbox)
-	var title := Label.new()
-	title.text = "CONTRIBUTION"
-	title.add_theme_color_override("font_color", ThemeData.COLOR_PLAYER_SIDE)
-	vbox.add_child(title)
 
 	_contrib_rows.clear()
 	var grid: Array = GameManager.state["battle_grid"] as Array
@@ -250,8 +289,8 @@ func _style_hp_bar(bar: ProgressBar) -> void:
 
 func _build_grids() -> void:
 	var s: Dictionary = GameManager.state
-	var pgrid_node: GridContainer = $VBox/BattleRow/PlayerSide/PlayerGrid
-	var ogrid_node: GridContainer = $VBox/BattleRow/OppSide/OppGrid
+	var pgrid_node: GridContainer = _player_side.get_node("PlayerGrid")
+	var ogrid_node: GridContainer = _opp_side.get_node("OppGrid")
 
 	_player_slots.clear()
 	_opp_slots.clear()
@@ -267,8 +306,6 @@ func _build_side(container: GridContainer, grid: Array, side: String, slots_out:
 		var slot: BattleSlot = BattleSlot.new()
 		slot.slot_index = i
 		slot.draggable = false
-		slot.tooltip_requested.connect(_on_tooltip_requested.bind(side, i))
-		slot.tooltip_hide_requested.connect(_on_tooltip_hide)
 		container.add_child(slot)
 		slot.set_element(grid[i])
 		slots_out.append(slot)
@@ -424,18 +461,70 @@ func _render() -> void:
 		($VBox/ButtonRow/NextRoundButton as Button).text = next_label
 
 
+# Builds the Battle Summary pop-up once: a centered dialog over a dimmer holding the two
+# side tables; clicking the dimmer or Close dismisses it. Toggled by the Summary button.
+func _build_summary_overlay() -> void:
+	_summary_overlay = CanvasLayer.new()
+	_summary_overlay.layer = 105
+	_summary_overlay.visible = false
+	add_child(_summary_overlay)
+
+	var dimmer := ColorRect.new()
+	dimmer.color = ThemeData.OVERLAY_DIMMER
+	dimmer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	dimmer.gui_input.connect(func(e: InputEvent) -> void:
+		if e is InputEventMouseButton and (e as InputEventMouseButton).pressed:
+			_hide_summary())
+	_summary_overlay.add_child(dimmer)
+
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_summary_overlay.add_child(center)
+
+	var panel := PanelContainer.new()
+	panel.add_theme_stylebox_override("panel", UIStyle.dialog_panel(ThemeData.AREA_BATTLE))
+	center.add_child(panel)
+
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 12)
+	panel.add_child(vbox)
+
+	var title := Label.new()
+	title.text = "BATTLE SUMMARY"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	UIScale.apply(title, UIScale.TOOLTIP_TITLE)
+	title.add_theme_color_override("font_color", ThemeData.COLOR_HEADER_BATTLE)
+	vbox.add_child(title)
+
+	_summary_content = HBoxContainer.new()
+	_summary_content.add_theme_constant_override("separation", 10)
+	vbox.add_child(_summary_content)
+
+	var close := Button.new()
+	close.text = "Close"
+	close.custom_minimum_size = Vector2(180, 0)
+	UIStyle.accent_button(close, ThemeData.AREA_BATTLE)
+	close.pressed.connect(_hide_summary)
+	vbox.add_child(close)
+
+
 func _on_summary_pressed() -> void:
 	AudioManager.play("click")
-	_summary_visible = not _summary_visible
-	$VBox/SummarySeparator.visible = _summary_visible
-	$VBox/SummaryPanel.visible = _summary_visible
-	if _summary_visible:
+	if _summary_overlay.visible:
+		_hide_summary()
+	else:
 		_build_summary()
-	($VBox/ButtonRow/SummaryButton as Button).text = "📊 Summary ▲" if _summary_visible else "📊 Summary"
+		_summary_overlay.visible = true
+		($VBox/ButtonRow/SummaryButton as Button).text = "📊 Summary ▲"
+
+
+func _hide_summary() -> void:
+	_summary_overlay.visible = false
+	($VBox/ButtonRow/SummaryButton as Button).text = "📊 Summary"
 
 
 func _build_summary() -> void:
-	var container: Node = $VBox/SummaryPanel/SummaryVBox
+	var container: Node = _summary_content
 	for child: Node in container.get_children():
 		child.queue_free()
 
@@ -461,9 +550,9 @@ func _build_summary() -> void:
 func _build_side_table(title: String, accent: Color, rows: Array[Dictionary]) -> PanelContainer:
 	var panel := PanelContainer.new()
 	var outer := StyleBoxFlat.new()
-	outer.bg_color = Color(0.06, 0.04, 0.09, 0.95)
+	outer.bg_color = ThemeData.PANEL_INTERIOR
 	outer.set_border_width_all(2)
-	outer.border_color = accent.lerp(Color(0.15, 0.08, 0.22, 1.0), 0.55)
+	outer.border_color = accent
 	outer.set_corner_radius_all(6)
 	outer.content_margin_left = 0.0
 	outer.content_margin_right = 0.0
@@ -537,16 +626,6 @@ func _summary_row(texts: Array, colors: Array, bg: Color, is_header: bool) -> Pa
 		hbox.add_child(lbl)
 
 	return pc
-
-
-# ── Item Tooltip ─────────────────────────────────────────────────────────────
-
-func _on_tooltip_requested(element: Dictionary, side: String, slot: int) -> void:
-	_tooltip.show_for_battle(element, side, slot)
-
-
-func _on_tooltip_hide() -> void:
-	_tooltip.hide_card()
 
 
 # ── Speed / Pause ─────────────────────────────────────────────────────────────

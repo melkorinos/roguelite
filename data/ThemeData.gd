@@ -94,6 +94,23 @@ const AREA_INVENTORY := Color(0.380, 0.780, 0.470)  # green
 const AREA_BATTLE    := Color(0.860, 0.300, 0.215)  # redder red-orange
 const AREA_FORGE     := Color(0.651, 0.310, 0.878)  # #a64fe0 purple
 
+# Per-screen accents for the menu / utility screens (not shop areas). Each screen +
+# neutral pop-up draws its frame from one of these, the same way the shop areas use
+# AREA_SHOP/INVENTORY/BATTLE/FORGE. Centralized here so the queued desaturation pass
+# tones the whole game in one file.
+const AREA_MENU       := Color(0.620, 0.450, 0.950)  # MainMenu — arcane violet (the title hue)
+const AREA_SETTINGS   := Color(0.560, 0.470, 0.920)  # Settings — indigo
+const AREA_HELP       := Color(0.360, 0.720, 0.880)  # How to Play — info cyan
+const AREA_COMPENDIUM := Color(0.300, 0.740, 0.780)  # Compendium — arcane-library teal
+
+# Modal dim behind the dialog pop-ups (Pause, Starting Pick) — one alpha for all.
+const OVERLAY_DIMMER  := Color(0.0, 0.0, 0.0, 0.70)
+
+# Settings per-channel slider/label hues (kept distinct on purpose — see Settings.gd).
+const SETTINGS_MASTER := Color(0.88, 0.68, 0.18)  # gold  — master volume
+const SETTINGS_MUSIC  := Color(0.30, 0.58, 0.95)  # blue  — music volume
+const SETTINGS_SFX    := Color(0.65, 0.30, 0.95)  # violet — sfx volume
+
 # FIGHT call-to-action gold — the only gold UI chrome (so the eye always finds it).
 const FIGHT_BG   := Color(0.910, 0.604, 0.196)
 const FIGHT_RIM  := Color(1.000, 0.902, 0.659)
@@ -147,6 +164,7 @@ const COLOR_HEADER_BATTLE    := Color(1.00, 0.42, 0.45)  # BATTLE header
 const COLOR_PLAYER_SIDE      := Color(0.38, 0.92, 0.55)  # YOU
 const COLOR_OPP_SIDE         := Color(1.00, 0.38, 0.38)  # OPPONENT
 const COLOR_ROUND_LABEL      := Color(0.78, 0.78, 1.00)  # round / timer text
+const UI_MUTED_TEXT          := Color(0.82, 0.82, 0.90)  # de-emphasised UI text (e.g. Quit, secondary actions)
 const COLOR_COMP_HEADER_T1   := Color(0.45, 0.72, 0.45)  # compendium tier 1 — green
 const COLOR_COMP_HEADER_T2   := Color(0.40, 0.60, 0.95)  # compendium tier 2 — blue
 const COLOR_COMP_HEADER_T3   := Color(0.78, 0.50, 1.00)  # compendium tier 3 — epic purple

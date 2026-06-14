@@ -33,79 +33,69 @@ func _ready() -> void:
 
 
 func _apply_theme() -> void:
-	($VBox/TitleLabel as Label).add_theme_color_override("font_color", ThemeData.COLOR_TITLE)
+	var accent: Color = ThemeData.AREA_SETTINGS
+	var vbox: VBoxContainer = $VBox
+	vbox.add_theme_constant_override("separation", LayoutData.PANEL_GAP)
+	($VBox/TitleLabel as Label).add_theme_color_override("font_color", accent.lightened(0.35))
 
-	# ── Tab container ─────────────────────────────────────────────────────────
+	# ── Tab container (accent-themed; interior matches the frame so they read as one) ──
 	var tabs: TabContainer = $VBox/Tabs as TabContainer
 
 	var content_style := StyleBoxFlat.new()
-	content_style.bg_color = Color(0.05, 0.04, 0.10, 0.96)
-	content_style.set_border_width_all(1)
-	content_style.border_color = Color(0.22, 0.14, 0.36, 0.55)
-	content_style.set_corner_radius_all(6)
+	content_style.bg_color = ThemeData.PANEL_INTERIOR
+	content_style.set_corner_radius_all(4)
 	tabs.add_theme_stylebox_override("panel", content_style)
 
 	var tab_sel := StyleBoxFlat.new()
-	tab_sel.bg_color = Color(0.14, 0.07, 0.26, 1.0)
+	tab_sel.bg_color = accent.darkened(0.68)
 	tab_sel.set_border_width_all(1)
-	tab_sel.border_color = ThemeData.FORGE_SLOT_BORDER
+	tab_sel.border_color = accent
 	tab_sel.set_corner_radius_all(4)
 	tabs.add_theme_stylebox_override("tab_selected", tab_sel)
 
 	var tab_unsel := StyleBoxFlat.new()
-	tab_unsel.bg_color = Color(0.07, 0.05, 0.12, 0.90)
+	tab_unsel.bg_color = accent.darkened(0.85)
 	tab_unsel.set_corner_radius_all(4)
 	tabs.add_theme_stylebox_override("tab_unselected", tab_unsel)
 
 	var tab_hover := StyleBoxFlat.new()
-	tab_hover.bg_color = Color(0.11, 0.06, 0.20, 0.95)
+	tab_hover.bg_color = accent.darkened(0.78)
 	tab_hover.set_corner_radius_all(4)
 	tabs.add_theme_stylebox_override("tab_hovered", tab_hover)
 
-	tabs.add_theme_color_override("font_selected_color", ThemeData.COLOR_HEADER_FORGE)
+	tabs.add_theme_color_override("font_selected_color", accent.lightened(0.4))
 	tabs.add_theme_color_override("font_unselected_color", ThemeData.COLOR_SUBTITLE)
 
-	# ── Sliders ───────────────────────────────────────────────────────────────
-	_style_slider(_master_slider, Color(0.88, 0.68, 0.18))  # gold  — master
-	_style_slider(_music_slider,  Color(0.30, 0.58, 0.95))  # blue  — music
-	_style_slider(_sfx_slider,    Color(0.65, 0.30, 0.95))  # violet — sfx
+	# ── Sliders (per-channel hues kept on purpose) ────────────────────────────
+	_style_slider(_master_slider, ThemeData.SETTINGS_MASTER)
+	_style_slider(_music_slider,  ThemeData.SETTINGS_MUSIC)
+	_style_slider(_sfx_slider,    ThemeData.SETTINGS_SFX)
 
 	# ── Value labels ──────────────────────────────────────────────────────────
 	for lbl: Variant in [_master_val, _music_val, _sfx_val]:
 		(lbl as Label).add_theme_color_override("font_color", ThemeData.COLOR_ROUND_LABEL)
 
 	# ── Section row labels ────────────────────────────────────────────────────
-	_tint_label($VBox/Tabs/Audio/AudioVBox/MasterRow/MasterLabel, Color(0.88, 0.68, 0.18))
-	_tint_label($VBox/Tabs/Audio/AudioVBox/MusicRow/MusicLabel,   Color(0.30, 0.58, 0.95))
-	_tint_label($VBox/Tabs/Audio/AudioVBox/SfxRow/SfxLabel,       Color(0.65, 0.30, 0.95))
+	_tint_label($VBox/Tabs/Audio/AudioVBox/MasterRow/MasterLabel, ThemeData.SETTINGS_MASTER)
+	_tint_label($VBox/Tabs/Audio/AudioVBox/MusicRow/MusicLabel,   ThemeData.SETTINGS_MUSIC)
+	_tint_label($VBox/Tabs/Audio/AudioVBox/SfxRow/SfxLabel,       ThemeData.SETTINGS_SFX)
 	_tint_label($VBox/Tabs/Video/VideoVBox/FullscreenRow/FullscreenLabel, ThemeData.COLOR_ROUND_LABEL)
 	_tint_label($VBox/Tabs/Video/VideoVBox/VsyncRow/VsyncLabel,           ThemeData.COLOR_ROUND_LABEL)
 	_tint_label($VBox/Tabs/Video/VideoVBox/ResRow/ResLabel,               ThemeData.COLOR_ROUND_LABEL)
 
 	# ── Back button ───────────────────────────────────────────────────────────
 	var back: Button = $VBox/BackButton as Button
-	var back_normal := StyleBoxFlat.new()
-	back_normal.bg_color = Color(0.09, 0.05, 0.17, 0.95)
-	back_normal.set_border_width_all(2)
-	back_normal.border_color = ThemeData.FORGE_PANEL_BORDER
-	back_normal.set_corner_radius_all(6)
-	back.add_theme_stylebox_override("normal", back_normal)
+	back.custom_minimum_size = Vector2(160, 0)
+	UIStyle.accent_button(back, accent)
 
-	var back_hover := StyleBoxFlat.new()
-	back_hover.bg_color = Color(0.14, 0.07, 0.26, 1.0)
-	back_hover.set_border_width_all(2)
-	back_hover.border_color = ThemeData.FORGE_SLOT_BORDER
-	back_hover.set_corner_radius_all(6)
-	back.add_theme_stylebox_override("hover", back_hover)
-
-	var back_pressed_style := StyleBoxFlat.new()
-	back_pressed_style.bg_color = Color(0.07, 0.04, 0.13, 1.0)
-	back_pressed_style.set_border_width_all(2)
-	back_pressed_style.border_color = ThemeData.FORGE_PANEL_BORDER
-	back_pressed_style.set_corner_radius_all(6)
-	back.add_theme_stylebox_override("pressed", back_pressed_style)
-
-	back.add_theme_color_override("font_color", ThemeData.COLOR_HEADER_FORGE)
+	# ── Frame the tab area in the shared beveled panel ─────────────────────────
+	var panel := ScenePanel.new()
+	panel.setup("OPTIONS", "⚙", accent)
+	panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	vbox.add_child(panel)
+	vbox.move_child(panel, 1)  # Title(0), panel(1), Back(2)
+	tabs.reparent(panel.body())
+	tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
 
 
 func _style_slider(slider: HSlider, fill_color: Color) -> void:
