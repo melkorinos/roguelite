@@ -34,7 +34,7 @@ F5 in Godot editor. CLI: `godot --path . scenes/screens/Boot.tscn` (scene) · `g
 |--------|---------|
 | `scenes/screens/` | Full-screen scene files: Boot, MainMenu, Settings, Shop, Battle, Compendium |
 | `scenes/slots/` | Reusable tile/slot nodes: BattleSlot, ForgeSlot, InventorySlot, ShopItemTile, SellZone |
-| `scenes/shared/` | Cross-scene UI: TooltipCard, PauseOverlay, StartingPickOverlay |
+| `scenes/shared/` | Cross-scene UI: ElementCard, ScenePanel, UIStyle, CardPreview, GlossaryPopup, PauseOverlay, StartingPickOverlay, EventOverlay |
 | `systems/` | Pure logic — static GDScript classes, take state Dictionary, return new Dictionary |
 | `data/` | `GameState.gd` factory; element/recipe/ability data (`ElementData`, `RecipeData`, `AbilityData`); `TuningData.gd` (all balance knobs); `ThemeData.gd` (colors); `UIScale.gd` (font sizes); `FeatureFlags.gd` (playtest toggles) |
 | `autoloads/` | `GameManager.gd` — global state holder, registered as Autoload |

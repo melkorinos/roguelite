@@ -352,8 +352,8 @@ func _build_pod(pod: Dictionary, hue: Color, value_size: int, label_size: int) -
 	return panel
 
 
-# Ability bbcode: trigger prefix + the description with [keyword] glossary links.
-# Mirrors TooltipCard's keyword transform so the two never drift on keyword set.
+# Ability bbcode: trigger prefix + the description with [keyword] glossary links. The
+# keyword set is `StatusGlossary.keywords()` (the GlossaryPopup reads the same source).
 func _ability_bbcode(id: String) -> String:
 	var ability: Dictionary = AbilityData.get_ability(id)
 	var description: String = ability.get("description", "") as String

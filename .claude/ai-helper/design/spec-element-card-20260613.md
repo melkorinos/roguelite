@@ -1,9 +1,9 @@
 # Spec — Element Card (ADR-0017)
 
-**Status: IMPLEMENTED** (build complete 2026-06-13/14). This is the build contract / as-built reference. Visual source of truth: [element-card-SPEC-20260613.html](element-card-SPEC-20260613.html) (open in browser). Convention: *show in HTML, specify in Markdown.*
+**Status: IMPLEMENTED** (build complete 2026-06-13/14). This is the build contract / as-built reference. The exploration HTML was deleted once it landed — **the running game is the visual reference now**; this `.md` is the build record.
 
 ## What it is
-One always-visible component (`scenes/shared/ElementCard.gd`, `extends PanelContainer`) that renders an element **identically** in every context — shop for-sale tile, inventory slot, battle-board slot — differing only by price badge / charge bar. Subclasses layer interaction on top; the base owns all visuals + the hover→Item-Tooltip behaviour.
+One always-visible component (`scenes/shared/ElementCard.gd`, `extends PanelContainer`) that renders an element **identically** in every context — shop for-sale tile, inventory slot, battle-board slot, forge bench, compendium, forge preview — differing only by price badge / charge bar. Subclasses layer interaction on top; the base owns all visuals. **The card self-describes — there is no hover stats tooltip** (retired 2026-06-14; live on-card stats is the planned successor, see backlog).
 
 ## Three independent visual axes (keep non-overlapping)
 | Axis | Means | Rendered as | Source |
@@ -34,13 +34,13 @@ ElementCard (PanelContainer)        ← "panel" = tier frame: metal StyleBoxFlat
     ├ Underbar (HBox: 2 ColorRect)  ← lineage split bar (T2+), parents' blended hues
     ├ NameLabel (Label)             ← family-tinted (Fredoka)
     ├ StatsRow (HBox)               ← 1–3 pods from stat_pods()
-    ├ AbilityRich (RichTextLabel)   ← trigger prefix + [url] keyword links (reuses TooltipCard logic)
+    ├ AbilityRich (RichTextLabel)   ← trigger prefix + [url] keyword links (mouse-IGNORE by default; mouse-STOP + keyword signals only when `keywords_interactive`)
     └ [PriceLabel] (Label)          ← shop context (show_price)
 ```
 
 ## Sizing & degradation
 - One scalable param `card_width`; **height = width × 1.45** (`HEIGHT_RATIO`). Fonts scale via `UIScale.apply_scaled(base, card_width/CARD_REFERENCE_WIDTH)`.
-- Graceful degradation by width band (SPEC §D): ability text hidden below `ABILITY_MIN_WIDTH` (140px → lives in tooltip); secondary pods + lineage drop below `SECONDARY_POD_MIN_WIDTH` (110px, CD pod survives).
+- Graceful degradation by width band (SPEC §D): ability text hidden below `ABILITY_MIN_WIDTH` (140px — simply not shown now that the hover tooltip is gone; all live contexts are ≥140); secondary pods + lineage drop below `SECONDARY_POD_MIN_WIDTH` (110px, CD pod survives).
 - **Native canvas 1920×1080** (`canvas_items`/`expand`) — the design budget. The width-band degradation above is the card's own responsiveness, NOT a sub-1080 layout target (`canvas_items`/`expand` scales the whole UI uniformly to the window).
 
 ## Tokens
@@ -54,14 +54,21 @@ ElementCard (PanelContainer)        ← "panel" = tier frame: metal StyleBoxFlat
 ## Subclasses (interaction layered on the one card)
 - `scenes/slots/ShopItemTile.gd` — price + click-to-buy + "shop" drag source; `card_width` from `SIZE`.
 - `scenes/slots/BattleSlot.gd` — charge bar + drag + F-quick-forge + fire animation; `card_width`.
-- `scenes/slots/InventorySlot.gd` — **extends ElementCard** (was a bespoke Button); drag + F-forge; `card_width`.
-Set config (`card_width`, `show_*`, `empty_*`) BEFORE `super._ready()`.
+- `scenes/slots/InventorySlot.gd` — drag + F-forge; `card_width`.
+- `scenes/slots/ForgeSlot.gd` — **extends ElementCard** (was a bespoke emoji+name tile, 2026-06-14); accept "inventory" drop + click-to-remove; `CARD_FORGE` (150).
+Set config (`card_width`, `show_*`, `empty_*`, `keywords_interactive`) BEFORE `super._ready()`.
+
+## Hover / keyword config (2026-06-14)
+Two opt-in flags on the base, both default **off**, so draggable slots stay drag-only:
+- `hover_tooltip_enabled` — the old hover→stats-tooltip path. **Off everywhere** (the stats tooltip is retired). Left as a flag, not deleted, so the hook survives.
+- `keywords_interactive` — makes the ability-text `[keyword]` links live (mouse-STOP, emits `keyword_hovered(keyword)` / `keyword_unhovered`). Enabled only in **non-draggable** contexts — Compendium cards and the forge `CardPreview` — where the host wires the signals to a `GlossaryPopup`. (On a draggable slot, mouse-stop text would eat the drag.)
+
+Used directly (not subclassed) by: **Compendium** grid, and `scenes/shared/CardPreview.gd` (floating preview for the forge "forge paths" chips). Both pair it with `scenes/shared/GlossaryPopup.gd` for keyword definitions.
 
 ## Tests
 - Pod rule + `root_family_weights` → [test/unit/data/test_element_data.gd](../../../test/unit/data/test_element_data.gd)
 - Family / frame metals / level-glow clamp / `blended_family_color` → [test/unit/data/test_theme_data.gd](../../../test/unit/data/test_theme_data.gd)
 - Runtime render (glow / metal+prismatic frame / pods / lineage / clear) → [test/unit/scenes/test_element_card.gd](../../../test/unit/scenes/test_element_card.gd)
 
-## Deferred (separate features)
-- **card animations** — embers, L3 halo/sweep, prismatic motion, per-fire firing FX. (v1 level separation is glow-intensity only; leave contrast headroom.)
-- **card art** — hand-built SVG portraits replacing emoji (`assets/elements/{id}.svg`, emoji fallback). Portrait box is a fixed slot → non-breaking swap.
+## Deferred → see [design-backlog.md](design-backlog.md)
+Card-specific items on the backlog: **on-card live stats** (the successor to the retired hover tooltip), **on-card recipe display**, the **element-info surface**, **card animations** (embers / L3 halo / prismatic motion / firing FX — v1 level separation is glow-intensity only, contrast headroom left), and **card art** (SVG portraits at `assets/elements/{id}.svg`, emoji fallback; fixed portrait slot → non-breaking swap).

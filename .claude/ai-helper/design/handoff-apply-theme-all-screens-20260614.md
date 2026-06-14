@@ -1,16 +1,21 @@
-# Handoff — apply the "hardware frame" theme to every screen
+# Handoff — "hardware frame" theme + forge/tooltip revamp — ✅ CLOSED (2026-06-14)
 
-**Agent entry point.** The Element Card, the beveled frame system, and the **Shop** are all built and green. The remaining work is **rolling the same theme to the other screens** (MainMenu, Settings, Compendium, Battle) using the shared node + the centralized tokens — no new colors, sizes, or spacings invented per screen.
+**This handoff is done.** The whole-game UI revamp landed and is green: the beveled `ScenePanel`
+frame on **every** screen (MainMenu/HowToPlay/Compendium/Settings/Battle) + pop-up, the shared
+`UIStyle` chrome, the Compendium on real `ElementCard`s, the forge two-column redesign, the
+hover/tooltip overhaul, and the Battle summary pop-up. There is no remaining work *in this
+handoff* — open design/art items moved to the backlog below.
 
-> (Renamed from `handoff-implement-element-card-20260613.md`; scope is now the whole-game theme rollout.)
+> (Renamed from `handoff-implement-element-card-20260613.md`; scope grew to the whole-game theme
+> rollout, then the forge/tooltip revamp. Kept as the as-built record + entry point.)
 
-## Design artifacts (convention: show in HTML, specify in Markdown)
-| | Visual (HTML) | Build spec (MD) |
-|---|---|---|
-| **Element Card** | [element-card-SPEC-20260613.html](element-card-SPEC-20260613.html) | [spec-element-card-20260613.md](spec-element-card-20260613.md) |
-| **Shop + frame system** | [shop-layout-20260614.html](shop-layout-20260614.html) | [spec-shop-frame-system-20260614.md](spec-shop-frame-system-20260614.md) |
-
-Also: ADR-0017 (3-axis card), `CONTEXT.md` glossary, `.claude/ai-helper/soul.md` (aesthetic).
+## Where things live now
+- **As-built specs** (build contracts / reference): [spec-element-card-20260613.md](spec-element-card-20260613.md) · [spec-shop-frame-system-20260614.md](spec-shop-frame-system-20260614.md).
+- **Open design/art work:** [design-backlog.md](design-backlog.md) — the single list.
+- The HTML mockups (`element-card-SPEC`, `shop-layout`) were **deleted** once the work landed — the
+  running game is the visual reference now; the spec `.md` files are the build record. (For *new*
+  in-flux design, `/design` still produces a working HTML per the "show in HTML, specify in MD" rule.)
+- Also: ADR-0017 (3-axis card), `CONTEXT.md` glossary, `.claude/ai-helper/soul.md` (aesthetic).
 
 ---
 
@@ -25,20 +30,19 @@ This is the whole point of the rollout: every screen draws from the same sources
 - **`data/LayoutData.gd`** (new) — spatial values: per-context card widths (`CARD_SHOP/INVENTORY/BATTLE/FORGE/COMPENDIUM`), `CARD_HEIGHT_RATIO`, screen split, and the **spacing rhythm** (`COLUMN_GAP`, `PANEL_GAP`, `GRID_CELL_GAP`, `PANEL_INNER_PAD/GAP`). `ScenePanel` reads the `PANEL_INNER_*`; scenes apply the gaps in code (see `Shop._apply_theme` for the reference pattern). Family: ThemeData=color, LayoutData=space, UIScale=fonts, TuningData=balance.
 - **`data/UIScale.gd`** — font sizes (incl. card-scaled + `PANEL_HEADER`).
 
-## ✅ NEXT — DONE (2026-06-14 rollout)
-The theme is now on **every** screen + pop-up. See `log.md` 2026-06-14.
-- **MainMenu / HowToPlay / Compendium / Settings** — `ScenePanel`-wrapped; **per-screen accents** (`AREA_MENU`/`AREA_HELP`/`AREA_COMPENDIUM`/`AREA_SETTINGS`, added to ThemeData) — the user chose per-screen accents over one neutral menu accent.
-- **Compendium** renders the **real `ElementCard`** node (on-card recipe display deferred — not built yet).
-- **Battle** — done **aggressively** (user call), not conservatively: both boards + the live DPS sidebar framed, buttons accent-styled, separators dropped. The "720p budget" caveat was wrong — native is **1920×1080** and `canvas_items`/`expand` scales the whole UI uniformly, so there is no sub-1080 budget. Corrected in README/goals/SKILL/spec.
-- **Pop-ups** (Pause / StartingPick / Event) — **lighter retint** (user call), NOT the full bevel: new `scenes/shared/UIStyle.gd` `dialog_panel`/`dialog_card` + `accent_button`, all from ThemeData tokens.
-- Validated: `--import`, boot each scene headless, GUT 724/724.
+## ✅ Rollout + revamp — DONE (2026-06-14). See `log.md` 2026-06-14.
+- **Every screen + pop-up themed.** MainMenu / HowToPlay / Compendium / Settings / Battle in `ScenePanel`s; **per-screen accents** (`AREA_MENU`/`AREA_HELP`/`AREA_COMPENDIUM`/`AREA_SETTINGS`) — user chose per-screen over one neutral.
+- **Compendium** on the **real `ElementCard`** node. **Battle** framed **aggressively** (user call): both boards + live DPS sidebar framed, buttons accent-styled, separators dropped.
+- **Pop-ups** (Pause / StartingPick / Event / Battle-summary) — **lighter retint** (user call), via new `scenes/shared/UIStyle.gd` (`accent_button` / `dialog_panel` / `dialog_card`), all from ThemeData tokens.
+- **Forge redesigned** — two columns (bench left = full `ElementCard`s; forge paths right; two valid → resulting card). **Element hover tooltip retired**; keyword popups → non-draggable contexts only via `ElementCard.keywords_interactive` + new `GlossaryPopup`; path-chip hover → new `CardPreview`. **Battle summary is a pop-up.**
+- **Bad-info fixed:** native is **1920×1080** (`canvas_items`/`expand` scales the whole UI uniformly — no sub-1080 budget), not 1280×720. Corrected in README/goals/SKILL/spec.
+- Validated: `--import`, boot each scene headless, headless forge harness, GUT 724/724.
 
-### Still open
-- **On-card recipe / "made from" display** for the Compendium (and the Forge result preview card) — both deferred.
-- The queued **desaturation/tuning pass** on the now-larger `AREA_*` set (still centralized in ThemeData — one-file change).
+## ⚠ Still-relevant build notes (carry forward)
+- **Token reuse is the rule** — a new screen reuses an existing `AREA_*` accent + LayoutData gap; it never authors a `Color()` or magic spacing. `ScenePanel` adopts `.tscn` children via `reparent()` (preserves `%unique_name`; remove/add crashes boot in 4.6.3).
+- **`CARD_BATTLE` is shared** — `BattleSlot` drives both the Shop board and the real Battle arena; if the arena needs its own footprint, split `CARD_BATTLE` board-vs-arena in LayoutData.
+- **`TooltipCard.gd` was deleted** (2026-06-14) — the element hover stats tooltip is gone; on-card live stats (backlog) is the successor.
 
-## ⚠ Pending / deferred (info that shapes the rollout)
-- **"Neon commercial" over-saturation** — the current `AREA_*` accents read too saturated/loud as a set. A global **desaturation/tuning pass** is queued for a later session; because the accents are centralized in `ThemeData`, it's a one-file change. Do the rollout against the current tokens; when they're toned down, every screen updates at once. **Don't pre-tune per screen.**
-- **Forge result preview card** — the forge still shows the result as the `ForgeResultLabel` text; the planned non-interactive `ElementCard` preview (`ForgeSystem.result_element`) was not built yet.
-- **`CARD_BATTLE` is shared** — `BattleSlot` drives both the Shop board and the real Battle arena. The arena isn't redesigned; if it needs a different footprint, split `CARD_BATTLE` into board-vs-arena in LayoutData.
-- **Frame flourishes** (rivets / ornaments / title-plates), **animations** (panel entrance, FIGHT pulse), **card art** — all still deferred. v1 is bevel + step only.
+## ⏭ Open design/art work → [design-backlog.md](design-backlog.md)
+The single list: on-card live stats · on-card recipe display · element-info surface · richer
+single-element forge view · frame flourishes · the queued `AREA_*` desaturation pass · animations · card art.

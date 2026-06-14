@@ -1,6 +1,14 @@
 # Spec — Shop layout + beveled "hardware" frame system
 
-**2026-06-14 · Implementation spec.** Visual source of truth: [shop-layout-20260614.html](shop-layout-20260614.html) (open in browser). This doc is the build brief: locked decisions, exact tokens, the reusable frame node, the Shop changes, and the rollout to every other scene.
+**Status: IMPLEMENTED + rolled out to every screen (2026-06-14).** The exploration HTML was deleted once it landed — **the running game is the visual reference now**; this `.md` is the as-built record of the locked decisions, tokens, the reusable frame node, the Shop changes, and the cross-scene rollout.
+
+> ### As-built deltas from this brief (read first)
+> - **Shop split is 50 / 50**, not the 65/35 sketched in §A (`LayoutData.SHOP_SPLIT_LEFT/RIGHT`). Card widths live in `LayoutData.CARD_*`, not the HTML's native-scale guesses.
+> - **Menu/utility screens use per-screen accents**, not one neutral: `AREA_MENU` (violet), `AREA_SETTINGS` (indigo), `AREA_HELP` (cyan), `AREA_COMPENDIUM` (teal) — added to `ThemeData` alongside the four area accents below.
+> - **Battle was reframed aggressively**, not conservatively (user call): both boards framed (you=`AREA_INVENTORY` green, enemy=`AREA_BATTLE` red), the live DPS sidebar is its own `CONTRIBUTION` `ScenePanel`, separators dropped. (The pre-build "wrap Battle conservatively" note below is superseded.)
+> - **Shared widget chrome** landed as `scenes/shared/UIStyle.gd` (`accent_button` / `dialog_panel` / `dialog_card`) — buttons + pop-ups draw from it. Pop-ups (Pause/StartingPick/Event/Battle-summary) are the **lighter retint** (`dialog_panel`), not the bevel.
+> - **Follow-on revamp** (same day): forge two-column redesign, the hover stats-tooltip retired, keyword popups → non-draggable contexts only (`GlossaryPopup` + `CardPreview`), Battle summary made a pop-up. See `spec-element-card` "Hover / keyword config" and `log.md` 2026-06-14.
+> - Open design/art work: [design-backlog.md](design-backlog.md).
 
 ## What this is
 Two coupled pieces of work:
@@ -165,12 +173,15 @@ func _draw() -> void:
 ## Rollout to the other scenes
 Yes — this is designed to generalise. Once `ScenePanel` + tokens exist, each scene is a mechanical wrap: replace bespoke `PanelContainer`/`StyleBoxFlat` section backgrounds with a `ScenePanel` carrying an accent. **Do them one PR at a time, validating each.**
 
-| Scene | Panels to wrap | Accent guidance | Effort |
-|-------|----------------|-----------------|--------|
-| **MainMenu** | title card / button stack container | single neutral or `AREA_SHOP` amber | low |
-| **Settings** | the settings group(s), keybind list | neutral / `AREA_INVENTORY` | low |
-| **Compendium** | the tier sections + keystone section + recipe rows panel | per-tier could reuse the card metals, or one `AREA_INVENTORY` frame around the grid | medium (many sub-panels) |
-| **Battle** | player/opponent side panels, contribution panel, result/summary panels, status readout | `AREA_BATTLE` for arena, neutral for HUD readouts | **highest** (live combat HUD; verify nothing overlaps the grid/labels at speed) |
+**As-built accents** (what actually shipped — the guidance column was pre-build):
+
+| Scene | Wrapped in | Accent (as built) |
+|-------|------------|-------------------|
+| **MainMenu** | button stack → `ScenePanel` | `AREA_MENU` violet |
+| **HowToPlay** | rules scroll → `ScenePanel` | `AREA_HELP` cyan |
+| **Settings** | tab area → `ScenePanel` | `AREA_SETTINGS` indigo |
+| **Compendium** | content scroll → one `ScenePanel`; grid = real `ElementCard`s | `AREA_COMPENDIUM` teal |
+| **Battle** | both boards + the contribution sidebar each their own `ScenePanel` | boards: you `AREA_INVENTORY` / enemy `AREA_BATTLE`; sidebar `AREA_BATTLE` |
 
 Per-scene checklist:
 1. Wrap each visual section in a `ScenePanel`; pass title/glyph/accent.
@@ -178,15 +189,13 @@ Per-scene checklist:
 3. Keep all logic/signals; only the container changes.
 4. `--import` → `--quit` → GUT → eyeball at 1920×1080.
 
-**Honest note:** MainMenu/Settings/Compendium are straightforward. **Battle is the real lift** — it has live, per-frame UI and tight vertical budget during combat; wrap conservatively and eyeball at 1×/2× speed. An agent can follow this spec for the easy three without handholding; Battle warrants a human eyeball pass.
+> ~~Honest note: Battle is the real lift, wrap conservatively…~~ **Superseded** — Battle was done aggressively and validated (see as-built deltas at top).
 
 ---
 
-## Out of scope / deferred
-- **Frame flourishes** (rivets, corner ornaments, title plates) — kept as a later polish pass; v1 is bevel + step only.
-- **Animation** (panel entrance, FIGHT pulse) — separate `card animations`-style feature.
-- **Card art** (SVG portraits) — unchanged, still the deferred swap.
+## Out of scope / deferred → [design-backlog.md](design-backlog.md)
+Frame flourishes (rivets / ornaments / title plates), animations (panel entrance, FIGHT pulse), card art (SVG portraits), and the queued **`AREA_*` desaturation pass** all live on the backlog.
 
 ## Suggested skills
-- `/design` to revisit any frame visual in-browser (the HTML stays the source of truth).
+- `/design` to explore any *new* frame visual in-browser (one working HTML per thread; the running game is the reference for what already landed).
 - `/tdd` only where logic appears (none expected — this is view work).
