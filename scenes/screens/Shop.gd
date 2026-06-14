@@ -8,6 +8,8 @@ var _starting_pick_overlay: StartingPickOverlay
 var _event_overlay: EventOverlay
 var _add_elem_panel: PanelContainer = null
 var _forge_panel: ForgePanel = null
+var _reroll_chip: Button = null
+var _fight_chip: Button = null
 
 
 func _ready() -> void:
@@ -23,11 +25,12 @@ func _ready() -> void:
 	_pause_overlay.quit_to_desktop_requested.connect(func() -> void: get_tree().quit())
 
 	_apply_theme()
+	_setup_frames()
 	_build_compendium_button()
 
 	# Forge bench lives in its own module (ForgePanel, on the RightPanel node). It
 	# owns bench rendering + operations and signals back so the shop re-renders.
-	_forge_panel = $VBox/MainArea/RightPanel
+	_forge_panel = %RightPanel
 	_forge_panel.setup()
 	_forge_panel.state_changed.connect(_render)
 	_forge_panel.forge_succeeded.connect(func() -> void: _fire_achievement("forge_discovered"))
@@ -71,35 +74,60 @@ func _on_event_chosen(reward: Dictionary) -> void:
 
 
 func _apply_theme() -> void:
-	# FOR SALE section — warm amber tint (applied directly to SellZone panel)
-	var forsale_style := StyleBoxFlat.new()
-	forsale_style.bg_color = ThemeData.SHOP_FORSALE_BG
-	forsale_style.set_border_width_all(1)
-	forsale_style.border_color = ThemeData.SHOP_FORSALE_BORDER
-	forsale_style.set_corner_radius_all(6)
-	($VBox/MainArea/LeftPanel/SellZone as PanelContainer).add_theme_stylebox_override("panel", forsale_style)
-
-	# INVENTORY section — cool blue tint on the row container
-	var inv_style := StyleBoxFlat.new()
-	inv_style.bg_color = ThemeData.SHOP_INVENTORY_BG
-	inv_style.set_border_width_all(1)
-	inv_style.border_color = ThemeData.SHOP_INVENTORY_BORDER
-	inv_style.set_corner_radius_all(6)
-	$VBox/MainArea/LeftPanel/InventoryRow.add_theme_stylebox_override("panel", inv_style)
-
-	# BATTLE GRID section — warm amber-red tint on the grid container
-	var grid_style := StyleBoxFlat.new()
-	grid_style.bg_color = ThemeData.SHOP_BATTLEGRID_BG
-	grid_style.set_border_width_all(1)
-	grid_style.border_color = ThemeData.SHOP_BATTLEGRID_BORDER
-	grid_style.set_corner_radius_all(6)
-	$VBox/MainArea/LeftPanel/BattleGrid.add_theme_stylebox_override("panel", grid_style)
-
-	# Header label colors
-	($VBox/MainArea/LeftPanel/SellZone/SellZoneVBox/ShopHeaderRow/ShopHeader as Label).add_theme_color_override("font_color", ThemeData.COLOR_HEADER_SHOP)
-	($VBox/MainArea/LeftPanel/InventoryHeader as Label).add_theme_color_override("font_color", ThemeData.COLOR_HEADER_INVENTORY)
-	($VBox/MainArea/LeftPanel/BattleGridHeader as Label).add_theme_color_override("font_color", ThemeData.COLOR_HEADER_GRID)
+	# Column split + spacing are data-driven (LayoutData), applied here so they have one
+	# home and the rest of the screens can reuse the same rhythm during the theme rollout.
+	(%LeftCol as Control).size_flags_stretch_ratio = LayoutData.SHOP_SPLIT_LEFT
+	(%RightCol as Control).size_flags_stretch_ratio = LayoutData.SHOP_SPLIT_RIGHT
+	($VBox/MainArea as HBoxContainer).add_theme_constant_override("separation", LayoutData.COLUMN_GAP)
+	(%LeftCol as VBoxContainer).add_theme_constant_override("separation", LayoutData.PANEL_GAP)
+	(%RightCol as VBoxContainer).add_theme_constant_override("separation", LayoutData.PANEL_GAP)
+	for grid: GridContainer in [%ShopGrid, %InventoryGrid, %BattleGrid]:
+		grid.add_theme_constant_override("h_separation", LayoutData.GRID_CELL_GAP)
+		grid.add_theme_constant_override("v_separation", LayoutData.GRID_CELL_GAP)
+	# Section backgrounds + headers now belong to the ScenePanel frames (see _setup_frames);
+	# interiors stay near-black so the family-glow cards are the only saturated thing.
 	($VBox/TopBar/RoundLabel as Label).add_theme_color_override("font_color", ThemeData.COLOR_ROUND_LABEL)
+
+
+# Wraps the four areas in beveled ScenePanel frames (per-area accent) and mounts the
+# Reroll / FIGHT chips into the shop / battle headers. The panels adopt their .tscn
+# content into their bodies on _ready; here we set their titles and header actions.
+func _setup_frames() -> void:
+	(%ShopPanel as ScenePanel).setup("FOR SALE", "🛒", ThemeData.AREA_SHOP)
+	(%InvPanel as ScenePanel).setup("INVENTORY", "🎒", ThemeData.AREA_INVENTORY)
+	(%BattlePanel as ScenePanel).setup("BATTLE BOARD", "⚔", ThemeData.AREA_BATTLE)
+	(%ForgeFrame as ScenePanel).setup("FORGE", "⚒", ThemeData.AREA_FORGE)
+
+	# Reroll chip → FOR SALE header (text refreshed each _render with the live cost).
+	_reroll_chip = Button.new()
+	UIScale.apply(_reroll_chip, UIScale.SHOP_LABEL)
+	_reroll_chip.pressed.connect(_on_reroll_pressed)
+	(%ShopPanel as ScenePanel).set_action(_reroll_chip)
+
+	# FIGHT chip → BATTLE BOARD header: the one gold call-to-action on screen.
+	_fight_chip = Button.new()
+	_fight_chip.text = "► FIGHT"
+	UIScale.apply(_fight_chip, UIScale.FORGE_BUTTON)
+	_fight_chip.add_theme_stylebox_override("normal", _fight_chip_style(ThemeData.FIGHT_BG))
+	_fight_chip.add_theme_stylebox_override("hover", _fight_chip_style(ThemeData.FIGHT_BG.lightened(0.1)))
+	_fight_chip.add_theme_stylebox_override("pressed", _fight_chip_style(ThemeData.FIGHT_BG.darkened(0.1)))
+	_fight_chip.add_theme_color_override("font_color", ThemeData.FIGHT_TEXT)
+	_fight_chip.pressed.connect(_on_fight_pressed)
+	(%BattlePanel as ScenePanel).set_action(_fight_chip)
+
+
+# The gold FIGHT chip stylebox — FIGHT_BG fill, FIGHT_RIM 1px rim, lifted slightly.
+func _fight_chip_style(bg: Color) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = bg
+	sb.set_border_width_all(1)
+	sb.border_color = ThemeData.FIGHT_RIM
+	sb.set_corner_radius_all(6)
+	sb.content_margin_left = 14.0
+	sb.content_margin_right = 14.0
+	sb.content_margin_top = 5.0
+	sb.content_margin_bottom = 5.0
+	return sb
 
 
 # ── Compendium (in-run recipe reference) ──────────────────────────────────────
@@ -162,7 +190,7 @@ func _render() -> void:
 	$VBox/TopBar/LivesLabel.text = "Life: %d  Wins: %d/10" % [s["lives"], s["wins"]]
 	var unlocked: Array[int] = ShopSystem.unlocked_tiers(s["run_discoveries"] as Array)
 	$VBox/DebugRow/TierLabel.text = "Shop T1–T%d  (%d forged)" % [unlocked[unlocked.size() - 1], (s["run_discoveries"] as Array).size()]
-	($VBox/MainArea/LeftPanel/SellZone/SellZoneVBox/ShopHeaderRow/RerollButton as Button).text = "Reroll — %dg" % ShopSystem.reroll_cost(s)
+	_reroll_chip.text = "Reroll — %dg" % ShopSystem.reroll_cost(s)
 	$VBox/TopBar/UndoButton.disabled = GameManager.undo_state == null
 	_rebuild_shop_grid(s)
 	_rebuild_inventory(s)
@@ -171,7 +199,7 @@ func _render() -> void:
 
 
 func _rebuild_shop_grid(s: Dictionary) -> void:
-	var grid: Node = $VBox/MainArea/LeftPanel/SellZone/SellZoneVBox/ShopGrid
+	var grid: Node = %ShopGrid
 	for child: Node in grid.get_children():
 		child.queue_free()
 	var gold: int = s["gold"] as int
@@ -181,7 +209,7 @@ func _rebuild_shop_grid(s: Dictionary) -> void:
 		if item == null:
 			# SOLD placeholder
 			var sold_tile := PanelContainer.new()
-			sold_tile.custom_minimum_size = ShopItemTile.SIZE
+			sold_tile.custom_minimum_size = LayoutData.card_min_size(LayoutData.CARD_SHOP)
 			var style := StyleBoxFlat.new()
 			style.bg_color = ThemeData.SOLD_TILE_BG
 			style.set_border_width_all(1)
@@ -209,7 +237,7 @@ func _rebuild_shop_grid(s: Dictionary) -> void:
 
 func _rebuild_inventory(s: Dictionary) -> void:
 	_inv_slot_nodes.clear()
-	var row: Node = $VBox/MainArea/LeftPanel/InventoryRow
+	var row: Node = %InventoryGrid
 	for child: Node in row.get_children():
 		child.queue_free()
 	var inv: Array = s["inventory"]
@@ -236,7 +264,7 @@ func _rebuild_inventory(s: Dictionary) -> void:
 
 func _rebuild_battle_grid(s: Dictionary) -> void:
 	_battle_slot_nodes.clear()
-	var container: GridContainer = $VBox/MainArea/LeftPanel/BattleGrid
+	var container: GridContainer = %BattleGrid
 	for child: Node in container.get_children():
 		child.queue_free()
 	var grid: Array = s["battle_grid"]
@@ -271,9 +299,9 @@ func _on_tooltip_hide() -> void:
 # ── Drag hint overlays ────────────────────────────────────────────────────────
 
 func _on_inv_drag_started(element_id: String, _inv_slot: int, sell_price: int) -> void:
-	var sell_zone: SellZone = $VBox/MainArea/LeftPanel/SellZone
+	var sell_zone: SellZone = %SellZone
 	sell_zone.show_hint(sell_price)
-	$VBox/MainArea/LeftPanel/SellHintLabel.visible = true
+	(%SellHintLabel as Label).visible = true
 	for node: Variant in _inv_slot_nodes:
 		var s: InventorySlot = node as InventorySlot
 		if s.has_item and s.element_id == element_id:
@@ -281,15 +309,15 @@ func _on_inv_drag_started(element_id: String, _inv_slot: int, sell_price: int) -
 
 
 func _on_grid_drag_started(_element_id: String, _grid_slot: int, sell_price: int) -> void:
-	var sell_zone: SellZone = $VBox/MainArea/LeftPanel/SellZone
+	var sell_zone: SellZone = %SellZone
 	sell_zone.show_hint(sell_price)
-	$VBox/MainArea/LeftPanel/SellHintLabel.visible = true
+	(%SellHintLabel as Label).visible = true
 
 
 func _on_inv_drag_ended() -> void:
-	var sell_zone: SellZone = $VBox/MainArea/LeftPanel/SellZone
+	var sell_zone: SellZone = %SellZone
 	sell_zone.hide_hint()
-	$VBox/MainArea/LeftPanel/SellHintLabel.visible = false
+	(%SellHintLabel as Label).visible = false
 	for node: Variant in _inv_slot_nodes:
 		(node as InventorySlot).modulate = Color.WHITE
 

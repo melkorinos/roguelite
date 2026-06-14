@@ -14,6 +14,7 @@
       "Bash(git log*)",
       "Bash(mkdir *)",
       "Bash(start *)",
+      "Bash(grep *)",
       "PowerShell(godot --headless *)",
       "PowerShell(godot *)",
       "PowerShell(Get-Content *)",

@@ -20,18 +20,18 @@ var _body: VBoxContainer
 
 
 func _ready() -> void:
-	var pad: int = ThemeData.FRAME_THICKNESS + ThemeData.FRAME_STEP_GAP + 8
+	var pad: int = ThemeData.FRAME_THICKNESS + ThemeData.FRAME_STEP_GAP + LayoutData.PANEL_INNER_PAD
 	add_theme_constant_override("margin_left", pad)
 	add_theme_constant_override("margin_right", pad)
 	add_theme_constant_override("margin_top", pad)
 	add_theme_constant_override("margin_bottom", pad)
 
 	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 8)
+	col.add_theme_constant_override("separation", LayoutData.PANEL_INNER_GAP)
 	add_child(col)
 
 	var header := HBoxContainer.new()
-	header.add_theme_constant_override("separation", 8)
+	header.add_theme_constant_override("separation", LayoutData.PANEL_INNER_GAP)
 	col.add_child(header)
 
 	_title_lbl = Label.new()
@@ -48,16 +48,16 @@ func _ready() -> void:
 
 	_body = VBoxContainer.new()
 	_body.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_body.add_theme_constant_override("separation", 8)
+	_body.add_theme_constant_override("separation", LayoutData.PANEL_INNER_GAP)
 	col.add_child(_body)
 
 	# Adopt any nodes the .tscn placed directly under this panel (besides the col we
 	# just built) into the body — lets a scene wrap existing content in a frame without
-	# rebuilding it. Reference those nodes via unique names (%Name) so the move is safe.
+	# rebuilding it. reparent() (not remove/add) preserves each node's owner, so its
+	# unique name (%Name) survives the move and host scenes can still resolve it.
 	for child: Node in get_children():
 		if child != col:
-			remove_child(child)
-			_body.add_child(child)
+			child.reparent(_body, false)
 
 	resized.connect(queue_redraw)
 	_refresh()
@@ -77,6 +77,8 @@ func set_action(node: Control) -> void:
 		return
 	for child: Node in _action_slot.get_children():
 		child.queue_free()
+	if node.get_parent() != null:
+		node.get_parent().remove_child(node)
 	_action_slot.add_child(node)
 
 

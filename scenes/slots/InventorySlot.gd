@@ -13,13 +13,11 @@ signal drag_started(element_id: String, inv_slot: int, sell_price: int)
 signal drag_ended()
 signal forge_quick_slot(slot_index: int)
 
-const CARD_WIDTH := 143
-
 var slot_index: int = -1
 
 
 func _ready() -> void:
-	card_width = CARD_WIDTH
+	card_width = LayoutData.CARD_INVENTORY
 	empty_bg = ThemeData.SLOT_BG_EMPTY
 	empty_border = ThemeData.SLOT_BORDER_EMPTY
 	super._ready()

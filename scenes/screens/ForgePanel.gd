@@ -79,7 +79,6 @@ func _apply_theme() -> void:
 	forge_btn.add_theme_stylebox_override("disabled", _button_style(ThemeData.FORGE_BUTTON_BG_DISABLED))
 	forge_btn.add_theme_color_override("font_color", Color.WHITE)
 	UIScale.apply(forge_btn, UIScale.FORGE_BUTTON)
-	($ForgeHeader as Label).add_theme_color_override("font_color", ThemeData.COLOR_HEADER_FORGE)
 
 
 func _button_style(bg: Color) -> StyleBoxFlat:

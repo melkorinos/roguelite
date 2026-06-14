@@ -7,8 +7,6 @@ extends ElementCard
 
 signal buy_pressed(element_id: String, shop_slot: int)
 
-const SIZE := Vector2(143, 207)  # width × 1.45 (ElementCard aspect)
-
 var shop_slot_index: int = -1
 
 var _price: int = 0
@@ -16,7 +14,7 @@ var _drag_started: bool = false
 
 
 func _ready() -> void:
-	card_width = int(SIZE.x)
+	card_width = LayoutData.CARD_SHOP
 	show_price = true
 	empty_bg = ThemeData.SLOT_BG_EMPTY
 	empty_border = ThemeData.SLOT_BORDER_EMPTY

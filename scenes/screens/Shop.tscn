@@ -3,6 +3,7 @@
 [ext_resource type="Script" path="res://scenes/screens/Shop.gd" id="1_shop"]
 [ext_resource type="Script" path="res://scenes/slots/SellZone.gd" id="2_sellzone"]
 [ext_resource type="Script" path="res://scenes/screens/ForgePanel.gd" id="3_forgepanel"]
+[ext_resource type="Script" path="res://scenes/shared/ScenePanel.gd" id="4_scenepanel"]
 
 [node name="Shop" type="Control"]
 layout_mode = 3
@@ -109,40 +110,31 @@ layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/separation = 20
 
-[node name="LeftPanel" type="VBoxContainer" parent="VBox/MainArea"]
+[node name="LeftCol" type="VBoxContainer" parent="VBox/MainArea"]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 8
+theme_override_constants/separation = 12
 
-[node name="SellZone" type="PanelContainer" parent="VBox/MainArea/LeftPanel"]
+[node name="ShopPanel" type="MarginContainer" parent="VBox/MainArea/LeftCol"]
+unique_name_in_owner = true
+layout_mode = 2
+script = ExtResource("4_scenepanel")
+
+[node name="SellZone" type="PanelContainer" parent="VBox/MainArea/LeftCol/ShopPanel"]
+unique_name_in_owner = true
 layout_mode = 2
 script = ExtResource("2_sellzone")
 
-[node name="SellZoneVBox" type="VBoxContainer" parent="VBox/MainArea/LeftPanel/SellZone"]
-layout_mode = 2
-theme_override_constants/separation = 6
-
-[node name="ShopHeaderRow" type="HBoxContainer" parent="VBox/MainArea/LeftPanel/SellZone/SellZoneVBox"]
-layout_mode = 2
-
-[node name="ShopHeader" type="Label" parent="VBox/MainArea/LeftPanel/SellZone/SellZoneVBox/ShopHeaderRow"]
-layout_mode = 2
-size_flags_horizontal = 3
-text = "FOR SALE"
-theme_override_font_sizes/font_size = 20
-
-[node name="RerollButton" type="Button" parent="VBox/MainArea/LeftPanel/SellZone/SellZoneVBox/ShopHeaderRow"]
-layout_mode = 2
-text = "Reroll — 2g"
-theme_override_font_sizes/font_size = 18
-
-[node name="ShopGrid" type="GridContainer" parent="VBox/MainArea/LeftPanel/SellZone/SellZoneVBox"]
+[node name="ShopGrid" type="GridContainer" parent="VBox/MainArea/LeftCol/ShopPanel/SellZone"]
+unique_name_in_owner = true
 layout_mode = 2
 columns = 5
 theme_override_constants/h_separation = 8
 theme_override_constants/v_separation = 8
 
-[node name="SellHintLabel" type="Label" parent="VBox/MainArea/LeftPanel"]
+[node name="SellHintLabel" type="Label" parent="VBox/MainArea/LeftCol/ShopPanel"]
+unique_name_in_owner = true
 layout_mode = 2
 horizontal_alignment = 1
 modulate = Color(0.3, 1.0, 0.45, 0.9)
@@ -150,85 +142,78 @@ visible = false
 text = "⬇  drag here to sell"
 theme_override_font_sizes/font_size = 14
 
-[node name="Separator2" type="HSeparator" parent="VBox/MainArea/LeftPanel"]
+[node name="InvPanel" type="MarginContainer" parent="VBox/MainArea/LeftCol"]
+unique_name_in_owner = true
 layout_mode = 2
+size_flags_vertical = 3
+script = ExtResource("4_scenepanel")
 
-[node name="InventoryHeader" type="Label" parent="VBox/MainArea/LeftPanel"]
+[node name="InventoryGrid" type="GridContainer" parent="VBox/MainArea/LeftCol/InvPanel"]
+unique_name_in_owner = true
 layout_mode = 2
-text = "INVENTORY  (6 slots)"
-theme_override_font_sizes/font_size = 20
+size_flags_horizontal = 4
+size_flags_vertical = 6
+columns = 3
+theme_override_constants/h_separation = 8
+theme_override_constants/v_separation = 8
 
-[node name="InventoryRow" type="HBoxContainer" parent="VBox/MainArea/LeftPanel"]
+[node name="RightCol" type="VBoxContainer" parent="VBox/MainArea"]
+unique_name_in_owner = true
 layout_mode = 2
-theme_override_constants/separation = 8
+size_flags_horizontal = 3
+theme_override_constants/separation = 12
 
-[node name="Separator3" type="HSeparator" parent="VBox/MainArea/LeftPanel"]
+[node name="BattlePanel" type="MarginContainer" parent="VBox/MainArea/RightCol"]
+unique_name_in_owner = true
 layout_mode = 2
+size_flags_vertical = 3
+script = ExtResource("4_scenepanel")
 
-[node name="BattleGridHeader" type="Label" parent="VBox/MainArea/LeftPanel"]
+[node name="BattleGrid" type="GridContainer" parent="VBox/MainArea/RightCol/BattlePanel"]
+unique_name_in_owner = true
 layout_mode = 2
-text = "BATTLE GRID — 2×2  (drag from inventory)"
-theme_override_font_sizes/font_size = 20
-
-[node name="BattleGrid" type="GridContainer" parent="VBox/MainArea/LeftPanel"]
-layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 6
 columns = 2
 theme_override_constants/h_separation = 8
 theme_override_constants/v_separation = 8
 
-[node name="Separator4" type="HSeparator" parent="VBox/MainArea/LeftPanel"]
+[node name="ForgeFrame" type="MarginContainer" parent="VBox/MainArea/RightCol"]
+unique_name_in_owner = true
 layout_mode = 2
+script = ExtResource("4_scenepanel")
 
-[node name="FightRow" type="HBoxContainer" parent="VBox/MainArea/LeftPanel"]
+[node name="RightPanel" type="VBoxContainer" parent="VBox/MainArea/RightCol/ForgeFrame"]
+unique_name_in_owner = true
 layout_mode = 2
-
-[node name="FightSpacer" type="Control" parent="VBox/MainArea/LeftPanel/FightRow"]
-layout_mode = 2
-size_flags_horizontal = 3
-
-[node name="FightButton" type="Button" parent="VBox/MainArea/LeftPanel/FightRow"]
-layout_mode = 2
-text = "► FIGHT"
-theme_override_font_sizes/font_size = 24
-
-[node name="VSeparator" type="VSeparator" parent="VBox/MainArea"]
-layout_mode = 2
-
-[node name="RightPanel" type="VBoxContainer" parent="VBox/MainArea"]
-layout_mode = 2
-custom_minimum_size = Vector2(280, 0)
+size_flags_horizontal = 4
 theme_override_constants/separation = 8
 script = ExtResource("3_forgepanel")
 
-[node name="ForgeHeader" type="Label" parent="VBox/MainArea/RightPanel"]
-layout_mode = 2
-text = "FORGE BENCH"
-theme_override_font_sizes/font_size = 20
-
-[node name="ForgeHintLine" type="Label" parent="VBox/MainArea/RightPanel"]
+[node name="ForgeHintLine" type="Label" parent="VBox/MainArea/RightCol/ForgeFrame/RightPanel"]
 layout_mode = 2
 modulate = Color(0.7, 0.7, 0.7, 1)
 text = "Drag items here · Press F to quick-forge"
 theme_override_font_sizes/font_size = 13
 
-[node name="ForgeSeparator" type="HSeparator" parent="VBox/MainArea/RightPanel"]
+[node name="ForgeSeparator" type="HSeparator" parent="VBox/MainArea/RightCol/ForgeFrame/RightPanel"]
 layout_mode = 2
 
-[node name="ForgeInfoLabel" type="Label" parent="VBox/MainArea/RightPanel"]
+[node name="ForgeInfoLabel" type="Label" parent="VBox/MainArea/RightCol/ForgeFrame/RightPanel"]
 layout_mode = 2
 autowrap_mode = 3
 text = "Drop 2 items to forge"
 
-[node name="ForgeSlotsRow" type="HBoxContainer" parent="VBox/MainArea/RightPanel"]
+[node name="ForgeSlotsRow" type="HBoxContainer" parent="VBox/MainArea/RightCol/ForgeFrame/RightPanel"]
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="ForgeButton" type="Button" parent="VBox/MainArea/RightPanel"]
+[node name="ForgeButton" type="Button" parent="VBox/MainArea/RightCol/ForgeFrame/RightPanel"]
 layout_mode = 2
 text = "⚒  Forge"
 disabled = true
 
-[node name="ForgeResultLabel" type="Label" parent="VBox/MainArea/RightPanel"]
+[node name="ForgeResultLabel" type="Label" parent="VBox/MainArea/RightCol/ForgeFrame/RightPanel"]
 layout_mode = 2
 autowrap_mode = 3
 text = ""
@@ -237,6 +222,4 @@ text = ""
 [connection signal="pressed" from="VBox/DebugRow/AddGoldButton" to="." method="_on_add_gold_pressed"]
 [connection signal="pressed" from="VBox/DebugRow/TierUpButton" to="." method="_on_tier_up_pressed"]
 [connection signal="pressed" from="VBox/DebugRow/AddElemButton" to="." method="_on_add_elem_pressed"]
-[connection signal="pressed" from="VBox/MainArea/LeftPanel/SellZone/SellZoneVBox/ShopHeaderRow/RerollButton" to="." method="_on_reroll_pressed"]
-[connection signal="pressed" from="VBox/MainArea/LeftPanel/FightRow/FightButton" to="." method="_on_fight_pressed"]
-[connection signal="sold" from="VBox/MainArea/LeftPanel/SellZone" to="." method="_on_sell_zone_sold"]
+[connection signal="sold" from="VBox/MainArea/LeftCol/ShopPanel/SellZone" to="." method="_on_sell_zone_sold"]

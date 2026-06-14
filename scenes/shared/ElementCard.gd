@@ -18,7 +18,7 @@ signal tooltip_requested(element: Dictionary)
 signal tooltip_hide_requested()
 
 const HOVER_DELAY_SECONDS: float = 0.3
-const HEIGHT_RATIO: float = 1.45          # card height = width × this
+const HEIGHT_RATIO: float = LayoutData.CARD_HEIGHT_RATIO   # card height = width × this
 const PORTRAIT_RATIO: float = 0.42        # portrait height as a fraction of width
 const ABILITY_MIN_WIDTH: int = 140        # below this the ability text moves to the tooltip
 const SECONDARY_POD_MIN_WIDTH: int = 110  # below this only the Cooldown pod survives

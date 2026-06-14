@@ -1,6 +1,6 @@
 extends Control
 
-const CARD_WIDTH: float = 160.0
+const CARD_WIDTH: float = LayoutData.CARD_COMPENDIUM
 const TIER_NAMES: Dictionary = {
 	1: "Tier 1 — Basics",
 	2: "Tier 2 — Combinations",

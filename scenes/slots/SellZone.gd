@@ -9,11 +9,11 @@ var _hover_style: StyleBoxFlat
 
 
 func _ready() -> void:
+	# Resting: transparent — the wrapping ScenePanel supplies the frame. Only the
+	# drag-hover state (below) paints, to signal "drop here to sell".
 	_base_style = StyleBoxFlat.new()
-	_base_style.bg_color = ThemeData.SELL_BG
-	_base_style.set_border_width_all(1)
-	_base_style.border_color = ThemeData.SELL_BORDER
-	_base_style.set_corner_radius_all(6)
+	_base_style.bg_color = Color(0, 0, 0, 0)
+	_base_style.set_border_width_all(0)
 	add_theme_stylebox_override("panel", _base_style)
 
 	_hover_style = StyleBoxFlat.new()

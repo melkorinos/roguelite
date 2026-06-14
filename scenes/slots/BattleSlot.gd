@@ -10,14 +10,12 @@ signal drag_started(element_id: String, grid_slot: int, sell_price: int)
 signal drag_ended()
 signal forge_quick_slot_grid(grid_slot: int)
 
-const CARD_WIDTH := 156
-
 var slot_index: int = -1
 var draggable: bool = true
 
 
 func _ready() -> void:
-	card_width = CARD_WIDTH
+	card_width = LayoutData.CARD_BATTLE
 	show_charge = true
 	name_with_level = true
 	empty_glyph = "+"

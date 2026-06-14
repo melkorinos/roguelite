@@ -6,8 +6,6 @@ signal item_removed(forge_slot_index: int)
 signal tooltip_requested(element: Dictionary)
 signal tooltip_hide_requested()
 
-const SIZE := Vector2(143, 143)
-
 var forge_slot_index: int = -1
 var has_item: bool = false
 
@@ -19,7 +17,7 @@ var _style: StyleBoxFlat
 
 
 func _ready() -> void:
-	custom_minimum_size = SIZE
+	custom_minimum_size = Vector2(LayoutData.CARD_FORGE, LayoutData.CARD_FORGE)
 	_hover_timer = Timer.new()
 	_hover_timer.wait_time = 0.3
 	_hover_timer.one_shot = true

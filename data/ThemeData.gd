@@ -89,9 +89,9 @@ const PANEL_INTERIOR := Color(0.050, 0.035, 0.030, 1.0)  # near-black; matches t
 
 # Per-area accents (frame colour only — interiors stay PANEL_INTERIOR). Shop is a warm
 # amber, NOT tier gold: gold stays the T3/T4 card signal + the FIGHT chip, so axes don't leak.
-const AREA_SHOP      := Color(0.851, 0.620, 0.220)  # #d99e38 amber
-const AREA_INVENTORY := Color(0.353, 0.608, 0.847)  # #5a9bd8 blue
-const AREA_BATTLE    := Color(0.847, 0.392, 0.235)  # #d8643c red-orange
+const AREA_SHOP      := Color(0.820, 0.660, 0.230)  # greener gold (a touch of green in the amber)
+const AREA_INVENTORY := Color(0.380, 0.780, 0.470)  # green
+const AREA_BATTLE    := Color(0.860, 0.300, 0.215)  # redder red-orange
 const AREA_FORGE     := Color(0.651, 0.310, 0.878)  # #a64fe0 purple
 
 # FIGHT call-to-action gold — the only gold UI chrome (so the eye always finds it).

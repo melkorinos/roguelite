@@ -19,6 +19,7 @@ Produce HTML mockups the user opens in a browser to react to. This is a brainsto
    - Element hue → `ThemeData.blended_family_color(ElementData.root_family_weights(id))` (weighted blend of the T1 roots; the old per-element `canonical_family` tag is superseded).
    - Battle-board shape / growth → `GridSystem.dimensions(slot_count)` + ADR-0014 (4 base → 8 max, always 2 rows, 2–4 cols; orthogonal adjacency).
    - Fonts/sizes → `data/UIScale.gd`.
+   - Card sizes / screen split / spacing → `data/LayoutData.gd` (per-context card widths `CARD_*`, `CARD_HEIGHT_RATIO`, column split, and the spacing rhythm `COLUMN_GAP`/`PANEL_GAP`/`GRID_CELL_GAP`/`PANEL_INNER_*`). The spatial sibling of ThemeData(color)/UIScale(font)/TuningData(balance).
    Use higher-tier *real* elements (e.g. the fire chain Fire→Lava→Volcano→Supernova) so the user reads the system in context, not toy data.
 
 3. **Output location & naming.** Write to `.claude/ai-helper/design/` only — never the OS temp dir. Name `<component>-<purpose>-YYYYMMDD.html`. **One working file per thread** — overwrite it each iteration and delete superseded copies; do not spawn a new dated file every round (the user will ask "why are there N htmls"). For a structural change, full-rewrite the file; for a small tweak (one color/number/copy), use a surgical Edit.
@@ -56,7 +57,8 @@ Area panels (shop, inventory, battle board, forge — and every other scene) sha
 - Accent lives on the **frame only**; interiors stay near-black (`ThemeData.PANEL_INTERIOR`) so the glow cards are the only saturated thing on screen.
 - One accent per area (frame colour): `AREA_SHOP` amber · `AREA_INVENTORY` blue · `AREA_BATTLE` red · `AREA_FORGE` purple. **Shop is amber, not gold** — gold stays the T3/T4 *card* signal.
 - **FIGHT (and only FIGHT) uses `FIGHT_*` gold** — the single gold UI object, so the eye always finds the CTA.
-- Tokens live in `ThemeData.FRAME_*`; build + per-scene rollout in `spec-shop-frame-system`. `ScenePanel` adopts pre-existing `.tscn` children into its body — reference those via unique names (`%Name`) so wrapping doesn't break paths.
+- Tokens live in `ThemeData.FRAME_*` (geometry+color) + `LayoutData.PANEL_INNER_*`/gaps (spacing); build + per-scene rollout in `spec-shop-frame-system` and `handoff-apply-theme-all-screens`. `ScenePanel` adopts pre-existing `.tscn` children into its body via `reparent()` (preserves `owner`, so `%Name` survives) — reference wrapped nodes via unique names.
+- **Standard palette / one rhythm:** the `AREA_*` accents + the LayoutData spacing ARE the cross-screen standard — a new screen reuses an existing `AREA_*` and the shared gaps, it does NOT author a new `Color()` or magic spacing. (Note: the accent set currently reads over-saturated/"neon" as a group; a global desaturation pass is queued in ThemeData — tone there, not per screen.)
 
 ## Full-screen layout mockups
 For *scene layouts* (not single components), render at the **true 1920×1080** inside a scaled wrapper so proportions are honest — don't eyeball-fake the scale:
