@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Architecture Review — roguelite · 2026-06-18</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+    mermaid.initialize({ startOnLoad: true, theme: "neutral", securityLevel: "loose" });
+  </script>
+  <style>
+    .seam-line { stroke-dasharray: 4 4; }
+    .deep-grad { background: linear-gradient(135deg, #0f172a, #1e293b); }
+    .badge-strong  { background: #d1fae5; color: #065f46; }
+    .badge-worth   { background: #fef3c7; color: #92400e; }
+    .badge-spec    { background: #f1f5f9; color: #475569; }
+    .mono { font-family: ui-monospace, "Cascadia Code", monospace; }
+  </style>
+</head>
+<body class="bg-stone-50 text-slate-900 font-sans">
+<main class="max-w-5xl mx-auto px-6 py-12 space-y-14">
+
+  <!-- HEADER -->
+  <header class="border-b border-slate-200 pb-8">
+    <h1 class="text-3xl font-serif font-bold text-slate-900">Architecture Review</h1>
+    <p class="text-slate-500 mt-1 text-sm mono">roguelite &nbsp;·&nbsp; 2026-06-18 &nbsp;·&nbsp; systems/ · data/ · scenes/</p>
+    <div class="mt-5 flex flex-wrap gap-6 text-xs text-slate-500">
+      <span class="flex items-center gap-1.5">
+        <span class="inline-block w-4 h-4 border-2 border-slate-400 rounded-sm bg-white"></span> module
+      </span>
+      <span class="flex items-center gap-1.5">
+        <svg width="28" height="12"><line x1="0" y1="6" x2="28" y2="6" stroke="#94a3b8" stroke-width="2" stroke-dasharray="4 3"/></svg> seam
+      </span>
+      <span class="flex items-center gap-1.5">
+        <svg width="28" height="12"><line x1="0" y1="6" x2="28" y2="6" stroke="#dc2626" stroke-width="2"/></svg> leakage
+      </span>
+      <span class="flex items-center gap-1.5">
+        <span class="inline-block w-4 h-4 border-2 border-slate-800 bg-slate-900 rounded-sm"></span> deep module
+      </span>
+    </div>
+  </header>
+
+  <!-- ─────────────────────────────────────────────────────── CANDIDATE 1 -->
+  <article id="c1" class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+    <div class="px-8 pt-8 pb-4 flex items-start justify-between gap-4">
+      <h2 class="text-xl font-serif font-semibold text-slate-900 leading-snug">
+        1 · Extract the Reactive Resolver from AbilitySystem
+      </h2>
+      <span class="badge-strong text-xs font-bold px-3 py-1 rounded-full shrink-0 mt-0.5">Strong</span>
+    </div>
+    <p class="px-8 pb-5 mono text-sm text-slate-400">systems/AbilitySystem.gd</p>
+
+    <!-- DIAGRAMS -->
+    <div class="px-8 pb-6 grid grid-cols-2 gap-5">
+      <div>
+        <p class="text-xs uppercase tracking-widest text-slate-400 mb-2">Before</p>
+        <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 h-72 overflow-hidden">
+          <pre class="mermaid text-xs">
+flowchart TD
+  BS[BattleSystem] -->|resolve_reactive_inplace| AB
+  PH[PhaseSystem] -->|resolve_combat_start| AB
+  AU[AugmentSystem] -->|apply_external_effects| AB
+  TS[Tests] -->|validate_atom| AB
+  AB["AbilitySystem\n603 lines"]
+  AB --- R1["① ability lookup"]
+  AB --- R2["② effect application"]
+  AB --- R3["③ reactive grid scan"]
+  AB --- R4["④ event factories"]
+  AB --- R5["⑤ atom validation"]
+  classDef god fill:#fecaca,stroke:#dc2626,stroke-width:2px,color:#7f1d1d;
+  classDef note fill:#fff7ed,stroke:#fed7aa,color:#9a3412;
+  classDef caller fill:#f8fafc,stroke:#cbd5e1,color:#475569;
+  class AB god
+  class R1,R2,R3,R4,R5 note
+  class BS,PH,AU,TS caller
+          </pre>
+        </div>
+      </div>
+      <div>
+        <p class="text-xs uppercase tracking-widest text-slate-400 mb-2">After</p>
+        <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 h-72 overflow-hidden">
+          <pre class="mermaid text-xs">
+flowchart TD
+  BS[BattleSystem] -->|"resolve(events, state)"| RR
+  PH[PhaseSystem] -->|"combat_start(state)"| RR
+  AU[AugmentSystem] -->|"apply_external(atoms, state)"| AB2
+  TS[Tests] -->|"validate_atom(atom)"| AB2
+  RR["ReactiveResolver\n(deep module)"] -->|"ability_for(id)"| AB2
+  AB2["AbilitySystem\nvocab + lookup"]
+  classDef deep fill:#0f172a,color:#e2e8f0,stroke:#334155,stroke-width:2px;
+  classDef vocab fill:#f0fdf4,stroke:#16a34a,color:#14532d;
+  classDef caller fill:#f8fafc,stroke:#cbd5e1,color:#475569;
+  class RR deep
+  class AB2 vocab
+  class BS,PH,AU,TS caller
+          </pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- TEXT -->
+    <div class="px-8 pb-8 grid grid-cols-3 gap-6 text-sm border-t border-slate-100 pt-6">
+      <div>
+        <p class="font-semibold text-red-600 mb-1.5">Problem</p>
+        <p class="text-slate-600 leading-relaxed">AbilitySystem is five concerns in 603 lines — ability lookup, effect application, reactive grid scanning, event factories, and atom validation — with no internal seams. A reactive-firing bug and an effect-vocabulary bug both live in the same module. Every caller's test crosses the same wide interface.</p>
+      </div>
+      <div>
+        <p class="font-semibold text-emerald-700 mb-1.5">Solution</p>
+        <p class="text-slate-600 leading-relaxed">Extract <strong>ReactiveResolver</strong>: takes the event list + state, returns updated state + new events. The grid-scan loop, trigger-matching, depth-1 enforcement, and effect dispatch all move behind this one seam. AbilitySystem shrinks to a pure atom-vocabulary registry and ability lookup — a shallow module that earns its shallowness.</p>
+      </div>
+      <div>
+        <p class="font-semibold text-slate-700 mb-1.5">Wins</p>
+        <ul class="space-y-1.5 text-slate-600">
+          <li>· <em>locality</em>: reactive bugs concentrate in one module</li>
+          <li>· <em>leverage</em>: one <code class="mono text-xs">resolve()</code> interface covers all Ability triggers</li>
+          <li>· AbilitySystem interface shrinks to lookup + validation</li>
+          <li>· test surface maps one-to-one with each concern</li>
+          <li>· Innate Ability + Replay slot naturally into ReactiveResolver</li>
+        </ul>
+      </div>
+    </div>
+  </article>
+
+  <!-- ─────────────────────────────────────────────────────── CANDIDATE 2 -->
+  <article id="c2" class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+    <div class="px-8 pt-8 pb-4 flex items-start justify-between gap-4">
+      <h2 class="text-xl font-serif font-semibold text-slate-900 leading-snug">
+        2 · Extract StatusReadout from StatusSystem
+      </h2>
+      <span class="badge-strong text-xs font-bold px-3 py-1 rounded-full shrink-0 mt-0.5">Strong</span>
+    </div>
+    <p class="px-8 pb-5 mono text-sm text-slate-400">systems/StatusSystem.gd &nbsp;·&nbsp; scenes/shared/StatusChip.gd</p>
+
+    <!-- MASS DIAGRAM -->
+    <div class="px-8 pb-6 grid grid-cols-2 gap-5">
+      <div>
+        <p class="text-xs uppercase tracking-widest text-slate-400 mb-2">Before — interface nearly as wide as implementation</p>
+        <div class="rounded-xl border border-slate-200 bg-slate-50 p-5 space-y-1.5 text-xs">
+          <p class="mono text-slate-400 mb-2 text-xs uppercase tracking-widest">StatusSystem public interface</p>
+          <div class="bg-red-50 border border-red-200 rounded px-3 py-1.5 mono text-red-800">empty_statuses()</div>
+          <div class="bg-red-50 border border-red-200 rounded px-3 py-1.5 mono text-red-800">apply_effect(name, state, amount, slot)</div>
+          <div class="bg-red-50 border border-red-200 rounded px-3 py-1.5 mono text-red-800">tick(state, side, events) → attribution</div>
+          <div class="bg-red-50 border border-red-200 rounded px-3 py-1.5 mono text-red-800">compute_incoming_damage(state, side, dmg)</div>
+          <div class="bg-red-50 border border-red-200 rounded px-3 py-1.5 mono text-red-800">slow_pct · is_active · active_statuses · cleanup</div>
+          <div class="bg-amber-100 border border-amber-300 rounded px-3 py-1.5 mono text-amber-800 font-semibold">describe(name, statuses) → String  ← display logic</div>
+          <div class="bg-amber-100 border border-amber-300 rounded px-3 py-1.5 mono text-amber-800 font-semibold">chip_badge(name, statuses) → String  ← display logic</div>
+          <p class="text-slate-400 mt-2">11 public functions — 2 are presentation; the module has no internal seam between them</p>
+        </div>
+      </div>
+      <div>
+        <p class="text-xs uppercase tracking-widest text-slate-400 mb-2">After — presentation seam extracted</p>
+        <div class="rounded-xl border border-slate-200 bg-slate-50 p-5 space-y-4 text-xs">
+          <div>
+            <p class="mono text-slate-400 mb-2 text-xs uppercase tracking-widest">StatusSystem (game logic only)</p>
+            <div class="bg-emerald-50 border border-emerald-200 rounded p-3 mono text-emerald-800 space-y-1">
+              <div>empty_statuses()</div>
+              <div>apply_effect · tick · compute_incoming_damage</div>
+              <div>slow_pct · is_active · active_statuses · cleanup</div>
+            </div>
+          </div>
+          <div class="border-t border-slate-200 pt-4">
+            <p class="mono text-slate-400 mb-2 text-xs uppercase tracking-widest">StatusReadout (new seam)</p>
+            <div class="deep rounded-lg p-3 mono space-y-1">
+              <div class="text-indigo-200">describe(name, statuses) → String</div>
+              <div class="text-indigo-200">chip_badge(name, statuses) → String</div>
+              <div class="text-indigo-400 text-xs mt-1.5">callers: StatusChip · future HUD elements</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="px-8 pb-8 grid grid-cols-3 gap-6 text-sm border-t border-slate-100 pt-6">
+      <div>
+        <p class="font-semibold text-red-600 mb-1.5">Problem</p>
+        <p class="text-slate-600 leading-relaxed"><code class="mono text-xs">describe()</code> — a 30-line presentation match block — lives inside the same module as <code class="mono text-xs">tick()</code> and <code class="mono text-xs">compute_incoming_damage()</code>. A Status Readout text change requires touching core game logic. A game-logic bug can be masked by a display test passing.</p>
+      </div>
+      <div>
+        <p class="font-semibold text-emerald-700 mb-1.5">Solution</p>
+        <p class="text-slate-600 leading-relaxed">Extract <strong>StatusReadout</strong>: takes a status name and the live statuses dict, returns display strings. StatusSystem stays pure game logic. StatusChip and any future Status Tray or battle HUD element calls StatusReadout exclusively — no path from display callers into game logic.</p>
+      </div>
+      <div>
+        <p class="font-semibold text-slate-700 mb-1.5">Wins</p>
+        <ul class="space-y-1.5 text-slate-600">
+          <li>· <em>locality</em>: display bugs and game bugs in separate modules</li>
+          <li>· <em>leverage</em>: StatusReadout is the single display seam for all 12 Status effects</li>
+          <li>· StatusSystem shrinks to 9 functions — all game logic</li>
+          <li>· StatusReadout is independently testable against any statuses dict</li>
+        </ul>
+      </div>
+    </div>
+  </article>
+
+  <!-- ─────────────────────────────────────────────────────── CANDIDATE 3 -->
+  <article id="c3" class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+    <div class="px-8 pt-8 pb-4 flex items-start justify-between gap-4">
+      <h2 class="text-xl font-serif font-semibold text-slate-900 leading-snug">
+        3 · Extract PoolPicker from ShopSystem
+      </h2>
+      <span class="badge-worth text-xs font-bold px-3 py-1 rounded-full shrink-0 mt-0.5">Worth exploring</span>
+    </div>
+    <p class="px-8 pb-5 mono text-sm text-slate-400">systems/ShopSystem.gd</p>
+
+    <!-- CROSS-SECTION -->
+    <div class="px-8 pb-6 grid grid-cols-2 gap-5">
+      <div>
+        <p class="text-xs uppercase tracking-widest text-slate-400 mb-2">Before — two concerns, one 460-line module</p>
+        <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-1.5 text-xs">
+          <div class="h-9 bg-indigo-100 border-l-4 border-indigo-400 rounded flex items-center px-3 mono font-medium text-indigo-800">unlocked_tiers · eligible_for_tier</div>
+          <div class="h-9 bg-indigo-200 border-l-4 border-indigo-600 rounded flex items-center px-3 mono font-medium text-indigo-900">offer · reroll_shop · _pick_spread (3-pass algorithm)</div>
+          <div class="h-9 bg-indigo-100 border-l-4 border-indigo-400 rounded flex items-center px-3 mono font-medium text-indigo-800">shop_weights (AugmentSystem integration)</div>
+          <div class="border-t border-dashed border-slate-300 my-2 relative">
+            <span class="absolute left-2 -top-2.5 bg-slate-50 px-1 text-slate-400 text-xs">seam goes here</span>
+          </div>
+          <div class="h-9 bg-slate-100 border-l-4 border-slate-400 rounded flex items-center px-3 mono font-medium text-slate-700">transfer · can_drop · drag_to_loc</div>
+          <div class="h-9 bg-slate-100 border-l-4 border-slate-400 rounded flex items-center px-3 mono font-medium text-slate-700">grant_to_inventory · sell (private)</div>
+          <p class="text-slate-400 mt-3">Pool-picking algorithm + CRUD transfer share a module — a pool regression touches the same tests as a drag-drop fix</p>
+        </div>
+      </div>
+      <div>
+        <p class="text-xs uppercase tracking-widest text-slate-400 mb-2">After — two focused modules</p>
+        <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3 text-xs">
+          <div class="deep rounded-xl p-4 space-y-1.5">
+            <p class="mono text-indigo-300 mb-2 text-xs uppercase tracking-widest">PoolPicker</p>
+            <div class="h-8 bg-indigo-600 rounded flex items-center px-3 mono font-semibold text-white">offer(state) → Array[Dict]</div>
+            <div class="h-8 bg-indigo-700/80 rounded flex items-center px-3 mono text-indigo-200">unlocked_tiers(state) → Array[int]</div>
+            <p class="text-indigo-400 mt-1.5">hides: 3-pass _pick_spread + Run Discovery gating + AugmentSystem weight integration</p>
+          </div>
+          <div class="bg-white border border-slate-200 rounded-xl p-4 space-y-1.5">
+            <p class="mono text-slate-400 mb-2 text-xs uppercase tracking-widest">ShopSystem (trimmed)</p>
+            <div class="h-8 bg-slate-100 border border-slate-200 rounded flex items-center px-3 mono text-slate-700">transfer · can_drop · grant_to_inventory</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="px-8 pb-8 grid grid-cols-3 gap-6 text-sm border-t border-slate-100 pt-6">
+      <div>
+        <p class="font-semibold text-red-600 mb-1.5">Problem</p>
+        <p class="text-slate-600 leading-relaxed">ShopSystem bundles a complex 3-pass pool algorithm — Run Discovery gating, tier unlock, family-variety spread, AugmentSystem weight integration — alongside straightforward item transfer and drag validation. A pool-picking bug touches the same module as a sell-zone regression.</p>
+      </div>
+      <div>
+        <p class="font-semibold text-emerald-700 mb-1.5">Solution</p>
+        <p class="text-slate-600 leading-relaxed">Extract <strong>PoolPicker</strong>: a deep module with a two-function interface (<code class="mono text-xs">offer</code>, <code class="mono text-xs">unlocked_tiers</code>) hiding the entire pool-generation algorithm. ShopSystem retains item transfer, selling, inventory grant, and drag validation — the CRUD concerns that belong to a different test surface.</p>
+      </div>
+      <div>
+        <p class="font-semibold text-slate-700 mb-1.5">Wins</p>
+        <ul class="space-y-1.5 text-slate-600">
+          <li>· <em>locality</em>: pool-selection bugs concentrate in PoolPicker</li>
+          <li>· <em>leverage</em>: one <code class="mono text-xs">offer(state)</code> hides a 3-pass spread algorithm</li>
+          <li>· ShopSystem shrinks; transfer tests decouple from pool tests</li>
+          <li>· PoolPicker is independently fuzzable (any state → valid shop offer)</li>
+        </ul>
+      </div>
+    </div>
+  </article>
+
+  <!-- ─────────────────────────────────────────────────────── CANDIDATE 4 -->
+  <article id="c4" class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+    <div class="px-8 pt-8 pb-4 flex items-start justify-between gap-4">
+      <h2 class="text-xl font-serif font-semibold text-slate-900 leading-snug">
+        4 · Fix the resolve_reactive_inplace mutation contract
+      </h2>
+      <span class="badge-worth text-xs font-bold px-3 py-1 rounded-full shrink-0 mt-0.5">Worth exploring</span>
+    </div>
+    <p class="px-8 pb-5 mono text-sm text-slate-400">systems/AbilitySystem.gd &nbsp;·&nbsp; systems/BattleSystem.gd</p>
+
+    <!-- SEQUENCE DIAGRAMS -->
+    <div class="px-8 pb-6 grid grid-cols-2 gap-5">
+      <div>
+        <p class="text-xs uppercase tracking-widest text-slate-400 mb-2">Before — invisible ordering constraint</p>
+        <div class="rounded-xl border border-slate-200 bg-white p-4">
+          <pre class="mermaid text-xs">
+sequenceDiagram
+  participant BS as BattleSystem
+  participant AS as AbilitySystem
+  Note over BS: caller must .duplicate() first
+  BS->>BS: copy = state.duplicate(true)
+  BS->>AS: resolve_reactive_inplace(copy, events)
+  Note over AS: mutates copy in-place
+  AS-->>BS: void
+  BS->>BS: state = copy
+  Note over BS: forget the duplicate →<br/>silent state corruption
+          </pre>
+        </div>
+      </div>
+      <div>
+        <p class="text-xs uppercase tracking-widest text-slate-400 mb-2">After — contract at the seam</p>
+        <div class="rounded-xl border border-slate-200 bg-white p-4">
+          <pre class="mermaid text-xs">
+sequenceDiagram
+  participant BS as BattleSystem
+  participant RR as ReactiveResolver
+  Note over BS: no duplication needed
+  BS->>RR: resolve(state, events)
+  Note over RR: duplicates internally
+  RR-->>BS: new_state (fresh dict)
+  BS->>BS: state = new_state
+  Note over BS: same convention as<br/>every other system
+          </pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="px-8 pb-8 grid grid-cols-3 gap-6 text-sm border-t border-slate-100 pt-6">
+      <div>
+        <p class="font-semibold text-red-600 mb-1.5">Problem</p>
+        <p class="text-slate-600 leading-relaxed"><code class="mono text-xs">resolve_reactive_inplace()</code> mutates the passed dict in-place. Every other module in <code class="mono text-xs">systems/</code> returns a new dict — the codebase convention is explicit. This function's ordering constraint (caller must <code class="mono text-xs">.duplicate()</code> first) is invisible in the interface. A future caller who skips the duplicate silently corrupts state with no error.</p>
+      </div>
+      <div>
+        <p class="font-semibold text-emerald-700 mb-1.5">Solution</p>
+        <p class="text-slate-600 leading-relaxed">Rename to <code class="mono text-xs">resolve_reactive(state, events) → Dictionary</code> and move the duplicate inside. The ordering constraint disappears from the interface and lives at the seam. This is a low-churn change: one rename, one <code class="mono text-xs">.duplicate()</code> moved, one void return changed.</p>
+      </div>
+      <div>
+        <p class="font-semibold text-slate-700 mb-1.5">Wins</p>
+        <ul class="space-y-1.5 text-slate-600">
+          <li>· <em>interface</em>: ordering constraint lives at the seam, not in caller docs</li>
+          <li>· <em>locality</em>: mutation behavior concentrates inside the module</li>
+          <li>· future callers cannot accidentally corrupt state</li>
+          <li>· codebase convention is uniform across all 13 system modules</li>
+        </ul>
+      </div>
+    </div>
+  </article>
+
+  <!-- ─────────────────────────────────────────────────────── CANDIDATE 5 -->
+  <article id="c5" class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+    <div class="px-8 pt-8 pb-4 flex items-start justify-between gap-4">
+      <h2 class="text-xl font-serif font-semibold text-slate-900 leading-snug">
+        5 · ElementCard: make the pre-_ready flag contract explicit
+      </h2>
+      <span class="badge-spec text-xs font-bold px-3 py-1 rounded-full shrink-0 mt-0.5">Speculative</span>
+    </div>
+    <p class="px-8 pb-5 mono text-sm text-slate-400">scenes/shared/ElementCard.gd &nbsp;·&nbsp; scenes/slots/ (4 subclasses)</p>
+
+    <!-- CALL-GRAPH COLLAPSE -->
+    <div class="px-8 pb-6 grid grid-cols-2 gap-5">
+      <div>
+        <p class="text-xs uppercase tracking-widest text-slate-400 mb-2">Before — ordering constraint scattered across 4 subclasses</p>
+        <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3 text-xs">
+          <div class="bg-white border border-red-200 rounded-lg p-3">
+            <p class="mono font-semibold text-slate-600 mb-1.5">BattleSlot._ready()</p>
+            <div class="mono text-slate-500 space-y-0.5">
+              <div>card_width = 110</div>
+              <div>show_charge = true</div>
+              <div class="text-red-600">super._ready()  &larr; must come last</div>
+            </div>
+          </div>
+          <div class="bg-white border border-red-200 rounded-lg p-3">
+            <p class="mono font-semibold text-slate-600 mb-1.5">InventorySlot._ready()</p>
+            <div class="mono text-slate-500 space-y-0.5">
+              <div>card_width = 95</div>
+              <div>keywords_interactive = false</div>
+              <div class="text-red-600">super._ready()  &larr; must come last</div>
+            </div>
+          </div>
+          <div class="bg-white border border-red-200 rounded-lg p-3">
+            <p class="mono font-semibold text-slate-600 mb-1.5">ShopItemTile._ready() &nbsp; ForgeSlot._ready()</p>
+            <p class="text-red-600 mono">same pattern again × 2</p>
+          </div>
+          <p class="text-slate-400">Adding a 6th flag = touch all 4 subclasses. Skip <code class="mono">super._ready()</code> = silent layout failure.</p>
+        </div>
+      </div>
+      <div>
+        <p class="text-xs uppercase tracking-widest text-slate-400 mb-2">After — configuration dict; contract lives at the seam</p>
+        <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3 text-xs">
+          <div class="deep rounded-xl p-4">
+            <p class="mono text-indigo-300 mb-2 text-xs uppercase tracking-widest">ElementCard.configure(opts)</p>
+            <div class="mono text-indigo-200 space-y-0.5">
+              <div>var card := ElementCard.new()</div>
+              <div>card.card_width = opts.get("width", 110)</div>
+              <div>card.show_charge = opts.get("charge", false)</div>
+              <div>card.keywords_interactive = opts.get("keywords", false)</div>
+              <div class="text-indigo-400"># add_child order enforced here — once</div>
+              <div>return card</div>
+            </div>
+          </div>
+          <div class="bg-white border border-emerald-200 rounded-lg p-3">
+            <p class="mono font-semibold text-slate-600 mb-1.5">BattleSlot._ready()</p>
+            <div class="mono text-emerald-700">ElementCard.configure({width=110, charge=true})</div>
+          </div>
+          <p class="text-slate-400">Adding a 6th flag = change <code class="mono">configure()</code> only. Ordering constraint is invisible to all 4 subclasses.</p>
+          <div class="bg-amber-50 border border-amber-200 rounded p-2 text-amber-800">
+            ⚠ Godot scene inheritance may resist a static factory — verify engine lifecycle before committing
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="px-8 pb-8 grid grid-cols-3 gap-6 text-sm border-t border-slate-100 pt-6">
+      <div>
+        <p class="font-semibold text-red-600 mb-1.5">Problem</p>
+        <p class="text-slate-600 leading-relaxed">Five flags must be set before <code class="mono text-xs">super._ready()</code> — a Godot lifecycle ordering constraint invisible in the type signature. Each of the 4 Element Card subclasses repeats the pattern. Adding a new flag touches all four. Missing the ordering silently breaks layout.</p>
+      </div>
+      <div>
+        <p class="font-semibold text-emerald-700 mb-1.5">Solution</p>
+        <p class="text-slate-600 leading-relaxed">A named factory <code class="mono text-xs">ElementCard.configure(opts)</code> that bundles flag-setting + <code class="mono text-xs">add_child</code> in the correct order internally. Subclasses call the factory; the ordering constraint disappears from their interface.</p>
+      </div>
+      <div>
+        <p class="font-semibold text-slate-700 mb-1.5">Wins</p>
+        <ul class="space-y-1.5 text-slate-600">
+          <li>· <em>interface</em>: ordering constraint explicit at the seam</li>
+          <li>· <em>locality</em>: new flag = change <code class="mono text-xs">configure()</code> only</li>
+          <li>· <em>leverage</em>: 4 subclasses share one creation path</li>
+          <li class="text-amber-700">· engine compatibility uncertain — speculative</li>
+        </ul>
+      </div>
+    </div>
+  </article>
+
+  <!-- ─────────────────────────────────────────────────────── TOP REC -->
+  <section id="top-recommendation" class="deep rounded-2xl p-10 text-white">
+    <p class="text-xs uppercase tracking-widest text-indigo-300 mb-3">Top recommendation</p>
+    <h2 class="text-2xl font-serif font-bold mb-4">
+      <a href="#c1" class="text-white hover:text-indigo-300 underline underline-offset-4 decoration-indigo-400">
+        Candidate 1 — Extract the Reactive Resolver
+      </a>
+    </h2>
+    <p class="text-slate-300 max-w-2xl leading-relaxed">
+      AbilitySystem is the largest module at 603 lines and the seam through which every Combat Event passes during a fight.
+      Extracting <strong>ReactiveResolver</strong> gives the deepest single-module deepening available:
+      the reactive-firing loop — grid scan, trigger-match, depth-1 enforcement, effect dispatch — hides behind one function.
+      AbilitySystem becomes a pure vocabulary registry.
+      Every future Ability addition, reactive bug, Innate Ability hook, and combat-trigger test
+      hits a smaller, more focused interface.
+      Candidate 4 (mutation contract fix) is a natural companion and can land first — it's a one-line rename
+      that aligns the interface with the convention the rest of <code class="mono text-xs text-indigo-200">systems/</code> already follows.
+    </p>
+  </section>
+
+</main>
+</body>
+</html>
