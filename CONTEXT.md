@@ -39,8 +39,8 @@ A collectable piece with passive Abilities that can attach to a Unit or exist in
 _Avoid_: gear, weapon, equipment (too narrow — Items include all non-Unit equippables)
 
 **Trinket**:
-A small modifier that slots into an Item or Unit to fine-tune its behaviour. Acquired via draft. Not a standalone fighter.
-_Avoid_: relic, charm, gem (until a canonical term is chosen)
+A run-wide **Augment** (a third `source_type`, after Keystone and Event Reward) the player picks up during a Run — an effect source, never a standalone fighter. Acquired by choosing it from an **Event** offer (folded into the every-N node, not a separate cadence). **Unique** (at most one of each) and stamped with a **Rarity** that scales its magnitude. Held up to a cap (currently 6).
+_Avoid_: relic, charm, gem (until a canonical term is chosen); "slots into an Item/Unit" (that was a pre-Augment notion)
 
 **Level 2 Reward**:
 A bonus granted when an element reaches level 2 through a Merge. Provides a flat gold payout plus a player-chosen flat stat boost (+1 base damage or −0.5 s cooldown). Healing, armour, and status effects are deferred to a later design session.
@@ -220,11 +220,11 @@ An acquired source of effects the player picks up during a Run — a **Keystone*
 _Avoid_: boon, relic, modifier (a Run Modifier is just its additive run_state subset)
 
 **Draft**:
-The free selection of Items and Trinkets offered each round. Separate from the gold shop.
+The free selection of Items offered each round, separate from the gold shop. *(Trinkets were once drafted here too; they now arrive through the **Event** node instead — see Trinket.)*
 _Avoid_: pick phase, card draw
 
 **Rarity**:
-A tier assigned to each piece that determines how frequently it appears in the shop. Working tiers: Common, Rare, Epic. *(Note: the codebase currently uses numeric Tier 1/2/3 — the named rarity vocabulary is aspirational and not yet reflected in code.)*
+A tier — Common, Rare, Epic — that does double duty: for a **piece** it sets how frequently it appears in the shop; for a **Trinket** it scales the effect magnitude (same Trinket, bigger numbers). Higher round → higher-Rarity Trinkets drop. *(Note: for pieces the codebase still uses numeric Tier 1/2/3 — the named vocabulary is aspirational there; Trinkets adopt the named Rarity directly.)*
 _Avoid_: grade, quality — "tier" is acceptable shorthand
 
 ### UI overlays
